@@ -6,6 +6,7 @@
 - `node tests/shared-browser.mjs`: nový profil bez owner tokenu, importní formulář a ruční podmnožina, dvě celé partie přes skutečný serverový engine, 0 lokálních workerů/WASM, obnova vybraného přehledu. Importní odpověď je deterministická API fixture; engine ani backend nejsou mockované.
 - Šipky ověřeny z desky, filtru i při fokusu na nastavení na 1440×900, 1366×768, 1024×768 a 1280×640. Deska nemění polohu, větší rozměr se vejde do okna. Mobil 390×844 nemá horizontální přetečení.
 - Kontrola přes Impeccable: viz IMPECCABLE_AUDIT.md. Sestavení v GitHub Actions provádí navíc anonymní celý rozbor v nativním Docker image před jeho publikováním.
+- Po nasazení 1.3 prošel veřejný HTTPS smoke: automatická session bez owner tokenu, celý nativní rozbor, chráněný privátní přístup a extension CORS. Čistý prohlížeč importoval skutečných 10 her Schweits, ručně vybral jednu a dokončil rozbor; testový průchod po spuštění rozboru trval 9 s. 0 lokálních workerů, 0 WASM, funkční šipky na nasazené stránce. Nejde o benchmark celé dávky 100 her.
 
 ## Verze 1.2.0 — pracovní plocha a hráčské přehledy
 
