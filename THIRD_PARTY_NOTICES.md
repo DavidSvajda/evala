@@ -16,3 +16,5 @@ Move accuracy uses the published per-move transformation described at https://li
 
 Upstream: https://github.com/official-stockfish/Stockfish/releases/tag/sf_19
 
+The native server image also provides the corresponding stockfish.js port source at `/engine/stockfish-js-source.tar.gz` for its optional browser engine files.
+

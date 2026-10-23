@@ -28,6 +28,7 @@ COPY --from=native /engine /opt/stockfish
 # Preserve the complete official distribution, including corresponding source.
 COPY --from=native /download/stockfish.tar.gz /app/dist/engine/stockfish-19-native-distribution.tar.gz
 COPY --from=build /app/dist ./dist
+COPY vendor-source/stockfish-0d5dd7944f88c817c07a26bc4fb1905d5f9c46d6.tar.gz ./dist/engine/stockfish-js-source.tar.gz
 COPY src/core ./src/core
 COPY src/study/uci.js ./src/study/uci.js
 COPY server ./server
