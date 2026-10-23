@@ -29,7 +29,7 @@ try{
   await page.waitForFunction(()=>document.querySelector('#inspect-status').textContent.startsWith('Hotovo'),{}, {timeout:20000});
   assert.match(await page.locator('#position-label').textContent(),/Vlastní varianta/);
   await page.locator('#return-game').click();
-  const downloadPromise=page.waitForEvent('download');await page.locator('#export-pgn').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/\.pgn$/);
+  const downloadPromise=page.waitForEvent('download');await page.locator('.game-actions summary').click();await page.locator('#export-pgn').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/\.pgn$/);
   await page.reload();await page.getByRole('heading',{name:'Test White — Test Black'}).waitFor();assert.equal(await page.locator('#review-state').textContent(),'Uloženo');
   const pgn=await readFile('.local-data/schweits.pgn','utf8').catch(()=>null);
   if(pgn){
@@ -54,9 +54,9 @@ try{
   await page.locator('#server-token').fill('browser-test-token');await page.locator('#server-token').dispatchEvent('change');
   await page.locator('#test-server').click();await page.waitForFunction(()=>document.querySelector('#server-status').textContent.startsWith('Připojeno'));
   await page.locator('#profile').selectOption('quick');await page.locator('#study-time').fill('100');await page.locator('#study-time').dispatchEvent('change');await page.locator('#close-settings').click();
-  let requests=0;page.on('request',req=>{if(req.url().endsWith('/api/analyze'))requests++;});
+  let requests=0;page.on('request',req=>{if(req.url().endsWith('/api/review-game'))requests++;});
   await page.locator('#review-game').click();await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:60000});
-  assert.ok(requests>=4,'server mode must use real streamed API for multiple positions');
+  assert.ok(requests>=1,'server mode must use real streamed API for multiple positions');
   assert.deepEqual(errors,[]);
   console.log('PASS: Full NNUE review, MultiPV, graph, classification, line playback, custom moves, export, IndexedDB reload, narrow viewport and complete server-mode review');
 }finally{await browser.close();backend.closeAllConnections();await new Promise(done=>backend.close(done));await new Promise(done=>server.close(done));}

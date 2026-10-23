@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
-          docker run -d --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" "$IMAGE:$GITHUB_SHA"
+          docker run -d --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" -e PUBLIC_REPORTS=true "$IMAGE:$GITHUB_SHA"
           trap 'docker rm -f evala-smoke >/dev/null' EXIT
           for i in {1..30}; do
             if curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health >/dev/null; then break; fi
@@ -38,6 +38,11 @@ jobs:
             --data '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","settings":{"depth":10,"time":300,"multipv":2}}' \
             http://127.0.0.1:8080/api/analyze > result.ndjson
           node --input-type=module -e 'import fs from "node:fs";const result=fs.readFileSync("result.ndjson","utf8").trim().split("\n").map(JSON.parse).find(x=>x.type==="done");if(!result||result.result.lines.length<2)throw Error("Native engine returned no MultiPV result");console.log("Native Stockfish + API passed");'
+          curl --fail --silent --cookie-jar cookies.txt http://127.0.0.1:8080/api/session >/dev/null
+          curl --fail --silent --no-buffer --cookie cookies.txt --header 'Content-Type: application/json' \
+            --data '{"pgn":"[Event \"Smoke\"]\n[White \"Guest\"]\n[Black \"Opponent\"]\n[Result \"0-1\"]\n\n1. f3 e5 2. g4 Qh4# 0-1","profile":"quick"}' \
+            http://127.0.0.1:8080/api/review-game > review.ndjson
+          node --input-type=module -e 'import fs from "node:fs";const game=fs.readFileSync("review.ndjson","utf8").trim().split("\n").map(JSON.parse).find(x=>x.type==="game");if(!game?.game.analysis.complete)throw Error("Public game review failed");console.log("Public session + complete native game review passed");'
       - name: Publish tested image
         run: |
           docker push "$IMAGE:$GITHUB_SHA"

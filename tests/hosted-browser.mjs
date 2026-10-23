@@ -11,7 +11,7 @@ try{
   const errors=[];
   page.on('worker',()=>workers++);
   page.on('pageerror',error=>errors.push(error.message));
-  page.on('request',request=>{if(request.url().endsWith('.wasm'))wasm++;if(request.url().endsWith('/api/analyze'))requests++;});
+  page.on('request',request=>{if(request.url().endsWith('.wasm'))wasm++;if(request.url().endsWith('/api/review-game'))requests++;});
   await page.goto(base);
   await page.locator('#backend').waitFor({state:'visible'});
   assert.equal(await page.locator('#backend').inputValue(),'server');
@@ -26,6 +26,6 @@ try{
   await page.locator('#pgn-input').fill('[White "Hosted"]\n[Black "Server"]\n\n1. f3 e5 2. g4 Qh4# 0-1');
   await page.locator('#import-pgn').click();await page.locator('#review-game').click();
   await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:60000});
-  assert.ok(requests>=4);assert.equal(workers,0);assert.equal(wasm,0);assert.deepEqual(errors,[]);
+  assert.ok(requests>=1);assert.equal(workers,0);assert.equal(wasm,0);assert.deepEqual(errors,[]);
   console.log('PASS: hosted app defaults to remote engine, reviews through real API, starts no local Worker and downloads no WASM');
 }finally{await browser.close();server.closeAllConnections();await new Promise(done=>server.close(done));}

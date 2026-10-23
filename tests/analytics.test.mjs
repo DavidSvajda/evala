@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePgn } from '../src/study/game.js';
 import { classifyMove } from '../src/study/review.js';
-import { analyzeLibrary,phaseOf,timeClass } from '../src/study/analytics.js';
+import { analyzeLibrary,phaseOf,timeClass,errorInterval,errorReason } from '../src/study/analytics.js';
 
 test('player insights use only the named player, completed results and evaluated own moves',()=>{
   const white=parsePgn('[White "Schweits"]\n[Black "Opponent"]\n[Result "0-1"]\n[TimeControl "600"]\n\n1. f3 e5 2. g4 Qh4# 0-1');
@@ -14,10 +14,18 @@ test('player insights use only the named player, completed results and evaluated
   assert.equal(report.overall.moves,2);assert.equal(report.overall.accuracy,25);assert.equal(report.analyzedGames,1);
   assert.equal(report.moments[0].ply,3);assert.equal(report.moments[0].gameId,white.id);
   assert.equal(report.winning,1);assert.equal(report.converted,0);
+  assert.equal(report.intervals[0].moves,2);assert.equal(report.windows[0].errors,2);
+  assert.equal(report.pieces.find(p=>p.key==='p').moves,2);
   assert.equal(report.terminations[0].name,'Mat');
   assert.equal(analyzeLibrary([white,black],{username:'Schweits',color:'b'}).overall.games,1);
   assert.equal(analyzeLibrary([white,black],{username:'Schweits',time:'rapid'}).overall.games,1);
   assert.equal(analyzeLibrary([white],{username:'Nobody'}).overall.games,0);
+});
+test('uncertainty and material motifs do not invent precise claims from no data',()=>{
+  assert.equal(errorInterval(0,0),null);assert.ok(errorInterval(1,5)[1]>errorInterval(20,100)[1]);
+  const move=parsePgn('1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0').moves.at(-1);
+  assert.equal(errorReason(move,{kind:'mate',value:1},{kind:'mate',value:0}),'mate');
+  assert.equal(errorReason(move,{kind:'cp',value:0},{kind:'cp',value:100,lines:[]}),'other');
 });
 test('phase, time controls and missing data are explicit',()=>{
   assert.equal(phaseOf('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'),'opening');

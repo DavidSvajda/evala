@@ -1,5 +1,9 @@
 # Evala na Azure
 
+Verze 1.3 zapíná PUBLIC_REPORTS=true. Sdílený web nevyžaduje osobní token: automaticky založí HttpOnly/SameSite session na 8 hodin. API token zůstává privátní pro vlastní API a rozšíření. Veřejné celé partie používají jeden sdílený engine a frontu nejvýše tří čekajících požadavků. Browser posílá vybrané PGN po jedné partii; během rozboru musí zůstat otevřený. Hotové partie a výběr jsou v IndexedDB/localStorage prohlížeče.
+
+Veřejná kvóta je nejvýše 100 partií na připojení a orientační globální rezerva 1 800 sekund engine výpočtu za UTC den. Počítá se konzervativním odhadem požadavků; soukromý owner přístup ji nečerpá. Session a počítadla jsou v paměti procesu a resetují se při restartu/nasazení/uspání. Není to trvalý finanční strop ani ochrana pro neomezenou veřejnou službu. Jedna instance, původní studentské předplatné a režim 0–1 replik zůstávají zachované.
+
 Zdrojový repozitář: soukromý `DavidSvajda/evala`. Sestavení je ruční GitHub Actions workflow `Build Evala server`; Dockerfile.azure ověřuje kontrolní součet oficiálního nativního Stockfishe 19 a workflow před publikováním provede skutečný MultiPV výpočet přes API.
 
 Azure používá povolený region Germany West Central, skupinu `evala-chess`, prostředí `evala-env`, profil Consumption a aplikaci `evala`. Cílové parametry jsou 2 vCPU / 4 GiB, ENGINE_THREADS=2 a jeden engine slot. Minimum replik 0, maximum 1. Vlastní Log Analytics není zapnutý.

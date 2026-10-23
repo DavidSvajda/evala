@@ -1,12 +1,13 @@
 import { Chess } from 'chess.js';
 import { StudyEngine,searchSettings } from './uci.js';
-import { RemoteEngine,serverAddress } from './remote.js';
+import { RemoteEngine,serverAddress,remoteReview,connectPublicServer } from './remote.js';
 import { parsePgnCollection,DEMO_PGN,lineToSan,annotatedPgn } from './game.js';
 import { reviewGame,summarize } from './review.js';
 import { loadLibrary,saveGame,removeGame,getPreferences,savePreferences } from './storage.js';
 import { importUsername } from './import.js';
 import { StudyBoard } from './board.js';
 import { analyzeLibrary,renderAnalytics } from './analytics.js';
+import { PlayerReport } from './report.js';
 import { START_FEN } from '../core/position.js';
 import { scoreText,whitePercent } from '../core/evaluation.js';
 import { brand,icons } from '../ui/icons.js';
@@ -21,9 +22,13 @@ $('#first-move').innerHTML=stroke('<path d="M7 5v14m10-13-7 6 7 6"/>');$('#previ
 $('#next-move').innerHTML=stroke('<path d="m9 5 7 7-7 7"/>');$('#last-move').innerHTML=stroke('<path d="M17 5v14M7 6l7 6-7 6"/>');
 let library=[],selected=null,ply=0,flipped=false,branch=null,promotionMove=null,activeView='review';
 const hostedServer=!!document.querySelector('meta[name="evala-backend"][content="server"]');
+const publicServer=!!document.querySelector('meta[name="evala-public"][content="true"]');
+document.body.classList.toggle('public-server',publicServer);
 let options=getPreferences(hostedServer?{backend:'server',serverUrl:location.origin}:{}),job=null,importController=null,inspectController=null,inspectResult=null;
 let reviewer=null,inspector=null,reviewerKey='',inspectorKey='',saveAt=0,renderQueued=false;
 let serverVerified=false;
+let playerReport;
+const publicConnection=publicServer?connectPublicServer(location.origin).then(()=>{serverVerified=true;}).catch(e=>{$('#report-status').textContent=e.message;}):Promise.resolve();
 const barServerOption=document.createElement('label');barServerOption.className='check-row';barServerOption.hidden=!globalThis.chrome?.runtime?.id;
 barServerOption.innerHTML='<span>Použít server také pro evaluation bar</span><input id="bar-server" type="checkbox">';
 $('#server-fields').append(barServerOption);
@@ -39,6 +44,7 @@ async function configureBarServer(enabled){
 }
 $('#bar-server').addEventListener('change',async event=>{try{await configureBarServer(event.target.checked);$('#server-status').textContent=event.target.checked?'Server je zapnutý i pro evaluation bar.':'Evaluation bar opět počítá lokálně.';}catch(e){event.target.checked=!event.target.checked;$('#server-status').textContent=e.message;}});
 const board=new StudyBoard($('#study-board'),{onMove:makeBoardMove});
+const focusBoard=()=>$('#study-board').focus({preventScroll:true});
 const profiles={quick:{time:300,depth:14,hash:32},balanced:{time:750,depth:18,hash:64},deep:{time:2000,depth:22,hash:128}};
 const settingsFields={'engine-choice':'engine',profile:'profile','study-depth':'depth','study-time':'time','study-lines':'multipv','study-hash':'hash','study-arrows':'arrows',backend:'backend','server-url':'serverUrl'};
 function error(message=''){$('#app-error').textContent=message;}
@@ -97,8 +103,15 @@ function setView(view){
   activeView=view;$('.workspace').hidden=view!=='review';$('#analytics-workspace').hidden=view!=='analytics';
   $('#view-review').setAttribute('aria-pressed',String(view==='review'));$('#view-analytics').setAttribute('aria-pressed',String(view==='analytics'));
   if(view==='analytics'){if(!$('#insight-username').value)$('#insight-username').value=options.lastUsername||$('#username').value;updateAnalytics();}
+  else focusBoard();
 }
-function updateAnalytics(){renderAnalytics($('#analytics-content'),analyzeLibrary(library,{username:$('#insight-username').value,color:$('#insight-color').value,time:$('#insight-time').value,result:$('#insight-result').value}),moment=>{
+function updateAnalytics(){
+  const username=$('#insight-username').value;
+  const ids=playerReport?.games.length?[...playerReport.checked]:options.reportUser===username?options.reportIds:null;
+  const games=ids?library.filter(game=>ids.includes(game.id)):library;
+  const report=analyzeLibrary(games,{username,color:$('#insight-color').value,time:$('#insight-time').value,result:$('#insight-result').value});
+  $('#insights-form').hidden=!report.matched;
+  renderAnalytics($('#analytics-content'),report,moment=>{
   const game=library.find(g=>g.id===moment.gameId);if(game){setView('review');selectGame(game);navigate(moment.ply);}
 });}
 $('#view-review').addEventListener('click',()=>setView('review'));$('#view-analytics').addEventListener('click',()=>setView('analytics'));
@@ -123,6 +136,7 @@ function selectGame(game){
   inspectController?.abort();inspectResult=null;selected=game;ply=0;branch=null;promotionMove=null;$('#promotion').hidden=true;
   sessionStorage.setItem('evala-current-game',game.id);error();renderLibrary();renderAll();
   $('.workspace').classList.remove('library-open');
+  if(activeView==='review')focusBoard();
 }
 async function addPgn(text){
   const {games,errors}=parsePgnCollection(text);let added=0;
@@ -157,7 +171,7 @@ $('#username-form').addEventListener('submit',async event=>{
 
 function renderReview(){
   const running=job?.game.id===selected?.id;
-  $('#review-game').disabled=!selected||!!job&&!running;
+  $('#review-game').disabled=!selected||!!job&&!running||playerReport?.running;
   $('#review-game').classList.toggle('running',!!running);
   $('#review-game').innerHTML=`${running?'Pozastavit rozbor':selected?.analysis?.complete?'Znovu rozebrat':selected?.analysis?'Pokračovat v rozboru':'Rozebrat partii'}<span>${running?icons.pause:icons.arrow}</span>`;
   $('#review-state').textContent=running?'Probíhá':selected?.analysis?.complete?'Uloženo':selected?.analysis?'Částečný rozbor':'Připraveno';
@@ -178,7 +192,7 @@ $('#review-game').addEventListener('click',async()=>{
   document.addEventListener('visibilitychange',visibility);
   try{
     $('#review-progress').hidden=false;$('#progress-text').textContent=options.backend==='server'?'Připojuji server…':options.engine==='full'?'Načítám plný engine (~100 MB)…':'Načítám Lite engine…';
-    await reviewGame(game,engine('review'),settings(),{signal:controller.signal,onUpdate:({phase,index,total,elapsed,processed})=>{
+    const onUpdate=({phase,index,total,elapsed,processed})=>{
       if(selected?.id===game.id){
         $('#review-progress').hidden=false;$('#progress').value=phase==='positions'?index/total*85:phase==='refine'?85+index/Math.max(1,total)*10:phase==='done'?100:97;
         const remaining=phase==='positions'&&processed>1?` · zbývá přibližně ${Math.ceil((game.fens.length-index)*elapsed/processed/1000)} s`:'';
@@ -186,17 +200,22 @@ $('#review-game').addEventListener('click',async()=>{
         renderPosition();renderMoves();renderSummary();renderGraph();
       }
       if(performance.now()-saveAt>1500){saveAt=performance.now();store(game);}
-    }});
+    };
+    if(options.backend==='server'){
+      if(publicServer)await publicConnection;
+      await remoteReview(options.serverUrl,$('#server-token').value,game,{profile:options.profile==='quick'?'quick':'balanced',signal:controller.signal,onUpdate});
+      renderAll();
+    }else await reviewGame(game,engine('review'),settings(),{signal:controller.signal,onUpdate});
     await store(game);renderLibrary();
   }catch(e){await store(game);if(e.name==='AbortError'){if(selected?.id===game.id)$('#review-estimate').textContent='Rozbor pozastaven. Hotové pozice zůstaly uložené; pokračuj stejným profilem.';}else error(e.message);}
-  finally{job=null;document.removeEventListener('visibilitychange',visibility);renderReview();renderLibrary();}
+  finally{job=null;document.removeEventListener('visibilitychange',visibility);renderReview();renderLibrary();if(activeView==='review')focusBoard();}
 });
 
 function renderPosition(){
   const fen=activeFen(),result=currentResult(),last=branch?branch.moves[branch.index-1]:selected?.moves[ply-1];
   const mark=!branch&&ply?selected?.analysis?.moves?.[ply-1]:null;
   board.set(fen,{flipped,lastMove:last,mark,arrow:options.arrows?result?.lines?.[0]?.pv?.[0]:null});
-  $('.study-eval').classList.toggle('flipped',flipped);$('.eval-white').style.height=whitePercent(result)+'%';$('.eval-score').textContent=scoreText(result);$('.eval-depth').textContent=result?.depth?'d'+result.depth:'';
+  $('.study-eval').classList.toggle('flipped',flipped);$('.eval-white').style.transform=`scaleY(${whitePercent(result)/100})`;$('.eval-score').textContent=scoreText(result);$('.eval-depth').textContent=result?.depth?'d'+result.depth:'';
   $('.study-eval').setAttribute('aria-valuenow',String(result?.kind==='mate'?Math.sign(result.value)*10:Math.max(-10,Math.min(10,(result?.value||0)/100))));$('.study-eval').setAttribute('aria-valuetext',scoreText(result)+' z pohledu bílého');
   $('#game-title').textContent=selected?`${selected.headers.White||'Bílý'} — ${selected.headers.Black||'Černý'}`:'Vyber partii';
   $('#game-subtitle').textContent=selected?`${selected.headers.Result||'*'} · ${selected.headers.Event||'Importovaná partie'}${selected.headers.Date?' · '+selected.headers.Date:''}`:'Vyber partii v knihovně nebo importuj PGN.';
@@ -262,17 +281,18 @@ function step(amount){if(branch){inspectController?.abort();inspectResult=null;b
 $('#previous-move').addEventListener('click',()=>step(-1));$('#next-move').addEventListener('click',()=>step(1));
 $('#first-move').addEventListener('click',()=>branch?step(-branch.moves.length):navigate(0));$('#last-move').addEventListener('click',()=>branch?step(branch.moves.length):navigate(selected?.moves.length||0));
 $('#return-game').addEventListener('click',()=>navigate(ply));$('#flip-board').addEventListener('click',()=>{flipped=!flipped;renderPosition();});
-$('#move-filter').addEventListener('change',renderMoves);
-document.addEventListener('keydown',event=>{
+$('#move-filter').addEventListener('change',()=>{renderMoves();focusBoard();});
+window.addEventListener('keydown',event=>{
   if(event.key==='Escape'){if(!$('#study-settings').hidden)$('#close-settings').click();else if(branch)navigate(ply);return;}
-  if(activeView!=='review'||!selected||!$('#study-settings').hidden||event.altKey||event.ctrlKey||event.metaKey||event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+  if(activeView!=='review'||!selected||event.altKey||event.ctrlKey||event.metaKey||event.target.closest('input,textarea,[contenteditable="true"]')||event.target.closest('#study-settings'))return;
+  if(event.target.closest('select')&&!['ArrowRight','ArrowLeft'].includes(event.key))return;
   if(['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Home','End'].includes(event.key)){
     event.preventDefault();event.stopPropagation();
     if(event.key==='Home')branch?step(-branch.moves.length):navigate(0);
     else if(event.key==='End')branch?step(branch.moves.length):navigate(selected.moves.length);
     else step(['ArrowRight','ArrowDown'].includes(event.key)?1:-1);
   }
-});
+},true);
 function startBranch(pv){
   inspectController?.abort();inspectResult=null;const fen=activeFen(),chess=new Chess(fen),moves=[],fens=[fen];
   for(const uci of pv){try{const m=chess.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]});moves.push({from:m.from,to:m.to,san:m.san,uci});fens.push(chess.fen());}catch{break;}}
@@ -296,6 +316,7 @@ async function inspectPosition(){
   if(!selected)return;inspectController?.abort();const controller=new AbortController();inspectController=controller;const fen=activeFen();
   $('#inspect-status').textContent='Počítám pokračování…';error();
   try{
+    if(publicServer)await publicConnection;
     const history=branch?undefined:{initialFen:selected.initialFen,moves:selected.moves.slice(0,ply).map(m=>m.uci)};
     const result=await engine('inspect').search({fen,history,settings:{...settings(),time:Math.max(1500,options.time)}},{signal:controller.signal,onInfo:result=>{if(!controller.signal.aborted&&fen===activeFen()){inspectResult={fen,result};queueRender();}}});
     if(!controller.signal.aborted&&fen===activeFen()){inspectResult={fen,result};renderPosition();$('#inspect-status').textContent=`Hotovo · hloubka ${result.depth} · ${new Intl.NumberFormat('cs-CZ',{notation:'compact'}).format(result.nps||0)} uzlů/s`;}
@@ -306,8 +327,16 @@ function download(text,name,type){const url=URL.createObjectURL(new Blob([text],
 $('#export-pgn').addEventListener('click',()=>{if(selected)download(annotatedPgn(selected),`evala-${selected.id}.pgn`,'application/x-chess-pgn');});
 $('#delete-game').addEventListener('click',async()=>{if(!selected||job?.game.id===selected.id)return;const id=selected.id;try{await removeGame(id);library=library.filter(g=>g.id!==id);selected=null;branch=null;ply=0;if(library[0])selectGame(library[0]);else{renderLibrary();renderAll();}}catch(e){error(e.message);}});
 
+playerReport=new PlayerReport({library:()=>library,addPgn,save:store,engine:()=>engine('review'),settings:()=>({...settings(),publicServer,token:$('#server-token').value}),onChange:()=>{if(playerReport.games.length){options.reportIds=[...playerReport.checked];options.reportUser=$('#insight-username').value;savePreferences(options);}renderLibrary();renderReview();if(activeView==='analytics')updateAnalytics();},onPlayer:(username,platform)=>{
+  options.lastUsername=username;options.lastPlatform=platform;options.reportIds=[...playerReport.checked];options.reportUser=username;savePreferences(options);$('#insight-username').value=username;$('#username').value=username;updateAnalytics();
+},onOpen:game=>{if(game){setView('review');selectGame(game);}}});
+$('#report-profile').addEventListener('change',()=>playerReport.updateCount());
+$('#report-username').value=options.lastUsername||$('#username').value;$('#report-platform').value=options.lastPlatform||'chesscom';
 syncSettings();
-if(hostedServer&&options.backend==='server'&&!$('#server-token').value){$('#study-settings').hidden=false;$('#server-status').textContent='Pro serverový rozbor zadej svůj API token a ověř spojení.';}
+if(publicServer){$('#server-token').value='';$('#server-fields').hidden=true;}
+else if(hostedServer&&options.backend==='server'&&!$('#server-token').value){$('#study-settings').hidden=false;$('#server-status').textContent='Pro serverový rozbor zadej svůj API token a ověř spojení.';}
 try{library=await loadLibrary();selected=library.find(g=>g.id===sessionStorage.getItem('evala-current-game'))||library[0]||null;}catch(e){error(e.message);}
+if(options.reportUser===$('#report-username').value)playerReport.restore(options.reportIds);
 renderLibrary();renderAll();
-window.addEventListener('pagehide',()=>{job?.controller.abort();inspectController?.abort();importController?.abort();reviewer?.dispose();inspector?.dispose();});
+if(publicServer&&new URLSearchParams(location.search).get('view')!=='review')setView('analytics');
+window.addEventListener('pagehide',()=>{playerReport.controller?.abort();job?.controller.abort();inspectController?.abort();importController?.abort();reviewer?.dispose();inspector?.dispose();});

@@ -70,6 +70,8 @@ def configuration(environment_id, image, token, location):
                         {'name': 'ENGINE_THREADS', 'value': '2'},
                         {'name': 'ENGINE_CONCURRENCY', 'value': '1'},
                         {'name': 'ALLOW_EXTENSION_ORIGINS', 'value': 'true'},
+                        {'name': 'PUBLIC_REPORTS', 'value': 'true'},
+                        {'name': 'PUBLIC_ENGINE_SECONDS', 'value': '1800'},
                     ],
                     'probes': [
                         {'type': 'Startup', 'tcpSocket': {'port': 8080}, 'periodSeconds': 2,

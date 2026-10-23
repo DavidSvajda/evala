@@ -1,4 +1,6 @@
-# Evala 1.2
+# Evala 1.3
+
+Sdílený web nyní funguje bez ručního API tokenu. Zadej jméno Chess.com/Lichess, zvol posledních 10–100 partií, ručně vyber hry a spusť společný rozbor. Server zpracuje partie postupně; kartu nech otevřenou. Hotové hry i vybraný přehled zůstanou v prohlížeči. Rychlý a podrobný profil mají rozdílné časy a ověřování obětí. Deska je větší a šipky fungují i po kliknutí na ovladače. Omezení veřejného serveru jsou popsána v AZURE_DEPLOYMENT.md.
 
 Verze 1.2 přidává pracovní plochu přizpůsobenou výšce okna, stabilní ovládání šipkami, označení tahu na desce a samostatný **Přehled hráče**. Importuj své partie, spusť jejich rozbor a v přehledu zadej přezdívku shodnou s PGN. Uvidíš výsledky podle barvy a zahájení, chyby podle fáze a konkrétní pozice k procvičení. Výsledkové statistiky fungují i bez enginu; hodnocení tahů a slabin vyžaduje rozebrané pozice. Podklady, pravidla a audit textů: [INSIGHTS_RESEARCH.md](INSIGHTS_RESEARCH.md).
 

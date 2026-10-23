@@ -63,7 +63,7 @@ export function summarize(game){
 }
 
 export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
-  const key=JSON.stringify({version:REVIEW_VERSION,engine:options.engine,backend:options.backend,server:options.backend==='server'?options.serverUrl:'',depth:options.depth,time:options.time,multipv:options.multipv});
+  const key=JSON.stringify({version:REVIEW_VERSION,engine:options.engine,backend:options.backend,server:options.backend==='server'?options.serverUrl:'',depth:options.depth,time:options.time,multipv:options.multipv,refineLimit:options.refineLimit??8,verifySacrifices:options.verifySacrifices!==false});
   if(game.analysis?.key!==key)game.analysis={key,version:REVIEW_VERSION,positions:[],moves:[],complete:false,engine:options.engine,options:{depth:options.depth,time:options.time,multipv:options.multipv},startedAt:Date.now()};
   const report=game.analysis,start=performance.now();let processed=0;
   const publish=(phase,index,total)=>{
@@ -79,14 +79,14 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
     processed++;publish('positions',i+1,game.fens.length);
   }
   // Recheck only critical positions, bounded to avoid hours of extra work.
-  const critical=report.moves.map((mark,i)=>({mark,i})).filter(({mark})=>mark&&mark.loss>=5).sort((a,b)=>b.mark.loss-a.mark.loss).slice(0,8);
+  const critical=report.moves.map((mark,i)=>({mark,i})).filter(({mark})=>mark&&mark.loss>=5).sort((a,b)=>b.mark.loss-a.mark.loss).slice(0,Math.max(0,Math.min(8,options.refineLimit??8)));
   report.refined ||= [];
   for(const [n,{i}] of critical.entries()){
     if(report.refined.includes(i))continue;
     for(const index of [i,i+1])report.positions[index]=await engine.search({fen:game.fens[index],history:{initialFen:game.initialFen,moves:game.moves.slice(0,index).map(m=>m.uci)},settings:{...options,time:Math.min(5000,options.time*2),depth:Math.min(30,options.depth+2)}},{signal});
     report.refined.push(i);publish('refine',n+1,critical.length);
   }
-  const nominees=report.moves.map((mark,i)=>({mark,i})).filter(({mark,i})=>mark?.loss<2&&mark.best&&game.moves[i].piece!=='p');
+  const nominees=options.verifySacrifices===false?[]:report.moves.map((mark,i)=>({mark,i})).filter(({mark,i})=>mark?.loss<2&&mark.best&&game.moves[i].piece!=='p');
   let verified=0;report.specials ||= [];
   for(const [scan,{mark,i}] of nominees.entries()){
     if(signal?.aborted)throw new DOMException('Rozbor byl pozastaven.','AbortError');

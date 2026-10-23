@@ -1,5 +1,11 @@
 # Rozhraní a hráčské přehledy — 23. října 2026
 
+## Rozšíření 1.3
+
+Sdílitelný postup bez ručního tokenu: vlastní jméno, 10/20/30/50/100 partií, ruční výběr, serverové rozbory a přehled právě z vybraných her. Rychlý profil používá 150 ms, depth 16, MultiPV 2 a nejvýše dvě kritická ověření; neprovádí drahé potvrzování brilantních obětí. Podrobný profil používá 500 ms, depth 20, MultiPV 3 a oběti ověřuje. Dlouhé partie mají čas přiměřeně omezený. Časy jsou nastavení, ne garance dokončení.
+
+Na základě rešerše Chess.com Insights a Chessvision přibyly úseky partie po deseti tazích, konkrétní herní úseky s více chybami, skóre jednotlivých figur, krátkou variantou doložené materiální ztráty a minuté maty. Wilsonovo rozmezí je orientační binomický popis nejistoty; tahy stejné partie nejsou nezávislé. Priority podle fáze se formulují až od 20 vlastních vyhodnocených tahů v dané fázi. Následek ve variantě se nevydává za psychologickou příčinu chyby.
+
 ## Podklady
 
 - [Chess.com Insights](https://support.chess.com/en/articles/8708925-what-is-insights-on-chess-com): přehledy výsledků, zahájení, fází hry, kvality tahů, figur a času. Podporuje smysluplnost filtrů a rozdělení výsledků, nikoli kopírování neveřejné klasifikace.

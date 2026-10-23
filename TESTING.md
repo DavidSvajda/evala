@@ -1,5 +1,12 @@
 # Ověření Evala
 
+## Verze 1.3.0 — sdílení a společné rozbory
+
+- `npm test`: 20 kontrol včetně session bez tokenu, limitů vstupu, globální kapacity, importu 10–100 her a nových analytických metrik.
+- `node tests/shared-browser.mjs`: nový profil bez owner tokenu, importní formulář a ruční podmnožina, dvě celé partie přes skutečný serverový engine, 0 lokálních workerů/WASM, obnova vybraného přehledu. Importní odpověď je deterministická API fixture; engine ani backend nejsou mockované.
+- Šipky ověřeny z desky, filtru i při fokusu na nastavení na 1440×900, 1366×768, 1024×768 a 1280×640. Deska nemění polohu, větší rozměr se vejde do okna. Mobil 390×844 nemá horizontální přetečení.
+- Kontrola přes Impeccable: viz IMPECCABLE_AUDIT.md. Sestavení v GitHub Actions provádí navíc anonymní celý rozbor v nativním Docker image před jeho publikováním.
+
 ## Verze 1.2.0 — pracovní plocha a hráčské přehledy
 
 - `npm test`: 16 úspěšných kontrol. Nové ověření statistik pro správného hráče a barvu, oddělení dokončených výsledků od pokrytí enginem, neznámých údajů, PGN hodin, fází, tempa a pravidel great/miss pro obě barvy.

@@ -6,10 +6,11 @@ async function checkedFetch(url,options){
   if(!response.ok)throw new Error(response.status===404?'Uživatel nebo archiv nebyl nalezen.':response.status===429?'Server omezuje požadavky. Počkej chvíli a zkus import znovu.':`Import se nezdařil (HTTP ${response.status}). Zkus PGN soubor.`);
   return response;
 }
-export async function importUsername(username,platform,{signal,onProgress}={}){
+export async function importUsername(username,platform,{signal,onProgress,limit=20}={}){
   const user=checkedUser(username);
+  limit=Math.max(1,Math.min(100,Math.floor(Number(limit))||20));
   if(platform==='lichess'){
-    const response=await checkedFetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=20&moves=true&clocks=false&evals=false&ongoing=false`,{signal,headers:{Accept:'application/x-chess-pgn'}});
+    const response=await checkedFetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${limit}&moves=true&clocks=true&evals=false&ongoing=false&perfType=bullet,blitz,rapid,classical`,{signal,headers:{Accept:'application/x-chess-pgn'}});
     const text=await response.text();if(text.length>2_000_000)throw new Error('Import je příliš velký. Použij PGN soubor.');return text;
   }
   const base=`https://api.chess.com/pub/player/${encodeURIComponent(user.toLowerCase())}/games`;
@@ -17,13 +18,14 @@ export async function importUsername(username,platform,{signal,onProgress}={}){
   if(!Array.isArray(archives.archives)||!archives.archives.length)throw new Error('Uživatel nemá dostupné archivované partie.');
   const games=[];
   // Serial requests follow the provider's published rate-limit guidance.
-  for(const [i,url] of archives.archives.slice(-3).reverse().entries()){
+  const recent=archives.archives.slice(-12).reverse();
+  for(const [i,url] of recent.entries()){
     if(!/^https:\/\/api\.chess\.com\/pub\/player\/[a-z0-9_-]+\/games\/\d{4}\/\d{2}$/i.test(url))throw new Error('Neplatná adresa archivu.');
-    onProgress?.(`Načítám archiv ${i+1}/3…`);
+    onProgress?.(`Načítám archiv ${i+1}/${recent.length} · ${Math.min(limit,games.length)}/${limit} partií…`);
     const response=await (await checkedFetch(url,{signal})).json();
     games.push(...(Array.isArray(response.games)?response.games:[]).filter(g=>g.rules==='chess'&&typeof g.pgn==='string'&&g.end_time).sort((a,b)=>b.end_time-a.end_time));
-    if(games.length>=20)break;
+    if(games.length>=limit)break;
   }
-  if(!games.length)throw new Error('V posledních třech archivech nejsou dokončené standardní partie.');
-  return games.slice(0,20).map(g=>g.pgn).join('\n\n');
+  if(!games.length)throw new Error('V posledních dvanácti archivech nejsou dokončené standardní partie.');
+  return games.sort((a,b)=>b.end_time-a.end_time).slice(0,limit).map(g=>g.pgn).join('\n\n');
 }

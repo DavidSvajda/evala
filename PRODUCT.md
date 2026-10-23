@@ -16,6 +16,8 @@ A Czech-speaking chess player wants an immediately readable evaluation next to t
 
 The user also wants a complete review application: import PGN and public completed games by username, explore MultiPV lines and custom branches, classify moves including conservative sacrifice/brilliant detection, keep a local game library, and optionally move calculation to a free/academic server. Public import has been authorized for account Schweits; personal games must not be embedded into distributable artifacts.
 
+The hosted web is shareable with friends: enter their own username, fetch 10–100 completed games, select a subset, review it in sequence on the server, and receive evidence-based priorities and training positions. No manual API token is required for this flow. Public computation uses an expiring technical session, a shared engine queue and bounded quotas. A separate owner token continues to protect administrative/extension access. The active review requires the browser tab to stay open; completed games persist locally.
+
 ## Capabilities and constraints
 
 - User-pinned: vertical white/black bar left of the board; neutral at half; visible +3.0 or -3.2 score.
