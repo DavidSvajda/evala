@@ -2,21 +2,73 @@
   "manifest_version": 3,
   "name": "Evala — Chess Evaluation Bar",
   "short_name": "Evala",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Stockfish 19: evaluation bar, import PGN a veřejných partií, varianty a rozbor her. Lokální výpočet a volitelný vlastní server.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "offscreen"],
-  "host_permissions": ["https://api.chess.com/*","https://lichess.org/*"],
-  "optional_host_permissions": ["https://*/*","http://localhost/*","http://127.0.0.1/*"],
-  "background": {"service_worker":"background.js"},
-  "icons": {"16":"icons/16.png","32":"icons/32.png","48":"icons/48.png","128":"icons/128.png"},
-  "action": {"default_title":"Evala — nastavení evaluation baru","default_popup":"popup.html"},
-  "content_security_policy": {"extension_pages":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; base-uri 'none'"},
+  "permissions": [
+    "storage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://api.chess.com/*",
+    "https://lichess.org/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Evala — nastavení evaluation baru",
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; base-uri 'none'"
+  },
   "content_scripts": [
-    {"matches":["https://www.chess.com/*","https://chess.com/*","https://lichess.org/*"],"js":["bridge.js"],"run_at":"document_start","world":"MAIN"},
-    {"matches":["https://www.chess.com/*","https://chess.com/*","https://lichess.org/*"],"js":["content.js"],"run_at":"document_idle"}
+    {
+      "matches": [
+        "https://www.chess.com/*",
+        "https://chess.com/*",
+        "https://lichess.org/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.chess.com/*",
+        "https://chess.com/*",
+        "https://lichess.org/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
   ],
   "web_accessible_resources": [
-    {"resources":["fonts/*"],"matches":["https://www.chess.com/*","https://chess.com/*","https://lichess.org/*"]}
+    {
+      "resources": [
+        "fonts/*"
+      ],
+      "matches": [
+        "https://www.chess.com/*",
+        "https://chess.com/*",
+        "https://lichess.org/*"
+      ]
+    }
   ]
 }

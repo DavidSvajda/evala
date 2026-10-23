@@ -1,4 +1,14 @@
-# Ověření Evala 1.1.0
+# Ověření Evala
+
+## Verze 1.2.0 — pracovní plocha a hráčské přehledy
+
+- `npm test`: 16 úspěšných kontrol. Nové ověření statistik pro správného hráče a barvu, oddělení dokončených výsledků od pokrytí enginem, neznámých údajů, PGN hodin, fází, tempa a pravidel great/miss pro obě barvy.
+- `node tests/workspace-browser.mjs`: skutečný Full Stockfish rozbor ukázkové partie, odznak na posledním tahu, zachování fokusu na desce, Home/End a opakované šipky. Na 1440×900, 1366×768, 1024×768 a 1280×640 zůstávají deska, graf i export ve viewportu. Aktivní tah posouvá jen vlastní seznam.
+- Hráčský přehled: výsledky, filtr barvy, vyhodnocené chyby a funkční otevření tréninkové pozice. Rozbor i přehled ověřeny na 390×844 bez horizontálního přetečení.
+- `node tests/hosted-browser.mjs`: hostovaný web automaticky zvolil server, ověřil token a provedl celý rozbor přes API; 0 lokálních engine workerů a 0 WASM downloadů.
+- Vizuálně ověřena pracovní plocha i přehled na desktopu a mobilu. Screenshoty jsou v místním test-results, nikoli ve veřejném instalačním obrazu.
+
+## Předchozí verze 1.1
 
 Ověřeno 21.–22. října 2026 v desktopovém Chrome 155 na Windows.
 

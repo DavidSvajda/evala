@@ -1,4 +1,6 @@
-# Evala 1.1
+# Evala 1.2
+
+Verze 1.2 přidává pracovní plochu přizpůsobenou výšce okna, stabilní ovládání šipkami, označení tahu na desce a samostatný **Přehled hráče**. Importuj své partie, spusť jejich rozbor a v přehledu zadej přezdívku shodnou s PGN. Uvidíš výsledky podle barvy a zahájení, chyby podle fáze a konkrétní pozice k procvičení. Výsledkové statistiky fungují i bez enginu; hodnocení tahů a slabin vyžaduje rozebrané pozice. Podklady, pravidla a audit textů: [INSIGHTS_RESEARCH.md](INSIGHTS_RESEARCH.md).
 
 Svislý evaluation bar pro **Chess.com a Lichess**, s lokálním Stockfish 19 Lite. Bílá/černá výplň, podepsané hodnocení z pohledu bílého, dosažená hloubka, nastavení výkonu. Bez účtu, backendu, API klíče a předplatného.
 

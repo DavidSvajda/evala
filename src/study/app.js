@@ -6,6 +6,7 @@ import { reviewGame,summarize } from './review.js';
 import { loadLibrary,saveGame,removeGame,getPreferences,savePreferences } from './storage.js';
 import { importUsername } from './import.js';
 import { StudyBoard } from './board.js';
+import { analyzeLibrary,renderAnalytics } from './analytics.js';
 import { START_FEN } from '../core/position.js';
 import { scoreText,whitePercent } from '../core/evaluation.js';
 import { brand,icons } from '../ui/icons.js';
@@ -18,7 +19,7 @@ $('#brand').innerHTML=brand;$('#review-arrow').innerHTML=icons.arrow;$('#close-s
 $('#flip-board').innerHTML=stroke('<path d="M5 7h12l-3-3M19 17H7l3 3M17 7l-3 3M7 17l3-3"/>');
 $('#first-move').innerHTML=stroke('<path d="M7 5v14m10-13-7 6 7 6"/>');$('#previous-move').innerHTML=stroke('<path d="m15 5-7 7 7 7"/>');
 $('#next-move').innerHTML=stroke('<path d="m9 5 7 7-7 7"/>');$('#last-move').innerHTML=stroke('<path d="M17 5v14M7 6l7 6-7 6"/>');
-let library=[],selected=null,ply=0,flipped=false,branch=null,promotionMove=null;
+let library=[],selected=null,ply=0,flipped=false,branch=null,promotionMove=null,activeView='review';
 const hostedServer=!!document.querySelector('meta[name="evala-backend"][content="server"]');
 let options=getPreferences(hostedServer?{backend:'server',serverUrl:location.origin}:{}),job=null,importController=null,inspectController=null,inspectResult=null;
 let reviewer=null,inspector=null,reviewerKey='',inspectorKey='',saveAt=0,renderQueued=false;
@@ -92,9 +93,20 @@ $('#test-server').addEventListener('click',async()=>{
     if($('#bar-server').checked&&globalThis.chrome?.runtime?.id)await configureBarServer(true);
   }catch(e){$('#server-status').textContent=e.message;}
 });
-$('#toggle-settings').addEventListener('click',()=>{$('#study-settings').hidden=!$('#study-settings').hidden;if(!$('#study-settings').hidden)$('#study-settings').scrollIntoView({block:'nearest',behavior:'smooth'});});
-$('#close-settings').addEventListener('click',()=>$('#study-settings').hidden=true);
-$('#toggle-library').addEventListener('click',()=>{$('.workspace').classList.toggle('library-open');if($('.workspace').classList.contains('library-open'))$('.library').scrollIntoView({block:'start',behavior:'smooth'});});
+function setView(view){
+  activeView=view;$('.workspace').hidden=view!=='review';$('#analytics-workspace').hidden=view!=='analytics';
+  $('#view-review').setAttribute('aria-pressed',String(view==='review'));$('#view-analytics').setAttribute('aria-pressed',String(view==='analytics'));
+  if(view==='analytics'){if(!$('#insight-username').value)$('#insight-username').value=options.lastUsername||$('#username').value;updateAnalytics();}
+}
+function updateAnalytics(){renderAnalytics($('#analytics-content'),analyzeLibrary(library,{username:$('#insight-username').value,color:$('#insight-color').value,time:$('#insight-time').value,result:$('#insight-result').value}),moment=>{
+  const game=library.find(g=>g.id===moment.gameId);if(game){setView('review');selectGame(game);navigate(moment.ply);}
+});}
+$('#view-review').addEventListener('click',()=>setView('review'));$('#view-analytics').addEventListener('click',()=>setView('analytics'));
+$('#insights-form').addEventListener('submit',event=>{event.preventDefault();updateAnalytics();});
+for(const id of ['insight-color','insight-time','insight-result'])$('#'+id).addEventListener('change',updateAnalytics);
+$('#toggle-settings').addEventListener('click',()=>{setView('review');$('#study-settings').hidden=!$('#study-settings').hidden;$('#toggle-settings').setAttribute('aria-expanded',String(!$('#study-settings').hidden));});
+$('#close-settings').addEventListener('click',()=>{$('#study-settings').hidden=true;$('#toggle-settings').setAttribute('aria-expanded','false');$('#toggle-settings').focus({preventScroll:true});});
+$('#toggle-library').addEventListener('click',()=>{setView('review');$('.workspace').classList.toggle('library-open');$('#toggle-library').setAttribute('aria-expanded',String($('.workspace').classList.contains('library-open')));});
 
 async function store(game){try{await saveGame(game);}catch(e){error(e.message);}}
 function renderLibrary(){
@@ -110,6 +122,7 @@ function renderLibrary(){
 function selectGame(game){
   inspectController?.abort();inspectResult=null;selected=game;ply=0;branch=null;promotionMove=null;$('#promotion').hidden=true;
   sessionStorage.setItem('evala-current-game',game.id);error();renderLibrary();renderAll();
+  $('.workspace').classList.remove('library-open');
 }
 async function addPgn(text){
   const {games,errors}=parsePgnCollection(text);let added=0;
@@ -151,7 +164,7 @@ function renderReview(){
   if(!running)$('#review-progress').hidden=true;
   if(selected){
     const positions=selected.fens.length,seconds=Math.ceil(positions*options.time/1000);
-    $('#review-estimate').textContent=`První průchod: ${positions} pozic × ${options.time/1000} s ≈ ${seconds<60?seconds+' s':Math.ceil(seconds/60)+' min'} + načtení enginu. Kritické tahy se ověří znovu.${selected.analysis?' Uložený rozbor: '+(selected.analysis.engine==='lite'?'Lite':'Full')+'.':''}`;
+    $('#review-estimate').textContent=selected.analysis?.complete?`${selected.moves.length} vyhodnocených tahů · ${selected.analysis.engine==='lite'?'Lite':'Full NNUE'}`:`${positions} pozic · přibližně ${seconds<60?seconds+' s':Math.ceil(seconds/60)+' min'} + ověření kritických tahů`;
   }
 }
 $('#review-game').addEventListener('click',async()=>{
@@ -181,17 +194,18 @@ $('#review-game').addEventListener('click',async()=>{
 
 function renderPosition(){
   const fen=activeFen(),result=currentResult(),last=branch?branch.moves[branch.index-1]:selected?.moves[ply-1];
-  board.set(fen,{flipped,lastMove:last,arrow:options.arrows?result?.lines?.[0]?.pv?.[0]:null});
+  const mark=!branch&&ply?selected?.analysis?.moves?.[ply-1]:null;
+  board.set(fen,{flipped,lastMove:last,mark,arrow:options.arrows?result?.lines?.[0]?.pv?.[0]:null});
   $('.study-eval').classList.toggle('flipped',flipped);$('.eval-white').style.height=whitePercent(result)+'%';$('.eval-score').textContent=scoreText(result);$('.eval-depth').textContent=result?.depth?'d'+result.depth:'';
   $('.study-eval').setAttribute('aria-valuenow',String(result?.kind==='mate'?Math.sign(result.value)*10:Math.max(-10,Math.min(10,(result?.value||0)/100))));$('.study-eval').setAttribute('aria-valuetext',scoreText(result)+' z pohledu bílého');
-  $('#game-title').textContent=selected?`${selected.headers.White||'Bílý'} — ${selected.headers.Black||'Černý'}`:'Prostor pro tvoje další zlepšení.';
+  $('#game-title').textContent=selected?`${selected.headers.White||'Bílý'} — ${selected.headers.Black||'Černý'}`:'Vyber partii';
   $('#game-subtitle').textContent=selected?`${selected.headers.Result||'*'} · ${selected.headers.Event||'Importovaná partie'}${selected.headers.Date?' · '+selected.headers.Date:''}`:'Vyber partii v knihovně nebo importuj PGN.';
   $('#position-label').textContent=branch?`Vlastní varianta · ${branch.index}/${branch.moves.length}`:ply?`${Math.ceil(ply/2)}${ply%2?'.':'…'} ${selected.moves[ply-1].san}`:'Výchozí pozice';
   $('#return-game').hidden=!branch;$('#first-move').disabled=branch?branch.index===0:ply===0;$('#previous-move').disabled=$('#first-move').disabled;
   $('#last-move').disabled=branch?branch.index===branch.moves.length:!selected||ply===selected.moves.length;$('#next-move').disabled=$('#last-move').disabled;
   $('#analyze-position').disabled=!selected;$('#export-pgn').disabled=!selected;$('#delete-game').disabled=!selected||job?.game.id===selected?.id;
-  const mark=!branch&&ply?selected?.analysis?.moves?.[ply-1]:null;
-  $('#move-classification').innerHTML=mark?`<span class="classification ${esc(mark.kind)}"><span class="class-symbol">${esc(mark.symbol||'✓')}</span>${esc(mark.label)}</span>`:'';
+  $('#move-classification').innerHTML=mark?`<span class="classification ${esc(mark.kind)}"><span class="class-symbol">${esc(mark.symbol||'✓')}</span><span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:'';
+  $('#board-feedback').innerHTML=mark?`<span class="classification ${esc(mark.kind)}"><span class="class-symbol">${esc(mark.symbol||'✓')}</span><span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:`<span>${branch?'Vlastní varianta':ply?'Tah bez rozboru':'Výchozí pozice'}</span>`;
   $('#move-explanation').textContent=branch?'Zkoušíš vlastní pokračování. Tlačítkem Prozkoumat pozici spustíš nový výpočet.':mark?`${mark.note}${mark.proof?.continuation?' Po přijetí oběti: '+mark.proof.continuation:''}`:ply?'Tento tah zatím nemá hodnocení. Spusť rozbor partie.':'Vyber tah nebo spusť rozbor celé partie.';
   renderLines(result,fen);
 }
@@ -214,19 +228,21 @@ function renderMoves(){
     let visible=filter==='all';
     for(const index of [i,i+1]){
       const move=selected.moves[index];if(!move)continue;const mark=selected.analysis?.moves?.[index];
-      const critical=mark&&['inaccuracy','mistake','blunder','brilliant','sacrifice'].includes(mark.kind);visible ||= !!critical;
+      const critical=mark&&['inaccuracy','mistake','blunder','miss','great','brilliant','sacrifice'].includes(mark.kind);visible ||= !!critical;
       const button=document.createElement('button');button.className='move-button '+(mark?.kind||'');button.dataset.ply=index+1;button.setAttribute('aria-current',String(!branch&&ply===index+1));
       button.title=mark?`${mark.label} · skóre tahu ${mark.accuracy.toFixed(1)} %`:move.san;
       button.innerHTML=`<span>${esc(move.san)}</span><span class="move-symbol">${esc(mark?.symbol||'')}</span>`;button.addEventListener('click',()=>navigate(index+1));pair.append(button);
     }
     if(visible)fragment.append(pair);
   }
+  const focused=$('#move-list').contains(document.activeElement)?document.activeElement.dataset.ply:null;
   $('#move-list').replaceChildren(fragment);
+  if(focused)$('#move-list').querySelector(`[data-ply="${focused}"]`)?.focus({preventScroll:true});
 }
 function renderSummary(){
   if(!selected?.analysis?.moves?.some(Boolean)){$('#summary').hidden=true;return;}
   const summary=summarize(selected);$('#summary').hidden=false;
-  $('#summary').innerHTML=['w','b'].map(color=>{const s=summary[color];return `<div><span class="player-name">${esc(selected.headers[color==='w'?'White':'Black']||(color==='w'?'Bílý':'Černý'))}</span><strong>${s.accuracy===null?'—':s.accuracy.toFixed(1)+' %'}</strong><span class="player-detail">Průměr skóre tahů<br>${s.blunders} hrubých chyb · ${s.mistakes} chyb${s.brilliants?' · '+s.brilliants+' brilantních*':''}</span></div>`;}).join('');
+  $('#summary').innerHTML=['w','b'].map(color=>{const s=summary[color];return `<div><span class="player-name">${esc(selected.headers[color==='w'?'White':'Black']||(color==='w'?'Bílý':'Černý'))}</span><strong title="Průměr skóre vyhodnocených tahů">${s.accuracy===null?'—':s.accuracy.toFixed(1)+' %'}</strong><span class="player-detail">${s.blunders} hrubých · ${s.mistakes} chyb${s.brilliants?' · '+s.brilliants+' brilantních':''}</span></div>`;}).join('');
 }
 function renderGraph(){
   const positions=selected?.analysis?.positions;if(!positions?.some(Boolean)){$('#eval-graph').innerHTML='<p class="empty-graph">Po rozboru tu uvidíš zvraty a rozhodující momenty.</p>';return;}
@@ -236,13 +252,27 @@ function renderGraph(){
   $('#eval-graph svg').addEventListener('click',event=>{const r=event.currentTarget.getBoundingClientRect();navigate(Math.max(0,Math.min(max,Math.round((event.clientX-r.left)/r.width*max))));});
 }
 function renderAll(){renderPosition();renderMoves();renderSummary();renderGraph();renderReview();}
-function navigate(index){inspectController?.abort();inspectResult=null;branch=null;promotionMove=null;$('#promotion').hidden=true;ply=Math.max(0,Math.min(selected?.moves.length||0,index));renderPosition();renderMoves();renderGraph();}
-function step(amount){if(branch){inspectController?.abort();inspectResult=null;branch.index=Math.max(0,Math.min(branch.moves.length,branch.index+amount));renderPosition();}else navigate(ply+amount);}
+function highlightMove(scroll=false){
+  const list=$('#move-list');for(const button of list.querySelectorAll('[data-ply]'))button.setAttribute('aria-current',String(!branch&&Number(button.dataset.ply)===ply));
+  const current=list.querySelector('[aria-current="true"]');
+  if(scroll&&current){const item=current.getBoundingClientRect(),bounds=list.getBoundingClientRect();if(item.top<bounds.top)list.scrollTop-=bounds.top-item.top;else if(item.bottom>bounds.bottom)list.scrollTop+=item.bottom-bounds.bottom;}
+}
+function navigate(index){inspectController?.abort();inspectResult=null;branch=null;promotionMove=null;$('#promotion').hidden=true;ply=Math.max(0,Math.min(selected?.moves.length||0,index));renderPosition();highlightMove(true);renderGraph();}
+function step(amount){if(branch){inspectController?.abort();inspectResult=null;branch.index=Math.max(0,Math.min(branch.moves.length,branch.index+amount));renderPosition();highlightMove();}else navigate(ply+amount);}
 $('#previous-move').addEventListener('click',()=>step(-1));$('#next-move').addEventListener('click',()=>step(1));
 $('#first-move').addEventListener('click',()=>branch?step(-branch.moves.length):navigate(0));$('#last-move').addEventListener('click',()=>branch?step(branch.moves.length):navigate(selected?.moves.length||0));
 $('#return-game').addEventListener('click',()=>navigate(ply));$('#flip-board').addEventListener('click',()=>{flipped=!flipped;renderPosition();});
 $('#move-filter').addEventListener('change',renderMoves);
-document.addEventListener('keydown',event=>{if(/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))return;if(event.key==='ArrowRight'){event.preventDefault();step(1);}if(event.key==='ArrowLeft'){event.preventDefault();step(-1);}if(event.key==='Escape'&&branch)navigate(ply);});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){if(!$('#study-settings').hidden)$('#close-settings').click();else if(branch)navigate(ply);return;}
+  if(activeView!=='review'||!selected||!$('#study-settings').hidden||event.altKey||event.ctrlKey||event.metaKey||event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+  if(['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+    event.preventDefault();event.stopPropagation();
+    if(event.key==='Home')branch?step(-branch.moves.length):navigate(0);
+    else if(event.key==='End')branch?step(branch.moves.length):navigate(selected.moves.length);
+    else step(['ArrowRight','ArrowDown'].includes(event.key)?1:-1);
+  }
+});
 function startBranch(pv){
   inspectController?.abort();inspectResult=null;const fen=activeFen(),chess=new Chess(fen),moves=[],fens=[fen];
   for(const uci of pv){try{const m=chess.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]});moves.push({from:m.from,to:m.to,san:m.san,uci});fens.push(chess.fen());}catch{break;}}

@@ -25,7 +25,11 @@ export function parsePgn(pgn) {
   if (history.length > 600) throw new Error('Limit je 600 půltahů na partii.');
   const initialFen = history[0].before;
   if (!validPosition(initialFen)) throw new Error('Neplatná výchozí pozice partie.');
-  const moves = history.map(m=>({san:m.san,uci:m.from+m.to+(m.promotion||''),color:m.color,from:m.from,to:m.to,piece:m.piece,captured:m.captured||null,promotion:m.promotion||null,fenBefore:m.before,fenAfter:m.after}));
+  const comments=new Map(chess.getComments().map(item=>[item.fen,item.comment]));
+  const moves = history.map(m=>{
+    const clock=comments.get(m.after)?.match(/\[%clk\s+(\d+):(\d+):(\d+(?:\.\d+)?)\]/);
+    return {san:m.san,uci:m.from+m.to+(m.promotion||''),color:m.color,from:m.from,to:m.to,piece:m.piece,captured:m.captured||null,promotion:m.promotion||null,fenBefore:m.before,fenAfter:m.after,clockAfter:clock?Number(clock[1])*3600+Number(clock[2])*60+Number(clock[3]):null};
+  });
   const canonical = initialFen+'|'+moves.map(m=>m.uci).join(' ');
   return {id:fingerprint(canonical),pgn:chess.pgn(),headers,initialFen,moves,fens:[initialFen,...moves.map(m=>m.fenAfter)],createdAt:Date.now(),analysis:null};
 }

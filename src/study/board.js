@@ -8,8 +8,8 @@ export class StudyBoard{
     this.arrows=document.createElementNS('http://www.w3.org/2000/svg','svg');this.arrows.setAttribute('viewBox','0 0 800 800');this.arrows.classList.add('board-arrows');this.arrows.setAttribute('aria-hidden','true');element.append(this.arrows);
     this.grid.addEventListener('click',event=>{const button=event.target.closest('[data-square]');if(button)this.click(button.dataset.square);});
   }
-  set(fen,{lastMove=null,arrow=null,flipped=this.flipped}={}){
-    this.chess=new Chess(fen);this.flipped=flipped;this.lastMove=lastMove;this.arrow=arrow;this.selected=null;this.paint();
+  set(fen,{lastMove=null,arrow=null,mark=null,flipped=this.flipped}={}){
+    this.chess=new Chess(fen);this.flipped=flipped;this.lastMove=lastMove;this.arrow=arrow;this.mark=mark;this.selected=null;this.paint();
   }
   paint(){
     const legal=this.selected?this.chess.moves({square:this.selected,verbose:true}):[];
@@ -23,11 +23,18 @@ export class StudyBoard{
       if(legal.some(m=>m.to===square))button.classList.add(piece?'legal-capture':'legal');
       button.setAttribute('aria-label',`${square}${piece?' '+(piece.color==='w'?'bílý ':'černý ')+names[piece.type]:''}`);
       if(piece){const image=document.createElement('img');image.src=`pieces/${piece.color}${piece.type.toUpperCase()}.svg`;image.alt='';image.draggable=false;button.append(image);}
+      if(this.mark&&this.lastMove?.to===square){
+        const badge=document.createElement('span');badge.className='board-mark '+this.mark.kind;
+        badge.textContent=this.mark.symbol||'✓';badge.title=this.mark.label;badge.setAttribute('aria-label',this.mark.label);
+        button.append(badge);button.classList.add('marked-square');button.setAttribute('aria-label',button.getAttribute('aria-label')+' · '+this.mark.label);
+      }
       if(y===7){const label=document.createElement('span');label.className='file-label';label.textContent=square[0];button.append(label);}
       if(x===7){const label=document.createElement('span');label.className='rank-label';label.textContent=square[1];button.append(label);}
       fragment.append(button);
     }
+    const focused=this.grid.contains(document.activeElement)?document.activeElement.dataset.square:null;
     this.grid.replaceChildren(fragment);this.paintArrow();
+    if(focused)this.grid.querySelector(`[data-square="${focused}"]`)?.focus({preventScroll:true});
   }
   coords(square){let x='abcdefgh'.indexOf(square[0]),y=8-Number(square[1]);if(this.flipped){x=7-x;y=7-y;}return [x*100+50,y*100+50];}
   paintArrow(){

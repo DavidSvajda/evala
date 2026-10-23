@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
 
-export const REVIEW_VERSION=2;
+export const REVIEW_VERSION=3;
 const values={p:100,n:320,b:330,r:500,q:900,k:0};
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 export function expectedPercent(score){
@@ -11,13 +11,17 @@ export function expectedPercent(score){
 }
 function material(chess,color){return chess.board().flat().filter(Boolean).reduce((sum,p)=>sum+(p.color===color?1:-1)*values[p.type],0);}
 
-export function classifyMove(move,before,after){
+export function classifyMove(move,before,after,{previous}={}){
   if(!before||!after)return null;
   const sign=move.color==='w'?1:-1;
   const loss=Math.max(0,(expectedPercent(before)-expectedPercent(after))*sign);
   const accuracy=clamp(103.1668*Math.exp(-.04354*loss)-3.1669,0,100);
   const best=before.lines?.[0]?.pv?.[0]===move.uci;
   const base={loss,accuracy,best,depth:Math.min(before.depth||0,after.depth||0)};
+  const own=score=>move.color==='w'?expectedPercent(score):100-expectedPercent(score);
+  const second=before.lines?.[1];
+  if(best&&loss<2&&base.depth>=14&&second?.depth>=14&&own(after)>=45&&own(before)-own(second)>=20)return {...base,kind:'great',label:'Skvělý tah',symbol:'!',note:'Výrazně lepší než druhá spočítaná varianta. Hloubka obou variant je alespoň 14.'};
+  if(!best&&loss>=10&&((before.kind==='mate'&&before.value*sign>0&&!(after.kind==='mate'&&after.value*sign>0))||(previous&&own(before)>=65&&own(after)<55&&own(before)-own(previous)>=10)))return {...base,kind:'miss',label:'Promarněná šance',symbol:'×',note:before.kind==='mate'?'Tah minul vynucený mat.':'Po chybě soupeře přišla příležitost, kterou tah nevyužil.'};
   if(best&&loss<5)return {...base,kind:'best',label:'Nejlepší',symbol:'★',note:'Zahraný tah odpovídá první variantě enginu.'};
   if(loss<2)return {...base,kind:'excellent',label:'Výborný',symbol:'✓',note:'Zachovává téměř celé hodnocení pozice.'};
   if(loss<5)return {...base,kind:'good',label:'Dobrý',symbol:'',note:'Rozumné pokračování s malou ztrátou hodnocení.'};
@@ -54,7 +58,7 @@ export function summarize(game){
   const list=game.analysis?.moves||[];
   return Object.fromEntries(['w','b'].map(color=>{
     const marks=list.filter((m,i)=>m&&game.moves[i].color===color);
-    return [color,{accuracy:marks.length?marks.reduce((n,m)=>n+m.accuracy,0)/marks.length:null,count:marks.length,blunders:marks.filter(m=>m.kind==='blunder').length,mistakes:marks.filter(m=>m.kind==='mistake').length,brilliants:marks.filter(m=>m.kind==='brilliant').length}];
+    return [color,{accuracy:marks.length?marks.reduce((n,m)=>n+m.accuracy,0)/marks.length:null,count:marks.length,blunders:marks.filter(m=>m.loss>=20).length,mistakes:marks.filter(m=>m.loss>=10&&m.loss<20).length,brilliants:marks.filter(m=>m.kind==='brilliant').length}];
   }));
 }
 
@@ -63,7 +67,7 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
   if(game.analysis?.key!==key)game.analysis={key,version:REVIEW_VERSION,positions:[],moves:[],complete:false,engine:options.engine,options:{depth:options.depth,time:options.time,multipv:options.multipv},startedAt:Date.now()};
   const report=game.analysis,start=performance.now();let processed=0;
   const publish=(phase,index,total)=>{
-    report.moves=game.moves.map((move,i)=>classifyMove(move,report.positions[i],report.positions[i+1]));
+    report.moves=game.moves.map((move,i)=>classifyMove(move,report.positions[i],report.positions[i+1],{previous:report.positions[i-1]}));
     for(const [i,mark] of (report.specials||[]))if(report.moves[i])report.moves[i]={...report.moves[i],...mark};
     onUpdate?.({phase,index,total,processed,elapsed:performance.now()-start,report});
   };
