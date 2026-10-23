@@ -19,4 +19,11 @@ Neověřováno přihlášení ani vlastní partie proti hráčům. Změny soukro
 - Naměřený browser průchod jedné skutečné 46-půltahové partie s Full NNUE, 300 ms / pozici, 2 variantami a ověřováním kritických momentů: 27,1 a 27,8 sekundy ve dvou bězích. Platí pro toto konkrétní zařízení a test; změny klasifikace obětí mohou přidat další ověření. Nejde o benchmark univerzitního ani bezplatného cloudového serveru.
 - Prošel kompletní rozbor přes skutečné serverové API i z webového rozhraní: ověření tokenu, streamování více pozic, návrat výsledků a uložení rozboru. Nainstalované MV3 rozšíření rovněž ověřilo skutečný API import účtu Schweits a Full NNUE varianty pod extension CSP.
 - `npm run test:remote-bar`: prošlo propojení nainstalovaného MV3 rozšíření se skutečným Node API a plným enginem, ověření spojení v aplikaci, dočasné uložení tokenu, zapnutí serverového baru a automatický přepočet po e2e4 na Chess.com fixture. Testovací kopie rozšíření má předem udělený přístup k localhostu; produkční instalace jej vyžádá při připojení.
-- Docker konfigurace je připravená, ale na tomto počítači neběží Docker daemon. Image nebyl spuštěn; backend byl otestován přímo jako Node služba.
+- Nativní Docker image byl sestaven a spuštěn v GitHub Actions: oficiální Stockfish 19, ověřený kontrolní součet, skutečný API MultiPV výpočet před publikováním. Lokální Docker daemon nebyl potřeba.
+
+## Azure — 23. října 2026
+
+- Nasazeno na Azure Container Apps Consumption: 2 vCPU, 4 GiB, 2 engine vlákna, jeden výpočetní slot, 0–1 replik.
+- Skutečný HTTPS API test: tři varianty, hloubka 18, přibližně 2,1 milionu uzlů za sekundu. Čas požadavku 1,89 s; šlo o zahřátou instanci.
+- `node tests/azure-browser.mjs`: celá skutečná 46půltahová partie Schweits zpracována za 90,849 s s profilem balanced (750 ms/pozici, MultiPV 3), včetně dodatečných ověření. Graf i klasifikace se zobrazily, žádné chyby JavaScriptu. Prohlížeč vytvořil 0 engine workerů a stáhl 0 WASM souborů.
+- Jednotlivé výsledky jsou měření této konfigurace a partie, nikoli záruka stejné rychlosti nebo bezplatného nepřetržitého provozu.

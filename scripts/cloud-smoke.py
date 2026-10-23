@@ -31,6 +31,17 @@ except urllib.error.HTTPError as error:
     assert error.code == 401
 with request('/', authenticated=False) as response:
     assert b'<meta name="evala-backend" content="server">' in response.read()
+extension_origin = 'chrome-extension://' + 'a' * 32
+req = urllib.request.Request(base + '/api/health', headers={
+    'Origin': extension_origin, 'Authorization': 'Bearer ' + token})
+with urllib.request.urlopen(req, timeout=90) as response:
+    assert response.headers['Access-Control-Allow-Origin'] == extension_origin
+req = urllib.request.Request(base + '/api/analyze', method='OPTIONS', headers={
+    'Origin': extension_origin, 'Access-Control-Request-Method': 'POST',
+    'Access-Control-Request-Headers': 'authorization,content-type'})
+with urllib.request.urlopen(req, timeout=90) as response:
+    assert response.status == 204
+print('PASS: authenticated extension origin and CORS preflight')
 fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 start = time.monotonic()
 with request('/api/analyze', {'fen': fen, 'settings': {'time': 1000, 'depth': 18, 'multipv': 3}}) as response:
