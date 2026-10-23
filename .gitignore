@@ -1,0 +1,10 @@
+node_modules/
+.npm-cache/
+.playwright/
+test-results/
+release/
+dist/
+*.log
+.env
+.local-data/
+.azure-cli-venv/

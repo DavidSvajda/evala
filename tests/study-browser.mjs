@@ -1,0 +1,62 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import { readFile,mkdir } from 'node:fs/promises';
+import { createServer } from '../scripts/serve.mjs';
+import { createAnalysisServer } from '../server/index.mjs';
+
+await mkdir('test-results',{recursive:true});
+const server=createServer(4175);await new Promise(done=>server.on('listening',done));
+const backend=createAnalysisServer({token:'browser-test-token',origins:['http://127.0.0.1:4175']});await new Promise(done=>backend.listen(0,'127.0.0.1',done));
+const browser=await chromium.launch({executablePath:process.env.EVALA_BROWSER||'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',headless:true,args:['--no-sandbox']});
+const context=await browser.newContext({viewport:{width:1560,height:1100}}),page=await context.newPage(),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+try{
+  await page.goto('http://127.0.0.1:4175/study.html');
+  await page.locator('#pgn-input').fill('[White "Test White"]\n[Black "Test Black"]\n\n1. f3 e5 2. g4 Qh4# 0-1');
+  await page.locator('#import-pgn').click();await page.getByRole('heading',{name:'Test White — Test Black'}).waitFor();
+  await page.locator('#toggle-settings').click();
+  await page.locator('#profile').selectOption('quick');
+  await page.locator('#study-time').fill('100');await page.locator('#study-time').dispatchEvent('change');
+  await page.locator('#study-lines').selectOption('2');await page.locator('#close-settings').click();
+  await page.locator('#review-game').click();
+  await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:60000});
+  assert.equal(await page.locator('.summary strong').count(),2);assert.equal(await page.locator('#eval-graph svg').count(),1);
+  if(!await page.locator('#first-move').isDisabled())await page.locator('#first-move').click();assert.ok(await page.locator('.engine-line').count()>=2);
+  await page.locator('.engine-line').first().click();assert.equal(await page.locator('#return-game').isVisible(),true);
+  await page.locator('#return-game').click();
+  await page.locator('#study-board [data-square=e2]').click();await page.locator('#study-board [data-square=e4]').click();
+  await page.waitForFunction(()=>document.querySelector('#inspect-status').textContent.startsWith('Hotovo'),{}, {timeout:20000});
+  assert.match(await page.locator('#position-label').textContent(),/Vlastní varianta/);
+  await page.locator('#return-game').click();
+  const downloadPromise=page.waitForEvent('download');await page.locator('#export-pgn').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/\.pgn$/);
+  await page.reload();await page.getByRole('heading',{name:'Test White — Test Black'}).waitFor();assert.equal(await page.locator('#review-state').textContent(),'Uloženo');
+  const pgn=await readFile('.local-data/schweits.pgn','utf8').catch(()=>null);
+  if(pgn){
+    await page.locator('#import-panel').evaluate(el=>el.open=true);await page.locator('#pgn-input').fill(pgn);await page.locator('#import-pgn').click();
+    await page.waitForFunction(()=>Number(document.querySelector('#library-count').textContent)>=20);
+    assert.match(await page.locator('#game-title').textContent(),/Schweits/);
+    await page.locator('#toggle-settings').click();await page.locator('#profile').selectOption('quick');await page.locator('#close-settings').click();
+    const started=Date.now();await page.locator('#review-game').click();
+    await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:120000});
+    console.log(`BENCHMARK: Schweits latest 46-ply game, Full NNUE, 300 ms / position + critical rechecks: ${((Date.now()-started)/1000).toFixed(1)} seconds`);
+    const critical=page.locator('.move-button.blunder,.move-button.mistake');if(await critical.count())await critical.first().click();
+    console.log('PASS: 20 actual public Schweits games imported via PGN, library persisted');
+  }
+  await page.screenshot({path:'test-results/study-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'mobile must not overflow horizontally');
+  await page.screenshot({path:'test-results/study-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1560,height:1100});
+  await page.locator('.game-item').filter({hasText:'Test White'}).click();
+  await page.locator('#toggle-settings').click();await page.locator('#backend').selectOption('server');
+  await page.locator('#server-url').fill(`http://127.0.0.1:${backend.address().port}`);await page.locator('#server-url').dispatchEvent('change');
+  await page.locator('#server-token').fill('browser-test-token');await page.locator('#server-token').dispatchEvent('change');
+  await page.locator('#test-server').click();await page.waitForFunction(()=>document.querySelector('#server-status').textContent.startsWith('Připojeno'));
+  await page.locator('#profile').selectOption('quick');await page.locator('#study-time').fill('100');await page.locator('#study-time').dispatchEvent('change');await page.locator('#close-settings').click();
+  let requests=0;page.on('request',req=>{if(req.url().endsWith('/api/analyze'))requests++;});
+  await page.locator('#review-game').click();await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:60000});
+  assert.ok(requests>=4,'server mode must use real streamed API for multiple positions');
+  assert.deepEqual(errors,[]);
+  console.log('PASS: Full NNUE review, MultiPV, graph, classification, line playback, custom moves, export, IndexedDB reload, narrow viewport and complete server-mode review');
+}finally{await browser.close();backend.closeAllConnections();await new Promise(done=>backend.close(done));await new Promise(done=>server.close(done));}

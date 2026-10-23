@@ -1,0 +1,12 @@
+services:
+  evala:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      API_TOKEN: ${API_TOKEN:?Set a strong API_TOKEN in your environment or .env file}
+      ENGINE_CONCURRENCY: "1"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    mem_limit: 1500m
+    cpus: 2
+    restart: unless-stopped

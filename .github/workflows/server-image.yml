@@ -1,0 +1,45 @@
+name: Build Evala server
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: evala-server-image
+  cancel-in-progress: false
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Authenticate to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Build and verify native engine
+        run: docker build --platform linux/amd64 --file Dockerfile.azure --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
+      - name: Smoke test the container
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          docker run -d --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" "$IMAGE:$GITHUB_SHA"
+          trap 'docker rm -f evala-smoke >/dev/null' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health
+          curl --fail --silent --no-buffer --header "Authorization: Bearer $token" --header 'Content-Type: application/json' \
+            --data '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","settings":{"depth":10,"time":300,"multipv":2}}' \
+            http://127.0.0.1:8080/api/analyze > result.ndjson
+          node --input-type=module -e 'import fs from "node:fs";const result=fs.readFileSync("result.ndjson","utf8").trim().split("\n").map(JSON.parse).find(x=>x.type==="done");if(!result||result.result.lines.length<2)throw Error("Native engine returned no MultiPV result");console.log("Native Stockfish + API passed");'
+      - name: Publish tested image
+        run: |
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:server"
+          echo "Image: $IMAGE:$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

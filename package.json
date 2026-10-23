@@ -1,0 +1,30 @@
+{
+  "name": "evala",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Stockfish evaluation bar for Chess.com and Lichess",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:extension": "node tests/extension.mjs",
+    "test:study": "node tests/study-browser.mjs",
+    "test:remote-bar": "node tests/remote-bar.mjs",
+    "server": "node server/index.mjs",
+    "serve": "node scripts/serve.mjs",
+    "package": "npm run build && node scripts/package.mjs"
+  },
+  "dependencies": {
+    "chess.js": "1.4.0",
+    "stockfish": "19.0.1"
+  },
+  "devDependencies": {
+    "@fontsource-variable/manrope": "^5.2.8",
+    "esbuild": "^0.25.12",
+    "fflate": "^0.8.2",
+    "playwright": "^1.56.1",
+    "sharp": "^0.35.5"
+  }
+}

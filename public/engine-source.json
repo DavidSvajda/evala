@@ -1,0 +1,9 @@
+{
+  "package": "stockfish",
+  "version": "19.0.1",
+  "gitHead": "0d5dd7944f88c817c07a26bc4fb1905d5f9c46d6",
+  "sourceTag": "v19.0.1",
+  "repository": "https://github.com/nmrugg/stockfish.js",
+  "tarball": "https://registry.npmjs.org/stockfish/-/stockfish-19.0.1.tgz",
+  "integrity": "sha512-bTwsO4e9HAwPBKls1+szcfibmaWRNzTF20rQE/XPdB3LOSoT6XTZDr1zYwriwSRRFT5MkvqrglPmJrKEVXGnyQ=="
+}

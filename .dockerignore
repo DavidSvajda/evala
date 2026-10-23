@@ -1,0 +1,11 @@
+node_modules
+.npm-cache
+.git
+dist
+release
+test-results
+vendor-source
+.env
+.local-data
+.azure-cli-venv
+*.log
