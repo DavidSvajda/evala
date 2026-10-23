@@ -10,7 +10,7 @@ import { nodeWorker } from './worker.mjs';
 
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.wasm':'application/wasm','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.json':'application/json','.txt':'text/plain; charset=utf-8'};
 const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
-export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrency=Number(process.env.ENGINE_CONCURRENCY||1),origins=(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),root=resolve('dist')}={}){
+export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrency=Number(process.env.ENGINE_CONCURRENCY||1),origins=(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),allowExtensionOrigins=process.env.ALLOW_EXTENSION_ORIGINS==='true',root=resolve('dist')}={}){
   const limit=Math.max(1,Math.min(4,Math.floor(concurrency)||1));
   const slots=Array.from({length:limit},()=>({engine:new StudyEngine(()=>nodeWorker()),busy:false}));
   const originsSet=new Set(origins),rates=new Map();
@@ -20,7 +20,10 @@ export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrenc
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
     const origin=req.headers.origin;
     const sameOrigin=origin&&(()=>{try{return new URL(origin).host===req.headers.host;}catch{return false;}})();
-    if(origin&&!sameOrigin&&!originsSet.has(origin)){json(res,403,{error:'Origin is not allowed. Configure ALLOWED_ORIGINS.'});return;}
+    // Chrome extensions still need the personal bearer token on every API call.
+    // Only preflight is unauthenticated; ordinary website origins remain blocked.
+    const extensionOrigin=allowExtensionOrigins&&!!token&&/^chrome-extension:\/\/[a-p]{32}$/.test(origin||'');
+    if(origin&&!sameOrigin&&!extensionOrigin&&!originsSet.has(origin)){json(res,403,{error:'Origin is not allowed. Configure ALLOWED_ORIGINS.'});return;}
     if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
     if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Max-Age':'600'});res.end();return;}
     let url;try{url=new URL(req.url,'http://localhost');}catch{json(res,400,{error:'Bad URL'});return;}

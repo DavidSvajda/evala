@@ -4,6 +4,8 @@ Zdrojový repozitář: soukromý `DavidSvajda/evala`. Sestavení je ruční GitH
 
 Azure používá povolený region Germany West Central, skupinu `evala-chess`, prostředí `evala-env`, profil Consumption a aplikaci `evala`. Cílové parametry jsou 2 vCPU / 4 GiB, ENGINE_THREADS=2 a jeden engine slot. Minimum replik 0, maximum 1. Vlastní Log Analytics není zapnutý.
 
+Nasazení zapíná `ALLOW_EXTENSION_ORIGINS=true`: platné Chrome extension originy mohou použít API se stejným osobním tokenem. Samotný origin přístup neposkytuje, každý výpočet i health vyžadují Bearer token. Běžné cizí webové originy zůstávají blokované. Díky tomu není nutné ručně registrovat jiné ID každé rozbalené instalace.
+
 S přihlášeným projektovým Azure CLI:
 
 ```powershell

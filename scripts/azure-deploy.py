@@ -25,7 +25,7 @@ def public_image(reference):
         bearer = json.load(response)['token']
     request = urllib.request.Request(f'https://ghcr.io/v2/{repository}/manifests/{tag}', headers={
         'Authorization': f'Bearer {bearer}',
-        'Accept': 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+        'Accept': 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
     })
     with urllib.request.urlopen(request, timeout=30) as response:
         content = response.read()
@@ -69,6 +69,7 @@ def configuration(environment_id, image, token, location):
                         {'name': 'PORT', 'value': '8080'},
                         {'name': 'ENGINE_THREADS', 'value': '2'},
                         {'name': 'ENGINE_CONCURRENCY', 'value': '1'},
+                        {'name': 'ALLOW_EXTENSION_ORIGINS', 'value': 'true'},
                     ],
                     'probes': [
                         {'type': 'Startup', 'tcpSocket': {'port': 8080}, 'periodSeconds': 2,
@@ -77,7 +78,7 @@ def configuration(environment_id, image, token, location):
                          'timeoutSeconds': 2, 'failureThreshold': 3},
                     ],
                 }],
-                'scale': {'minReplicas': 0, 'maxReplicas': 1, 'cooldownPeriod': 60,
+                'scale': {'minReplicas': 0, 'maxReplicas': 1,
                           'rules': [{'name': 'http', 'http': {'metadata': {'concurrentRequests': '1'}}}]},
             },
         },
@@ -99,7 +100,7 @@ def main():
         raise ValueError('Unexpected deployment region')
     image = public_image(args.image)
     print(json.dumps({'subscription': account['name'], 'image': image, 'region': location,
-                      'cpu': 2, 'memory': '4Gi', 'replicas': '0–1', 'logs': 'no Log Analytics'}, ensure_ascii=False))
+                      'cpu': 2, 'memory': '4Gi', 'replicas': '0-1', 'logs': 'no Log Analytics'}, ensure_ascii=False))
     if not args.apply:
         return
     PRIVATE.mkdir(parents=True, exist_ok=True)
