@@ -30,7 +30,9 @@ try:
 except urllib.error.HTTPError as error:
     assert error.code == 401
 with request('/', authenticated=False) as response:
-    assert b'<meta name="evala-backend" content="server">' in response.read()
+    html = response.read()
+    assert b'<meta name="evala-backend" content="server">' in html
+    assert b'id="view-analytics"' in html and b'id="analytics-workspace"' in html
 extension_origin = 'chrome-extension://' + 'a' * 32
 req = urllib.request.Request(base + '/api/health', headers={
     'Origin': extension_origin, 'Authorization': 'Bearer ' + token})
