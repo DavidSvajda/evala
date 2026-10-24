@@ -63,7 +63,7 @@ def configuration(environment_id, image, token, location, google_client_id='', s
             },
             'template': {
                 'containers': [{
-                    'name': 'evala', 'image': image, 'resources': {'cpu': 2, 'memory': '4Gi'},
+                    'name': 'evala-web', 'image': image, 'resources': {'cpu': 2, 'memory': '4Gi'},
                     'env': [
                         {'name': 'API_TOKEN', 'secretRef': 'api-token'},
                         {'name': 'HOST', 'value': '0.0.0.0'},
