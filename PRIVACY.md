@@ -1,15 +1,29 @@
-# Zásady soukromí Evala
+# Soukromí v Evale
 
-Rozšíření čte aktuální šachovou pozici na Chess.com a Lichess, aby ji mohlo vyhodnotit. Podle dostupnosti používá FEN z herního rozhraní, viditelné figury a seznam tahů.
+## Režim hosta a místní rozšíření
 
-Výpočet ve výchozím lokálním režimu provádí přibalený Stockfish v prohlížeči. V tomto režimu se pozice, tahy ani hodnocení neposílají na výpočetní server. Rozšíření neobsahuje analytiku, reklamy, účty ani vzdáleně načítaný spustitelný kód.
+Malé rozšíření s evaluation barem počítá přes lokální Stockfish. Neodesílá pozice na server a nepoužívá účet. Webovou knihovnu a trénink lze používat také bez přihlášení; v takovém případě zůstávají uložené v prohlížeči. Vymazání dat webu může tuto místní knihovnu odstranit.
 
-Do lokálního úložiště ukládá nastavení a do IndexedDB knihovnu importovaných partií a jejich rozborů. Import podle username kontaktuje veřejné API Chess.com nebo Lichess; poskytovatel vidí požadavek a veřejné jméno. Heslo k šachovému účtu se nevyžaduje.
+## Import a výpočet
 
-Sdílený web má serverový rozbor jako výchozí režim. Po spuštění rozboru posílá celé PGN vybraných dokončených partií včetně veřejných jmen, hlaviček a případných hodin na server. Ten je zpracuje v paměti; hotová knihovna je uložena do prohlížeče. Technická HttpOnly cookie s platností 8 hodin identifikuje připojení pro frontu a limity. Náhodný identifikátor a čítače připojení jsou v paměti serveru, nejsou spojeny s přihlášeným účtem ani reklamními službami. Hromadný rozbor vyžaduje otevřenou kartu; při zavření se probíhající požadavek přeruší.
+Import veřejných partií kontaktuje API Chess.com nebo Lichess. Služba uvidí požadovanou přezdívku a síťový požadavek. Evala nevyžaduje heslo k šachovému účtu. Samotné zadání přezdívky neověřuje vlastnictví profilu.
 
-Při výslovném zvolení vlastního serveru se na uživatelem zadanou adresu posílají FEN pozice, historie tahů a parametry výpočtu. API token se uchovává v sessionStorage aktuální karty, nikoli v exportu. Zapneš-li server také pro evaluation bar, token se uloží i do dočasného chrome.storage.session rozšíření do restartu prohlížeče; není předáván herní stránce. Dodaný backend partie neukládá. Za případné logování cizího serveru odpovídá jeho provozovatel.
+Při serverovém rozboru se posílá PGN včetně hlaviček, tahů a případných hodin. Při samostatném výpočtu pozice se posílá FEN, historie a nastavení. Veřejné výpočty používají technickou HttpOnly cookie s platností osm hodin pro frontu a kvóty. Probíhající rozbor vyžaduje otevřenou kartu.
 
-Oprávnění `storage` slouží k nastavení a `offscreen` ke spuštění lokálního enginu v neviditelném dokumentu. Výchozí hosty jsou Chess.com, api.chess.com a Lichess. Přístup k jinému výpočetnímu serveru je volitelný a vyžaduje povolení uživatele v prohlížeči. Partie lze smazat jednotlivě v knihovně a exportovat do PGN.
+## Google účet
 
-Kód knihoven, fonty a engine jsou přibalené. Externí odkazy v dokumentaci se otevírají až při kliknutí uživatele.
+Přihlášení je dobrovolné. Google poskytne potvrzení identity, jméno a e-mail. Evala nedostává heslo, přístup ke Gmailu, Disku ani jiným dokumentům. Google přihlašovací knihovna se načte při otevření přihlašovací stránky. Podpis, příjemce, vydavatel, expirace a jednorázová nonce potvrzení se kontrolují na serveru.
+
+U přihlášeného účtu se na serveru ukládají identifikátor účtu, jméno, e-mail, přezdívka z nastavení, knihovna partií, rozbory, poznámky, nastavení vzhledu a historie tréninku. Produkční uložiště je soukromý Azure Blob Storage. Každý účet má oddělené záznamy. Přihlašovací cookie je HttpOnly a platí nejvýše 30 dní; server ukládá pouze hash její náhodné hodnoty. Uživatel se může odhlásit.
+
+Hostovská knihovna a knihovny jednotlivých účtů jsou v prohlížeči oddělené. Převzetí místních partií do účtu je výslovná akce. Při výpadku připojení zůstane místní kopie; rozpracovaný rozbor může čekat na synchronizaci do dokončení.
+
+## Export a smazání
+
+Jednotlivé partie lze exportovat do PGN a smazat v knihovně. V části Můj účet lze exportovat osobní data do JSON a smazat účet včetně uložených partií a historie tréninku. Smazání účtu Evaly nemaže účet u Googlu ani veřejné partie u jejich původního poskytovatele. Místní hostovská data se mažou samostatně vymazáním dat webu.
+
+## Vlastní server a rozšíření
+
+Plné rozšíření může po povolení uživatelem využít vlastní server. API token zůstává v sessionStorage karty, případně v dočasném chrome.storage.session rozšíření do restartu prohlížeče. Nepředává se herní stránce. Host přístup se vyžádá až při ověření spojení.
+
+Evala neobsahuje reklamní sledování ani analytické měřicí skripty. Provozní záznamy poskytovatele hostingu a požadavky Google/Chess.com/Lichess se řídí také pravidly příslušné služby. Úlohy Lichess jsou otevřená data CC0; odkazy na původní partie se zobrazují po vyřešení.

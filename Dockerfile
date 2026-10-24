@@ -12,7 +12,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY src/core ./src/core
-COPY src/study/uci.js ./src/study/uci.js
+COPY src/study ./src/study
+COPY src/training ./src/training
 COPY server ./server
 USER node
 EXPOSE 8080

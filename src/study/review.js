@@ -54,11 +54,43 @@ export function sacrificeCandidates(move){
   return candidates.sort((a,b)=>b.materialLoss-a.materialLoss).slice(0,2);
 }
 
+const performanceCache=new WeakMap();
+export function estimateGamePerformance(game,color){
+  if(!game.analysis?.complete)return {value:null,reason:'Nejprve dokonči rozbor.'};
+  const cached=performanceCache.get(game.analysis);if(cached?.[color])return cached[color];
+  const rating=Number(game.headers[color==='w'?'WhiteElo':'BlackElo']);
+  if(!Number.isFinite(rating)||rating<100||rating>3500)return {value:null,reason:'V PGN chybí Elo hráče.'};
+  const informative=[],seen=new Set();
+  for(let i=8;i<game.moves.length;i++){
+    const move=game.moves[i],mark=game.analysis.moves[i],before=game.analysis.positions[i];
+    if(move.color!==color||!mark||!Number.isFinite(mark.accuracy)||!before||before.depth<12)continue;
+    const expected=expectedPercent(before);
+    if(expected<2||expected>98||new Chess(move.fenBefore).moves().length<=1)continue;
+    const position=move.fenBefore.split(' ').slice(0,4).join(' ');
+    if(seen.has(position))continue;
+    seen.add(position);
+    informative.push(mark);
+  }
+  let result;
+  if(informative.length<12)result={value:null,reason:`Málo podkladů (${informative.length}/12 rozhodnutí).`,sample:informative.length};
+  else{
+    // An explicit, uncalibrated per-game heuristic, anchored to the PGN rating.
+    // Its range is an indication of uncertainty, not a statistical confidence interval.
+    const quality=informative.reduce((n,m)=>n+m.accuracy,0)/informative.length;
+    const expectedQuality=clamp(55+rating*.015,60,95);
+    const reliability=informative.length/(informative.length+15);
+    const value=Math.round(clamp(rating+(quality-expectedQuality)*24*reliability,100,3500)/50)*50;
+    const reserve=Math.max(250,Math.round((600-informative.length*5)/50)*50);
+    result={value,low:Math.max(100,value-reserve),high:Math.min(3500,value+reserve),sample:informative.length,baseline:rating,quality,method:'evala-game-strength-v1',calibrated:false};
+  }
+  performanceCache.set(game.analysis,{...cached,[color]:result});return result;
+}
 export function summarize(game){
   const list=game.analysis?.moves||[];
   return Object.fromEntries(['w','b'].map(color=>{
     const marks=list.filter((m,i)=>m&&game.moves[i].color===color);
-    return [color,{accuracy:marks.length?marks.reduce((n,m)=>n+m.accuracy,0)/marks.length:null,count:marks.length,blunders:marks.filter(m=>m.loss>=20).length,mistakes:marks.filter(m=>m.loss>=10&&m.loss<20).length,brilliants:marks.filter(m=>m.kind==='brilliant').length}];
+    const counts={};for(const mark of marks)counts[mark.kind]=(counts[mark.kind]||0)+1;
+    return [color,{accuracy:marks.length?marks.reduce((n,m)=>n+m.accuracy,0)/marks.length:null,count:marks.length,counts,performance:estimateGamePerformance(game,color),blunders:marks.filter(m=>m.loss>=20).length,mistakes:marks.filter(m=>m.loss>=10&&m.loss<20).length,brilliants:marks.filter(m=>m.kind==='brilliant').length}];
   }));
 }
 

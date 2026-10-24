@@ -8,18 +8,20 @@ import { StudyEngine,searchSettings } from '../src/study/uci.js';
 import { validPosition } from '../src/core/position.js';
 import { nodeWorker } from './worker.mjs';
 import { createPublicReviews } from './public-reviews.mjs';
+import { createAccounts } from './accounts.mjs';
 
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.wasm':'application/wasm','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.json':'application/json','.txt':'text/plain; charset=utf-8'};
 const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
-export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrency=Number(process.env.ENGINE_CONCURRENCY||1),origins=(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),allowExtensionOrigins=process.env.ALLOW_EXTENSION_ORIGINS==='true',publicReports=process.env.PUBLIC_REPORTS==='true',publicBudgetSeconds=Number(process.env.PUBLIC_ENGINE_SECONDS||1800),root=resolve('dist')}={}){
+export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrency=Number(process.env.ENGINE_CONCURRENCY||1),origins=(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),allowExtensionOrigins=process.env.ALLOW_EXTENSION_ORIGINS==='true',publicReports=process.env.PUBLIC_REPORTS==='true',publicBudgetSeconds=Number(process.env.PUBLIC_ENGINE_SECONDS||1800),root=resolve('dist'),accounts={}}={}){
   const limit=Math.max(1,Math.min(4,Math.floor(concurrency)||1));
   const slots=Array.from({length:limit},()=>({engine:new StudyEngine(()=>nodeWorker()),busy:false}));
   const originsSet=new Set(origins),rates=new Map();
   const authorized=req=>!token||equal(req.headers.authorization||'','Bearer '+token);
   const reports=createPublicReviews({slots,enabled:publicReports,isOwner:authorized,budgetSeconds:Math.max(1,Math.min(7200,publicBudgetSeconds||1800))});
+  const identity=createAccounts({puzzlePath:resolve(root,'data/puzzles.json'),...accounts});
   const json=(res,status,object)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(object));};
   const server=http.createServer(async(req,res)=>{
-    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
+    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');
     const origin=req.headers.origin;
     const sameOrigin=origin&&(()=>{try{return new URL(origin).host===req.headers.host;}catch{return false;}})();
     // Chrome extensions still need the personal bearer token on every API call.
@@ -27,8 +29,9 @@ export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrenc
     const extensionOrigin=allowExtensionOrigins&&!!token&&/^chrome-extension:\/\/[a-p]{32}$/.test(origin||'');
     if(origin&&!sameOrigin&&!extensionOrigin&&!originsSet.has(origin)){json(res,403,{error:'Origin is not allowed. Configure ALLOWED_ORIGINS.'});return;}
     if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
-    if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Max-Age':'600'});res.end();return;}
+    if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-CSRF-Token','Access-Control-Max-Age':'600'});res.end();return;}
     let url;try{url=new URL(req.url,'http://localhost');}catch{json(res,400,{error:'Bad URL'});return;}
+    if(await identity.handle(req,res,url))return;
     if(await reports.handle(req,res,url))return;
     if(url.pathname==='/api/health'){
       if(!publicReports&&!authorized(req)){json(res,401,{error:'Invalid token'});return;}
@@ -82,7 +85,7 @@ export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrenc
       if(!path.startsWith(root+sep)||(await stat(path)).isDirectory()){json(res,404,{error:'Not found'});return;}
       let data=await readFile(path);
       if(path.endsWith(sep+'study.html'))data=Buffer.from(data.toString('utf8').replace('</head>',`<meta name="evala-backend" content="server">${publicReports?'<meta name="evala-public" content="true">':''}</head>`));
-      res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Content-Security-Policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'none'",'Cache-Control':path.endsWith('.wasm')?'public, max-age=86400':'no-cache'});
+      res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Content-Security-Policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; frame-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'self'",'Cache-Control':path.endsWith('.wasm')?'public, max-age=86400':'no-cache'});
       res.end(req.method==='HEAD'?undefined:data);
     }catch{json(res,404,{error:'Not found'});}
   });

@@ -4,6 +4,10 @@ node_modules/
 test-results/
 release/
 dist/
+dist-bar/
+.impeccable/review/
+.impeccable/mocks/
+__pycache__/
 *.log
 .env
 .local-data/

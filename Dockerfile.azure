@@ -30,8 +30,8 @@ COPY --from=native /download/stockfish.tar.gz /app/dist/engine/stockfish-19-nati
 COPY --from=build /app/dist ./dist
 COPY vendor-source/stockfish-0d5dd7944f88c817c07a26bc4fb1905d5f9c46d6.tar.gz ./dist/engine/stockfish-js-source.tar.gz
 COPY src/core ./src/core
-COPY src/study/uci.js ./src/study/uci.js
-COPY src/study/review.js src/study/game.js ./src/study/
+COPY src/study ./src/study
+COPY src/training ./src/training
 COPY server ./server
 RUN printf 'uci\nisready\nquit\n' | /opt/stockfish/stockfish-linux-x86-64-universal | grep -q 'uciok'
 USER node

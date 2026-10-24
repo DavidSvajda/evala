@@ -1,5 +1,9 @@
 # Evala 1.3
 
+## Samotné malé rozšíření s evaluation barem
+
+`npm ci` a `npm run build:bar` vytvoří složku `dist-bar` se Stockfish 19 Lite a instalační ZIP `release/evala-bar-1.3.0.zip`. V Chrome otevři `chrome://extensions`, zapni **Režim pro vývojáře**, zvol **Načíst rozbalené** a vyber `dist-bar`. Potom obnov otevřené stránky Chess.com/Lichess. Nastavení a zkušební deska jsou pod ikonou rozšíření. Tento balíček obsahuje samotný bar; kompletní aplikaci na rozbor partií sestaví běžné `npm run build` do `dist`.
+
 Sdílený web nyní funguje bez ručního API tokenu. Zadej jméno Chess.com/Lichess, zvol posledních 10–100 partií, ručně vyber hry a spusť společný rozbor. Server zpracuje partie postupně; kartu nech otevřenou. Hotové hry i vybraný přehled zůstanou v prohlížeči. Rychlý a podrobný profil mají rozdílné časy a ověřování obětí. Deska je větší a šipky fungují i po kliknutí na ovladače. Omezení veřejného serveru jsou popsána v AZURE_DEPLOYMENT.md.
 
 Verze 1.2 přidává pracovní plochu přizpůsobenou výšce okna, stabilní ovládání šipkami, označení tahu na desce a samostatný **Přehled hráče**. Importuj své partie, spusť jejich rozbor a v přehledu zadej přezdívku shodnou s PGN. Uvidíš výsledky podle barvy a zahájení, chyby podle fáze a konkrétní pozice k procvičení. Výsledkové statistiky fungují i bez enginu; hodnocení tahů a slabin vyžaduje rozebrané pozice. Podklady, pravidla a audit textů: [INSIGHTS_RESEARCH.md](INSIGHTS_RESEARCH.md).
@@ -7,6 +11,14 @@ Verze 1.2 přidává pracovní plochu přizpůsobenou výšce okna, stabilní ov
 Svislý evaluation bar pro **Chess.com a Lichess**, s lokálním Stockfish 19 Lite. Bílá/černá výplň, podepsané hodnocení z pohledu bílého, dosažená hloubka, nastavení výkonu. Bez účtu, backendu, API klíče a předplatného.
 
 Nově také **kompletní rozbor partií** s plným Stockfish 19 NNUE a volitelným vlastním serverem. V popupu klikni **Rozebrat moje partie**; přes prohlížeč ho můžeš otevřít i jako samostatnou webovou aplikaci. Tato verze přibaluje plný engine (~100 MB), proto je větší než původní balík samotného baru.
+
+## Evala 2 — osobní šachová aplikace
+
+Web má samostatný přehled, knihovnu, rozbor, trénink, statistiky, nastavení a účet. Krémový vzhled nabízí čtyři barvy šachovnice, sbalitelný panel a přepínání CS/EN. Trénink obsahuje 4 459 legálně ověřených CC0 úloh Lichess s původním ratingem, adaptivním výběrem a opakováním chyb. Vlastní tréninkový rating je oddělený od ratingu jednotlivé úlohy.
+
+Shrnutí rozboru ukazuje obě barvy, počty klasifikací a kliknutím přejde na odpovídající tah. Odhad herního Elo je vlastní nekalibrovaná heuristika ukotvená v PGN ratingu, nikoli výpočet Chess.com. Krátké, mělké nebo jednoznačně rozhodnuté partie nemají dost podkladů.
+
+Google přihlášení vyžaduje veřejné `GOOGLE_CLIENT_ID` a povolený origin. Produkční účty se povolí pouze s trvalým `ACCOUNT_STORAGE_CONNECTION_STRING` (soukromý Azure Blob Storage). Lokální server může používat `.local-data/accounts`. Client secret se nepoužívá. Hostovská data zůstávají oddělená; jejich převzetí do účtu je výslovná akce.
 
 ## Rozbor vlastních partií
 

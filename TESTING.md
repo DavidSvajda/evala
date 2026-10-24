@@ -1,5 +1,12 @@
 # Ověření Evala
 
+## Verze 2.0.0
+
+- `npm test`: 29 úspěšných kontrol, včetně všech 4 459 legálních řešení úloh, adaptivního výběru, minimálních podkladů pro odhad výkonu, účtů, CSRF, nonce, oddělení knihoven, konfliktů verzí a odvolání všech sessions po smazání účtu.
+- `npm run test:platform`: skutečný serverový Stockfish, import, shrnutí a kliknutí na chybu, klávesnice, poznámky, celé vícetahové úlohy, nápověda, uložení vzhledu, synchronizace dvou izolovaných profilů, návrat k hostovské knihovně, zvětšení desky po sbalení panelu a anglické stránky bez zbytků českého rozhraní.
+- Obrazovky ověřeny na 1440×900, 1024×768 a 390×844 bez horizontálního přetečení. Test přihlášení podepisuje JWT místním testovacím RSA klíčem; nepotvrzuje skutečné dokončení Google přihlášení člověkem.
+
+
 ## Verze 1.3.0 — sdílení a společné rozbory
 
 - `npm test`: 20 kontrol včetně session bez tokenu, limitů vstupu, globální kapacity, importu 10–100 her a nových analytických metrik.

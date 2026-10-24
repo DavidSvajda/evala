@@ -15,8 +15,18 @@ const errors = [];
 page.on('pageerror',error=>errors.push(error.message));
 try {
   const cdp = await context.browser().newBrowserCDPSession();
-  const { id } = await cdp.send('Extensions.loadUnpacked',{path:resolve('dist')});
+  const { id } = await cdp.send('Extensions.loadUnpacked',{path:resolve(process.env.EVALA_EXTENSION_DIR || 'dist')});
   console.log(`Loaded real MV3 extension ${id}`);
+  const popup = await context.newPage();
+  popup.on('pageerror', error => errors.push(error.message));
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  await popup.locator('#settings [data-preset="balanced"]').waitFor();
+  assert.equal(await popup.locator('#depth').inputValue(), '18');
+  assert.equal(await popup.locator('.power').getAttribute('aria-label'), 'Pozastavit engine');
+  if (process.env.EVALA_EXTENSION_DIR === 'dist-bar') assert.equal(await popup.locator('.study-link').count(), 0);
+  await popup.screenshot({path:'test-results/extension-popup.png'});
+  await popup.close();
+  console.log('PASS: popup settings initialize without JavaScript errors');
   // Same extension iframe/worker/storage path as the installed product.
   await page.goto(`chrome-extension://${id}/demo.html`);
   await page.waitForFunction(()=>document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state==='done',{}, {timeout:30000});

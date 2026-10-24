@@ -41,15 +41,16 @@ def cli(*args):
                             env=env, text=True, capture_output=True)
     if result.returncode:
         message = result.stderr
-        token_file = PRIVATE / 'api-token.txt'
-        if token_file.exists():
-            message = message.replace(token_file.read_text().strip(), '[REDACTED]')
+        for name in ['api-token.txt', 'account-storage-connection.txt']:
+            token_file = PRIVATE / name
+            if token_file.exists():
+                message = message.replace(token_file.read_text().strip(), '[REDACTED]')
         raise RuntimeError(message)
     return result.stdout.strip()
 
 
-def configuration(environment_id, image, token, location):
-    return {
+def configuration(environment_id, image, token, location, google_client_id='', storage_connection=''):
+    result = {
         'location': location,
         'properties': {
             'environmentId': environment_id,
@@ -85,6 +86,13 @@ def configuration(environment_id, image, token, location):
             },
         },
     }
+    env = result['properties']['template']['containers'][0]['env']
+    if google_client_id:
+        env.append({'name': 'GOOGLE_CLIENT_ID', 'value': google_client_id})
+    if storage_connection:
+        result['properties']['configuration']['secrets'].append({'name': 'account-storage', 'value': storage_connection})
+        env.append({'name': 'ACCOUNT_STORAGE_CONNECTION_STRING', 'secretRef': 'account-storage'})
+    return result
 
 
 def main():
@@ -101,8 +109,15 @@ def main():
     if location != 'germanywestcentral':
         raise ValueError('Unexpected deployment region')
     image = public_image(args.image)
+    client_file = PRIVATE / 'google-client-id.txt'
+    google_client_id = client_file.read_text().strip() if client_file.exists() else ''
+    if google_client_id and not re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com', google_client_id):
+        raise ValueError('Invalid Google web client ID')
+    storage_file = PRIVATE / 'account-storage-connection.txt'
+    storage_connection = storage_file.read_text().strip() if storage_file.exists() else ''
     print(json.dumps({'subscription': account['name'], 'image': image, 'region': location,
-                      'cpu': 2, 'memory': '4Gi', 'replicas': '0-1', 'logs': 'no Log Analytics'}, ensure_ascii=False))
+                      'cpu': 2, 'memory': '4Gi', 'replicas': '0-1', 'logs': 'no Log Analytics',
+                      'googleSignIn': bool(google_client_id), 'persistentAccounts': bool(storage_connection)}, ensure_ascii=False))
     if not args.apply:
         return
     PRIVATE.mkdir(parents=True, exist_ok=True)
@@ -114,7 +129,7 @@ def main():
     if not re.fullmatch(r'[0-9a-f]{64}', token):
         raise ValueError('Invalid local API token file')
     config_file = PRIVATE / 'containerapp.json'
-    config_file.write_text(json.dumps(configuration(environment['id'], image, token, location)), encoding='utf8')
+    config_file.write_text(json.dumps(configuration(environment['id'], image, token, location, google_client_id, storage_connection)), encoding='utf8')
     config_file.chmod(0o600)
     # Listing metadata avoids treating an authorization failure as "not found".
     existing = json.loads(cli('containerapp', 'list', '--resource-group', 'evala-chess', '--output', 'json'))

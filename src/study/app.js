@@ -3,7 +3,9 @@ import { StudyEngine,searchSettings } from './uci.js';
 import { RemoteEngine,serverAddress,remoteReview,connectPublicServer } from './remote.js';
 import { parsePgnCollection,DEMO_PGN,lineToSan,annotatedPgn } from './game.js';
 import { reviewGame,summarize } from './review.js';
-import { loadLibrary,saveGame,removeGame,getPreferences,savePreferences } from './storage.js';
+import { loadLibrary,saveGame,removeGame,getPreferences,savePreferences,setStorageIdentity } from './storage.js';
+import { account,initializeAccount } from './account.js';
+import { initPlatform } from './platform.js';
 import { importUsername } from './import.js';
 import { StudyBoard } from './board.js';
 import { analyzeLibrary,renderAnalytics } from './analytics.js';
@@ -11,9 +13,12 @@ import { PlayerReport } from './report.js';
 import { START_FEN } from '../core/position.js';
 import { scoreText,whitePercent } from '../core/evaluation.js';
 import { brand,icons } from '../ui/icons.js';
+import { MOVE_KINDS,moveIcon } from '../ui/move-icons.js';
+import { initializeLanguage,language,translate } from './i18n.js';
 import { readSettings as readBarSettings,writeSettings as writeBarSettings } from '../core/settings.js';
 
 const $=selector=>document.querySelector(selector);
+initializeLanguage();
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stroke=path=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 $('#brand').innerHTML=brand;$('#review-arrow').innerHTML=icons.arrow;$('#close-settings').innerHTML=icons.close;
@@ -23,11 +28,17 @@ $('#next-move').innerHTML=stroke('<path d="m9 5 7 7-7 7"/>');$('#last-move').inn
 let library=[],selected=null,ply=0,flipped=false,branch=null,promotionMove=null,activeView='review';
 const hostedServer=!!document.querySelector('meta[name="evala-backend"][content="server"]');
 const publicServer=!!document.querySelector('meta[name="evala-public"][content="true"]');
+await initializeAccount(hostedServer);
+setStorageIdentity(account.user);
 document.body.classList.toggle('public-server',publicServer);
 let options=getPreferences(hostedServer?{backend:'server',serverUrl:location.origin}:{}),job=null,importController=null,inspectController=null,inspectResult=null;
 let reviewer=null,inspector=null,reviewerKey='',inspectorKey='',saveAt=0,renderQueued=false;
 let serverVerified=false;
 let playerReport;
+function setAnalysisTab(tab){$('.analysis-panel').dataset.tab=tab;document.querySelectorAll('[data-analysis-tab]').forEach(button=>{button.setAttribute('aria-selected',String(button.dataset.analysisTab===tab));button.tabIndex=button.dataset.analysisTab===tab?0:-1;});}
+document.querySelectorAll('[data-analysis-tab]').forEach(button=>button.addEventListener('click',()=>setAnalysisTab(button.dataset.analysisTab)));
+setAnalysisTab('summary');
+document.querySelectorAll('[data-analysis-tab]').forEach(button=>button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=[...document.querySelectorAll('[data-analysis-tab]')],index=tabs.indexOf(button),next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next].click();tabs[next].focus();}));
 const publicConnection=publicServer?connectPublicServer(location.origin).then(()=>{serverVerified=true;}).catch(e=>{$('#report-status').textContent=e.message;}):Promise.resolve();
 const barServerOption=document.createElement('label');barServerOption.className='check-row';barServerOption.hidden=!globalThis.chrome?.runtime?.id;
 barServerOption.innerHTML='<span>Použít server také pro evaluation bar</span><input id="bar-server" type="checkbox">';
@@ -100,7 +111,8 @@ $('#test-server').addEventListener('click',async()=>{
   }catch(e){$('#server-status').textContent=e.message;}
 });
 function setView(view){
-  activeView=view;$('.workspace').hidden=view!=='review';$('#analytics-workspace').hidden=view!=='analytics';
+  activeView=view;
+  document.dispatchEvent(new CustomEvent('evala:route',{detail:view==='analytics'?'insights':'analysis'}));
   $('#view-review').setAttribute('aria-pressed',String(view==='review'));$('#view-analytics').setAttribute('aria-pressed',String(view==='analytics'));
   if(view==='analytics'){if(!$('#insight-username').value)$('#insight-username').value=options.lastUsername||$('#username').value;updateAnalytics();}
   else focusBoard();
@@ -119,19 +131,24 @@ $('#insights-form').addEventListener('submit',event=>{event.preventDefault();upd
 for(const id of ['insight-color','insight-time','insight-result'])$('#'+id).addEventListener('change',updateAnalytics);
 $('#toggle-settings').addEventListener('click',()=>{setView('review');$('#study-settings').hidden=!$('#study-settings').hidden;$('#toggle-settings').setAttribute('aria-expanded',String(!$('#study-settings').hidden));});
 $('#close-settings').addEventListener('click',()=>{$('#study-settings').hidden=true;$('#toggle-settings').setAttribute('aria-expanded','false');$('#toggle-settings').focus({preventScroll:true});});
-$('#toggle-library').addEventListener('click',()=>{setView('review');$('.workspace').classList.toggle('library-open');$('#toggle-library').setAttribute('aria-expanded',String($('.workspace').classList.contains('library-open')));});
+$('#toggle-library').addEventListener('click',()=>{document.dispatchEvent(new CustomEvent('evala:route',{detail:'games'}));$('#import-panel').open=true;$('#username').focus();});
 
 async function store(game){try{await saveGame(game);}catch(e){error(e.message);}}
 function renderLibrary(){
   $('#library-count').textContent=library.length;
   const fragment=document.createDocumentFragment();
-  for(const game of library){
+  const query=$('#library-search').value.trim().toLowerCase(),filter=$('#library-filter').value;
+  const visible=library.filter(game=>(!query||[...Object.values(game.headers)].join(' ').toLowerCase().includes(query))&&(filter==='all'||filter==='analyzed'&&game.analysis?.complete||filter==='pending'&&!game.analysis?.complete));
+  for(const game of visible){
     const button=document.createElement('button');button.className='game-item';button.setAttribute('aria-current',String(selected?.id===game.id));
-    button.innerHTML=`<strong>${esc(game.headers.White||'Bílý')} <span class="versus">vs ${esc(game.headers.Black||'Černý')}</span></strong><span>${esc(game.headers.Result||'*')} · ${Math.ceil(game.moves.length/2)} tahů${game.headers.Date?' · '+esc(game.headers.Date):''}</span>${game.analysis?.complete?'<span class="game-analysed">Rozbor uložen</span>':game.analysis?'<span class="game-analysed">Částečný rozbor</span>':''}`;
-    button.addEventListener('click',()=>selectGame(game));fragment.append(button);
+    button.innerHTML=`<span class="game-result">${esc(game.headers.Result||'*')}</span><span class="recent-players"><strong>${esc(game.headers.White||'Bílý')} <span>–</span> ${esc(game.headers.Black||'Černý')}</strong><small>${esc(game.headers.Opening||game.headers.ECO||'Standardní šachy')} · ${Math.ceil(game.moves.length/2)} tahů</small></span><span class="game-date">${esc(game.headers.Date?.includes('?')?'':game.headers.Date||'')}</span><span class="game-state ${game.analysis?.complete?'game-analysed complete':''}">${game.analysis?.complete?'Rozebráno':game.analysis?'Částečný rozbor':'Bez rozboru'}</span><span>→</span>`;
+    button.addEventListener('click',()=>{setView('review');selectGame(game);});fragment.append(button);
   }
+  if(!visible.length){const empty=document.createElement('div');empty.className='empty-state';empty.innerHTML=`<h3>${library.length?'Žádné odpovídající partie':'Knihovna je zatím prázdná'}</h3><p>${library.length?'Změň hledání nebo filtr.':'Načti partie podle přezdívky nebo vlož vlastní PGN.'}</p>`;fragment.append(empty);}
   $('#game-list').replaceChildren(fragment);
+  document.dispatchEvent(new CustomEvent('evala:library'));
 }
+$('#library-search').addEventListener('input',renderLibrary);$('#library-filter').addEventListener('change',renderLibrary);
 function selectGame(game){
   inspectController?.abort();inspectResult=null;selected=game;ply=0;branch=null;promotionMove=null;$('#promotion').hidden=true;
   sessionStorage.setItem('evala-current-game',game.id);error();renderLibrary();renderAll();
@@ -218,13 +235,15 @@ function renderPosition(){
   $('.study-eval').classList.toggle('flipped',flipped);$('.eval-white').style.transform=`scaleY(${whitePercent(result)/100})`;$('.eval-score').textContent=scoreText(result);$('.eval-depth').textContent=result?.depth?'d'+result.depth:'';
   $('.study-eval').setAttribute('aria-valuenow',String(result?.kind==='mate'?Math.sign(result.value)*10:Math.max(-10,Math.min(10,(result?.value||0)/100))));$('.study-eval').setAttribute('aria-valuetext',scoreText(result)+' z pohledu bílého');
   $('#game-title').textContent=selected?`${selected.headers.White||'Bílý'} — ${selected.headers.Black||'Černý'}`:'Vyber partii';
-  $('#game-subtitle').textContent=selected?`${selected.headers.Result||'*'} · ${selected.headers.Event||'Importovaná partie'}${selected.headers.Date?' · '+selected.headers.Date:''}`:'Vyber partii v knihovně nebo importuj PGN.';
+  $('#game-subtitle').textContent=selected?`${selected.headers.Result||'*'} · ${selected.headers.Event||'Importovaná partie'}${selected.headers.Date&&!selected.headers.Date.includes('?')?' · '+selected.headers.Date:''}`:'Vyber partii v knihovně nebo importuj PGN.';
+  if(document.activeElement!==$('#game-note'))$('#game-note').value=selected?.notes||'';
+  $('#game-note').disabled=!selected;
   $('#position-label').textContent=branch?`Vlastní varianta · ${branch.index}/${branch.moves.length}`:ply?`${Math.ceil(ply/2)}${ply%2?'.':'…'} ${selected.moves[ply-1].san}`:'Výchozí pozice';
   $('#return-game').hidden=!branch;$('#first-move').disabled=branch?branch.index===0:ply===0;$('#previous-move').disabled=$('#first-move').disabled;
   $('#last-move').disabled=branch?branch.index===branch.moves.length:!selected||ply===selected.moves.length;$('#next-move').disabled=$('#last-move').disabled;
   $('#analyze-position').disabled=!selected;$('#export-pgn').disabled=!selected;$('#delete-game').disabled=!selected||job?.game.id===selected?.id;
-  $('#move-classification').innerHTML=mark?`<span class="classification ${esc(mark.kind)}"><span class="class-symbol">${esc(mark.symbol||'✓')}</span><span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:'';
-  $('#board-feedback').innerHTML=mark?`<span class="classification ${esc(mark.kind)}"><span class="class-symbol">${esc(mark.symbol||'✓')}</span><span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:`<span>${branch?'Vlastní varianta':ply?'Tah bez rozboru':'Výchozí pozice'}</span>`;
+  $('#move-classification').innerHTML=mark?`<span class="classification ${esc(mark.kind)}">${moveIcon(mark.kind)}<span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:'';
+  $('#board-feedback').innerHTML=mark?`<span class="classification ${esc(mark.kind)}">${moveIcon(mark.kind)}<span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`:`<span>${branch?'Vlastní varianta':ply?'Tah bez rozboru':'Výchozí pozice'}</span>`;
   $('#move-explanation').textContent=branch?'Zkoušíš vlastní pokračování. Tlačítkem Prozkoumat pozici spustíš nový výpočet.':mark?`${mark.note}${mark.proof?.continuation?' Po přijetí oběti: '+mark.proof.continuation:''}`:ply?'Tento tah zatím nemá hodnocení. Spusť rozbor partie.':'Vyber tah nebo spusť rozbor celé partie.';
   renderLines(result,fen);
 }
@@ -247,10 +266,15 @@ function renderMoves(){
     let visible=filter==='all';
     for(const index of [i,i+1]){
       const move=selected.moves[index];if(!move)continue;const mark=selected.analysis?.moves?.[index];
-      const critical=mark&&['inaccuracy','mistake','blunder','miss','great','brilliant','sacrifice'].includes(mark.kind);visible ||= !!critical;
+      const accepted={critical:['inaccuracy','mistake','blunder','miss','great','brilliant','sacrifice'],errors:['inaccuracy','mistake','blunder','miss'],best:['best','great','brilliant'],brilliant:['brilliant']};
+      const matches=mark&&accepted[filter]?.includes(mark.kind);visible ||= !!matches;
       const button=document.createElement('button');button.className='move-button '+(mark?.kind||'');button.dataset.ply=index+1;button.setAttribute('aria-current',String(!branch&&ply===index+1));
       button.title=mark?`${mark.label} · skóre tahu ${mark.accuracy.toFixed(1)} %`:move.san;
-      button.innerHTML=`<span>${esc(move.san)}</span><span class="move-symbol">${esc(mark?.symbol||'')}</span>`;button.addEventListener('click',()=>navigate(index+1));pair.append(button);
+      const position=selected.analysis?.positions?.[index+1];
+      button.innerHTML=`<span class="move-san">${esc(move.san)}</span><span class="notation-eval">${position?esc(scoreText(position)):''}</span><span class="move-symbol">${mark?moveIcon(mark.kind):''}</span>`;
+      if(Number.isFinite(move.clockAfter)&&move.clockAfter!==null)button.title+=' · Zbývající čas '+Math.floor(move.clockAfter/60)+':'+String(Math.floor(move.clockAfter%60)).padStart(2,'0');
+      if(filter!=='all'&&!matches)button.classList.add('filtered-out');
+      button.addEventListener('click',()=>navigate(index+1));pair.append(button);
     }
     if(visible)fragment.append(pair);
   }
@@ -259,15 +283,18 @@ function renderMoves(){
   if(focused)$('#move-list').querySelector(`[data-ply="${focused}"]`)?.focus({preventScroll:true});
 }
 function renderSummary(){
-  if(!selected?.analysis?.moves?.some(Boolean)){$('#summary').hidden=true;return;}
+  const available=!!selected?.analysis?.moves?.some(Boolean);$('#review-summary-empty').hidden=available;
+  if(!available){$('#summary').hidden=true;return;}
   const summary=summarize(selected);$('#summary').hidden=false;
-  $('#summary').innerHTML=['w','b'].map(color=>{const s=summary[color];return `<div><span class="player-name">${esc(selected.headers[color==='w'?'White':'Black']||(color==='w'?'Bílý':'Černý'))}</span><strong title="Průměr skóre vyhodnocených tahů">${s.accuracy===null?'—':s.accuracy.toFixed(1)+' %'}</strong><span class="player-detail">${s.blunders} hrubých · ${s.mistakes} chyb${s.brilliants?' · '+s.brilliants+' brilantních':''}</span></div>`;}).join('');
+  const number=value=>new Intl.NumberFormat(language()==='en'?'en-GB':'cs-CZ').format(value);
+  $('#summary').innerHTML=`<div class="summary-players">${['w','b'].map(color=>{const s=summary[color],p=s.performance;return `<section class="summary-player"><span class="summary-side"><i class="player-dot ${color==='b'?'black':''}"></i>${color==='w'?'Bílý':'Černý'}</span><strong class="summary-name">${esc(selected.headers[color==='w'?'White':'Black']||(color==='w'?'Bílý':'Černý'))}</strong><span class="accuracy-value" title="Průměr skóre vyhodnocených tahů Evaly">${s.accuracy===null?'—':s.accuracy.toFixed(1)+' %'}</span><span class="summary-caption">Přesnost Evaly</span><div class="performance-estimate"><span>Odhad Elo v partii</span><strong>${p.value?'≈ '+number(p.value):'—'}</strong><small>${p.value?number(p.low)+'–'+number(p.high):esc(p.reason)}</small></div></section>`;}).join('')}</div><div class="move-summary"><div class="summary-coverage"><span>${summary.w.count+summary.b.count}/${selected.moves.length} vyhodnocených tahů</span><span>Kliknutím přejdeš na tah</span></div>${MOVE_KINDS.map(([kind,label])=>`<div class="move-summary-row"><button data-jump-kind="${kind}" data-color="w" ${!summary.w.counts[kind]?'disabled':''} aria-label="Bílý: ${label} ${summary.w.counts[kind]||0}">${summary.w.counts[kind]||0}</button><span>${moveIcon(kind)}<span>${label}</span></span><button data-jump-kind="${kind}" data-color="b" ${!summary.b.counts[kind]?'disabled':''} aria-label="Černý: ${label} ${summary.b.counts[kind]||0}">${summary.b.counts[kind]||0}</button></div>`).join('')}</div><details class="performance-method"><summary>Jak vzniká odhad výkonu</summary><p>Vlastní orientační heuristika Evaly, ne výpočet Chess.com. Vychází z Elo v PGN a kvality nejméně 12 nevyhraných či nevynucených rozhodnutí po prvních čtyřech tazích, spočítaných do hloubky alespoň 12. Krátké partie a chybějící Elo neodhadujeme. Rozmezí vyjadřuje rezervu heuristiky, nejde o statistický interval. Model není kalibrovaný na oficiálním ratingovém systému.</p></details>`;
+  $('#summary').querySelectorAll('[data-jump-kind]').forEach(button=>button.onclick=()=>{const indices=selected.analysis.moves.map((mark,i)=>mark?.kind===button.dataset.jumpKind&&selected.moves[i].color===button.dataset.color?i+1:null).filter(Boolean);const index=indices.find(i=>i>ply)||indices[0];if(index){$('#move-filter').value='all';renderMoves();setAnalysisTab('moves');navigate(index);focusBoard();}});
 }
 function renderGraph(){
   const positions=selected?.analysis?.positions;if(!positions?.some(Boolean)){$('#eval-graph').innerHTML='<p class="empty-graph">Po rozboru tu uvidíš zvraty a rozhodující momenty.</p>';return;}
   const width=600,height=126,max=Math.max(1,selected.fens.length-1),point=(score,i)=>[i/max*width,score.kind==='mate'?score.value>0?8:118:63-Math.tanh(score.value/500)*55];
   let path='';for(let i=0;i<positions.length;i++){const score=positions[i];if(!score)continue;const [x,y]=point(score,i);path+=(path?'L':'M')+x.toFixed(1)+','+y.toFixed(1);}
-  $('#eval-graph').innerHTML=`<svg viewBox="0 0 600 126" preserveAspectRatio="none" role="img" aria-label="Graf hodnocení. Kliknutím přejdeš na tah."><path d="M0 63H600" stroke="#58614e" stroke-width="1"/><path d="M0 20H600M0 106H600" stroke="#343d2d" stroke-width="1"/><path d="${path}" fill="none" stroke="#d5b77a" stroke-width="2" vector-effect="non-scaling-stroke"/><path class="graph-cursor" d="M${ply/max*600} 0V126"/><text x="7" y="14" fill="#b2b6ad" font-size="9">Bílý +</text><text x="7" y="120" fill="#b2b6ad" font-size="9">Černý −</text></svg>`;
+  $('#eval-graph').innerHTML=`<svg viewBox="0 0 600 126" preserveAspectRatio="none" role="img" aria-label="Graf hodnocení. Kliknutím přejdeš na tah."><path d="M0 63H600" stroke="#aab49e" stroke-width="1"/><path d="M0 20H600M0 106H600" stroke="#d7ddcc" stroke-width="1"/><path d="${path}" fill="none" stroke="#386446" stroke-width="2" vector-effect="non-scaling-stroke"/><path class="graph-cursor" d="M${ply/max*600} 0V126"/><text x="7" y="20" fill="#626c60" font-size="18">Bílý +</text><text x="7" y="120" fill="#626c60" font-size="18">Černý −</text></svg>`;
   $('#eval-graph svg').addEventListener('click',event=>{const r=event.currentTarget.getBoundingClientRect();navigate(Math.max(0,Math.min(max,Math.round((event.clientX-r.left)/r.width*max))));});
 }
 function renderAll(){renderPosition();renderMoves();renderSummary();renderGraph();renderReview();}
@@ -284,7 +311,7 @@ $('#return-game').addEventListener('click',()=>navigate(ply));$('#flip-board').a
 $('#move-filter').addEventListener('change',()=>{renderMoves();focusBoard();});
 window.addEventListener('keydown',event=>{
   if(event.key==='Escape'){if(!$('#study-settings').hidden)$('#close-settings').click();else if(branch)navigate(ply);return;}
-  if(activeView!=='review'||!selected||event.altKey||event.ctrlKey||event.metaKey||event.target.closest('input,textarea,[contenteditable="true"]')||event.target.closest('#study-settings'))return;
+  if(document.body.dataset.page!=='analysis'||activeView!=='review'||!selected||event.altKey||event.ctrlKey||event.metaKey||event.target.closest('input,textarea,[contenteditable="true"]')||event.target.closest('#study-settings')||event.target.closest('[role=tablist]'))return;
   if(event.target.closest('select')&&!['ArrowRight','ArrowLeft'].includes(event.key))return;
   if(['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Home','End'].includes(event.key)){
     event.preventDefault();event.stopPropagation();
@@ -325,6 +352,9 @@ async function inspectPosition(){
 $('#analyze-position').addEventListener('click',inspectPosition);
 function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 $('#export-pgn').addEventListener('click',()=>{if(selected)download(annotatedPgn(selected),`evala-${selected.id}.pgn`,'application/x-chess-pgn');});
+$('#game-note').addEventListener('change',async()=>{if(selected){selected.notes=$('#game-note').value;await store(selected);}});
+$('#copy-fen').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(activeFen());$('#copy-fen').textContent='Zkopírováno';setTimeout(()=>$('#copy-fen').textContent='FEN',1500);}catch{error('FEN se nepodařilo zkopírovat. Povol přístup ke schránce.');}});
+$('#next-critical').addEventListener('click',()=>{const indices=(selected?.analysis?.moves||[]).map((mark,i)=>mark&&['mistake','blunder','miss','great','brilliant'].includes(mark.kind)?i+1:null).filter(Boolean);if(indices.length){$('#move-filter').value='all';renderMoves();navigate(indices.find(i=>i>ply)||indices[0]);}});
 $('#delete-game').addEventListener('click',async()=>{if(!selected||job?.game.id===selected.id)return;const id=selected.id;try{await removeGame(id);library=library.filter(g=>g.id!==id);selected=null;branch=null;ply=0;if(library[0])selectGame(library[0]);else{renderLibrary();renderAll();}}catch(e){error(e.message);}});
 
 playerReport=new PlayerReport({library:()=>library,addPgn,save:store,engine:()=>engine('review'),settings:()=>({...settings(),publicServer,token:$('#server-token').value}),onChange:()=>{if(playerReport.games.length){options.reportIds=[...playerReport.checked];options.reportUser=$('#insight-username').value;savePreferences(options);}renderLibrary();renderReview();if(activeView==='analytics')updateAnalytics();},onPlayer:(username,platform)=>{
@@ -338,5 +368,7 @@ else if(hostedServer&&options.backend==='server'&&!$('#server-token').value){$('
 try{library=await loadLibrary();selected=library.find(g=>g.id===sessionStorage.getItem('evala-current-game'))||library[0]||null;}catch(e){error(e.message);}
 if(options.reportUser===$('#report-username').value)playerReport.restore(options.reportIds);
 renderLibrary();renderAll();
-if(publicServer&&new URLSearchParams(location.search).get('view')!=='review')setView('analytics');
+document.addEventListener('evala:page',event=>{activeView=event.detail==='insights'?'analytics':'review';if(activeView==='analytics'){if(!$('#insight-username').value)$('#insight-username').value=options.lastUsername||$('#report-username').value;updateAnalytics();}});
+const reloadLibrary=async()=>{const id=selected?.id;library=await loadLibrary();selected=library.find(g=>g.id===id)||library[0]||null;branch=null;ply=0;renderLibrary();renderAll();};
+await initPlatform({library:()=>library,username:()=>options.lastUsername||'',openGame:game=>{selectGame(game);focusBoard();},busy:()=>!!job||!!playerReport?.running,reload:reloadLibrary,sync:async()=>{for(const game of library.filter(g=>g._syncPending))await saveGame(game);await reloadLibrary();},setUsername:(name,platform)=>{options.lastUsername=name;options.lastPlatform=platform;options.reportIds=null;options.reportUser=name;for(const id of ['username','report-username','insight-username'])$('#'+id).value=name;$('#platform').value=$('#report-platform').value=platform;savePreferences(options);updateAnalytics();},onIdentity:async user=>{job?.controller.abort();playerReport.controller?.abort();inspectController?.abort();setStorageIdentity(user);await reloadLibrary();const prefs=user?.preferences;if(prefs?.chessUsername){options.lastUsername=prefs.chessUsername;options.lastPlatform=prefs.chessPlatform||'chesscom';for(const id of ['username','report-username','insight-username'])$('#'+id).value=prefs.chessUsername;}}});
 window.addEventListener('pagehide',()=>{playerReport.controller?.abort();job?.controller.abort();inspectController?.abort();importController?.abort();reviewer?.dispose();inspector?.dispose();});

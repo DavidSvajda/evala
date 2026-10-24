@@ -6,7 +6,6 @@ import { icons, brand } from './ui/icons.js';
 let settings = await readSettings();
 document.querySelector('.brand-mark').innerHTML = brand;
 document.querySelector('.arrow').innerHTML = icons.arrow;
-document.querySelector('.study-arrow').innerHTML = icons.arrow;
 const root = document.querySelector('#settings');
 root.innerHTML = settingsMarkup(settings);
 const form = bindSettings(root, settings, async next => { settings = next; await writeSettings(settings); refresh(); });
@@ -22,10 +21,14 @@ document.querySelector('.demo-link:not(.study-link)').addEventListener('click', 
   if (globalThis.chrome?.tabs) chrome.tabs.create({ url: chrome.runtime.getURL('demo.html') });
   else location.href = 'demo.html';
 });
-document.querySelector('.study-link').addEventListener('click',()=>{
-  if(globalThis.chrome?.tabs)chrome.tabs.create({url:chrome.runtime.getURL('study.html')});
-  else location.href='study.html';
-});
+const studyLink = document.querySelector('.study-link');
+if (studyLink) {
+  studyLink.querySelector('.study-arrow').innerHTML = icons.arrow;
+  studyLink.addEventListener('click',()=>{
+    if(globalThis.chrome?.tabs)chrome.tabs.create({url:chrome.runtime.getURL('study.html')});
+    else location.href='study.html';
+  });
+}
 async function refresh() {
   renderPower();
   let status = null;
