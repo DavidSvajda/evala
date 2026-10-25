@@ -18,7 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Verify application and account isolation
-        run: npm ci && npm run build && node --test tests/learning.test.mjs tests/accounts.test.mjs tests/study.test.mjs
+        run: npm ci && npm run build && node --test tests/analysis-speed.test.mjs tests/public-reports.test.mjs tests/learning.test.mjs tests/accounts.test.mjs tests/study.test.mjs
       - name: Install release browser
         run: npx playwright install --with-deps chromium
       - name: Verify core browser flow before publishing

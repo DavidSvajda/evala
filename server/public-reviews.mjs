@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { parsePgn } from '../src/study/game.js';
 import { reviewGame } from '../src/study/review.js';
+import { reviewProgressEncoder } from '../src/study/review-stream.js';
 
 export const REPORT_PROFILES={
   quick:{time:150,depth:16,multipv:2,hash:64,refineLimit:2,verifySacrifices:false},
@@ -8,6 +9,8 @@ export const REPORT_PROFILES={
 };
 export function createPublicReviews({slots,enabled=false,isOwner=()=>false,budgetSeconds=1800}={}){
   const sessions=new Map(),starts=new Map(),queue=[];
+  const ownerScope={};
+  const cacheScope=req=>isOwner(req)?ownerScope:session(req);
   let day='',used=0;
   const budget=()=>{const today=new Date().toISOString().slice(0,10);if(today!==day){day=today;used=0;}return Math.max(0,budgetSeconds-used);};
   const cookie=req=>String(req.headers.cookie||'').split(';').map(p=>p.trim()).find(p=>p.startsWith('evala_session='))?.slice(14);
@@ -61,7 +64,7 @@ export function createPublicReviews({slots,enabled=false,isOwner=()=>false,budge
       let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>300000)throw error('PGN je příliš velké.',400);}
       const request=JSON.parse(body),game=parsePgn(request.pgn);
       if(!['1-0','0-1','1/2-1/2'].includes(game.headers.Result))throw error('Rozbor přijímá dokončené partie.',400);
-      const options={...REPORT_PROFILES[request.profile==='balanced'?'balanced':'quick'],engine:'full',backend:'server'};
+      const options={...REPORT_PROFILES[request.profile==='balanced'?'balanced':'quick'],engine:'full',backend:'server',cacheScope:cacheScope(req)};
       options.time=Math.max(100,Math.min(options.time,Math.floor(90000/game.fens.length)));
       const estimate=game.fens.length*options.time/1000+options.refineLimit*4*options.time/1000+(options.verifySacrifices?15:0);
       reserve(req,estimate,true);
@@ -69,12 +72,13 @@ export function createPublicReviews({slots,enabled=false,isOwner=()=>false,budge
       send({type:'progress',phase:'queued',index:0,total:game.fens.length});
       heartbeat=setInterval(()=>send({type:'heartbeat'}),10000);
       lease=await acquire(controller.signal);
-      await reviewGame(game,lease.engine,options,{signal:controller.signal,onUpdate:progress=>send({type:'progress',...progress})});
+      const encode=reviewProgressEncoder();
+      await reviewGame(game,lease.engine,options,{signal:controller.signal,onUpdate:progress=>send(request.streamVersion===2?encode(progress):{type:'progress',...progress})});
       game.analysis.profile=request.profile==='balanced'?'balanced':'quick';
       send({type:'game',game});res.end();
     }catch(e){if(sent){send({type:'error',message:e.name==='AbortError'?'Rozbor byl přerušen. Hotové partie zůstaly uložené.':e.message});res.end();}else json(res,e.status||400,{error:e.message});}
     finally{clearTimeout(timeout);clearInterval(heartbeat);lease?.release();}
     return true;
   }
-  return {enabled,handle,session,reserve,acquire,pump};
+  return {enabled,handle,session,reserve,acquire,pump,cacheScope};
 }

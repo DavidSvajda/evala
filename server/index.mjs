@@ -64,6 +64,7 @@ export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrenc
           if(chess.fen()!==new Chess(request.fen).fen())throw new Error('History does not match FEN');
         }
         const opts=searchSettings(request.settings);
+        request.cacheScope=reports.cacheScope(req);
         request.settings={...opts,time:Math.min(opts.time,owner?5000:500),hash:Math.min(opts.hash,owner?128:64),depth:Math.min(opts.depth,owner?28:18),multipv:Math.min(opts.multipv,owner?5:3),engine:'full'};
         slot=slots.find(s=>!s.busy);
         if(!slot){res.setHeader('Retry-After','2');json(res,429,{error:'Engine is busy. Retry shortly.'});return;}

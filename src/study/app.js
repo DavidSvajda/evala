@@ -215,12 +215,18 @@ $('#review-game').addEventListener('click',async()=>{
   document.addEventListener('visibilitychange',visibility);
   try{
     $('#review-progress').hidden=false;$('#progress-text').textContent=options.backend==='server'?'Připojuji server…':options.engine==='full'?'Načítám plný engine (~100 MB)…':'Načítám Lite engine…';
+    let lastReviewPaint=0;
     const onUpdate=({phase,index,total,elapsed,processed})=>{
       if(selected?.id===game.id){
-        $('#review-progress').hidden=false;$('#progress').value=phase==='positions'?index/total*85:phase==='refine'?85+index/Math.max(1,total)*10:phase==='done'?100:97;
+        $('#review-progress').hidden=false;$('#progress').value=phase==='queued'?0:phase==='positions'?index/total*85:phase==='refine'?85+index/Math.max(1,total)*10:phase==='done'?100:97;
         const remaining=phase==='positions'&&processed>1?` · zbývá přibližně ${Math.ceil((game.fens.length-index)*elapsed/processed/1000)} s`:'';
-        $('#progress-text').textContent=phase==='positions'?`Pozice ${index}/${total}${remaining}`:phase==='refine'?`Ověřuji kritické momenty ${index}/${total}`:phase==='brilliant'?'Ověřuji oběti a brilantní kandidáty…':'Rozbor dokončen';
-        renderPosition();renderMoves();renderSummary();renderGraph();
+        $('#progress-text').textContent=phase==='queued'?(language()==='en'?'Waiting for an available engine…':'Čekám na volný engine…'):phase==='positions'?`Pozice ${index}/${total}${remaining}`:phase==='refine'?`Ověřuji kritické momenty ${index}/${total}`:phase==='brilliant'?'Ověřuji oběti a brilantní kandidáty…':'Rozbor dokončen';
+        // Progress numbers stay live; rebuilding the board, notation and graph
+        // for every fast engine result needlessly blocks the browser thread.
+        const now=performance.now();
+        if(!lastReviewPaint||now-lastReviewPaint>=180||phase==='done'){
+          lastReviewPaint=now;renderPosition();renderMoves();renderSummary();renderGraph();
+        }
       }
       if(performance.now()-saveAt>1500){saveAt=performance.now();store(game);}
     };

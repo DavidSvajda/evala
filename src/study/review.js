@@ -132,11 +132,18 @@ export function summarize(game){
 }
 
 export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
-  const key=JSON.stringify({version:REVIEW_VERSION,engine:options.engine,backend:options.backend,server:options.backend==='server'?options.serverUrl:'',depth:options.depth,time:options.time,multipv:options.multipv,refineLimit:options.refineLimit??8,verifySacrifices:options.verifySacrifices!==false});
+  const key=JSON.stringify({version:REVIEW_VERSION,pipeline:2,engine:options.engine,backend:options.backend,server:options.backend==='server'?options.serverUrl:'',depth:options.depth,time:options.time,multipv:options.multipv,refineLimit:options.refineLimit??8,verifySacrifices:options.verifySacrifices!==false});
   if(game.analysis?.key!==key)game.analysis={key,version:REVIEW_VERSION,positions:[],moves:[],complete:false,engine:options.engine,options:{depth:options.depth,time:options.time,multipv:options.multipv},startedAt:Date.now()};
-  const report=game.analysis,start=performance.now();let processed=0;
+  const report=game.analysis,start=performance.now(),gameKey=game.initialFen+'|'+game.moves.map(m=>m.uci).join(' ');let processed=0;
+  const dirty=new Set(game.moves.map((_,i)=>i));
+  const setPosition=(i,result)=>{
+    report.positions[i]=result;
+    // A score is the before/after/previous position of only three moves.
+    for(const j of [i-1,i,i+1])if(j>=0&&j<game.moves.length)dirty.add(j);
+  };
   const publish=(phase,index,total)=>{
-    report.moves=game.moves.map((move,i)=>classifyMove(move,report.positions[i],report.positions[i+1],{previous:report.positions[i-1]}));
+    for(const i of dirty)report.moves[i]=classifyMove(game.moves[i],report.positions[i],report.positions[i+1],{previous:report.positions[i-1]});
+    dirty.clear();
     for(const [i,mark] of (report.specials||[]))if(report.moves[i]){
       const special=verifiedBrilliant(game.moves[i],report.positions[i],report.positions[i+1],mark.proof);
       if(special)report.moves[i]={...report.moves[i],...special};
@@ -147,15 +154,20 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
     if(signal?.aborted)throw new DOMException('Rozbor byl pozastaven.','AbortError');
     if(report.positions[i]){publish('positions',i+1,game.fens.length);continue;}
     const history={initialFen:game.initialFen,moves:game.moves.slice(0,i).map(m=>m.uci)};
-    report.positions[i]=await engine.search({fen:game.fens[i],history,settings:options},{signal});
+    setPosition(i,await engine.search({cacheScope:options.cacheScope,gameKey,fen:game.fens[i],history,settings:options},{signal}));
     processed++;publish('positions',i+1,game.fens.length);
   }
   // Recheck only critical positions, bounded to avoid hours of extra work.
   const critical=report.moves.map((mark,i)=>({mark,i})).filter(({mark})=>mark&&mark.loss>=5).sort((a,b)=>b.mark.loss-a.mark.loss).slice(0,Math.max(0,Math.min(8,options.refineLimit??8)));
   report.refined ||= [];
+  report.refinedPositions ||= [];
   for(const [n,{i}] of critical.entries()){
     if(report.refined.includes(i))continue;
-    for(const index of [i,i+1])report.positions[index]=await engine.search({fen:game.fens[index],history:{initialFen:game.initialFen,moves:game.moves.slice(0,index).map(m=>m.uci)},settings:{...options,time:Math.min(5000,options.time*2),depth:Math.min(30,options.depth+2)}},{signal});
+    for(const index of [i,i+1]){
+      if(report.refinedPositions.includes(index))continue;
+      setPosition(index,await engine.search({cacheScope:options.cacheScope,gameKey,fen:game.fens[index],history:{initialFen:game.initialFen,moves:game.moves.slice(0,index).map(m=>m.uci)},settings:{...options,time:Math.min(5000,options.time*2),depth:Math.min(30,options.depth+2)}},{signal}));
+      report.refinedPositions.push(index);
+    }
     report.refined.push(i);publish('refine',n+1,critical.length);
   }
   const nominees=options.verifySacrifices===false?[]:report.moves.map((mark,i)=>({mark,i})).filter(({mark,i})=>mark?.loss<2&&mark.best&&game.moves[i].piece!=='p');
@@ -175,7 +187,7 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
     publish('brilliant',verified,Math.min(6,nominees.length));
     const proof={version:SACRIFICE_VERSION,captures:[]};
     for(const candidate of sacrifices){
-      const score=await engine.search({fen:candidate.fen,history:{initialFen:game.initialFen,moves:[...game.moves.slice(0,i+1).map(m=>m.uci),candidate.capture]},settings:{...options,time:Math.max(1200,options.time*2),depth:Math.max(20,options.depth),multipv:1}},{signal});
+      const score=await engine.search({cacheScope:options.cacheScope,gameKey,fen:candidate.fen,history:{initialFen:game.initialFen,moves:[...game.moves.slice(0,i+1).map(m=>m.uci),candidate.capture]},settings:{...options,time:Math.max(1200,options.time*2),depth:Math.max(20,options.depth),multipv:1}},{signal});
       proof.captures.push({capture:candidate.capture,score,continuation:lineToSan(candidate.fen,score.lines?.[0]?.pv||[],8)});
       if(score.depth<18||ownExpected(score)<49||ownExpected(report.positions[i+1])-ownExpected(score)>3)break;
     }

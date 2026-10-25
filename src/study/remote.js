@@ -1,3 +1,5 @@
+import { applyReviewProgress } from './review-stream.js';
+
 export function serverAddress(value){
   let url;try{url=new URL(value);}catch{throw new Error('Zadej platnou HTTPS adresu serveru.');}
   if(url.username||url.password||!['https:','http:'].includes(url.protocol)||(url.protocol==='http:'&&!['localhost','127.0.0.1','[::1]'].includes(url.hostname)))throw new Error('Server musí používat HTTPS. HTTP je povoleno jen pro localhost.');
@@ -31,10 +33,10 @@ export async function connectPublicServer(base,{signal}={}){
 }
 
 export async function remoteReview(base,token,game,{profile='quick',signal,onUpdate}={}){
-  const response=await fetch(serverAddress(base)+'/api/review-game',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({pgn:game.pgn,profile}),signal});
+  const response=await fetch(serverAddress(base)+'/api/review-game',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({pgn:game.pgn,profile,streamVersion:2}),signal});
   if(!response.ok){const message=await response.json().catch(()=>({}));throw new Error(message.error||`Server vrátil chybu ${response.status}.`);}
   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result;
-  const consume=line=>{if(!line.trim())return;const message=JSON.parse(line);if(message.type==='error')throw new Error(message.message);if(message.type==='progress')onUpdate?.(message);if(message.type==='game')result=message.game;};
+  const consume=line=>{if(!line.trim())return;const message=JSON.parse(line);if(message.type==='error')throw new Error(message.message);if(message.type==='progress'){applyReviewProgress(game,message);onUpdate?.(message);}if(message.type==='game')result=message.game;};
   try{
     for(;;){const {value,done}=await reader.read();buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});if(buffer.length>8_000_000)throw new Error('Výsledek je příliš velký.');let index;while((index=buffer.indexOf('\n'))>=0){consume(buffer.slice(0,index));buffer=buffer.slice(index+1);}if(done)break;}
     if(buffer.trim())consume(buffer);
