@@ -41,4 +41,10 @@ Local loads and account reads/writes reclassify old badges from stored evaluatio
 - Existing short release sequence verifies onboarding, profile, lesson completion/reload and mobile English. Both UI sequences together take a few seconds; no large screenshot matrix or full-game analysis sweep was run.
 - Manual desktop/mobile inspection and one Impeccable mechanical scan. User-selected cream is retained. Existing navigation animation warnings are outside this change; new controls reuse established colours and type sizes. Design sidecar drift was reported, not repaired as an unrelated task.
 
-Deployment receipt is recorded after publishing the tested image.
+## Deployment
+
+Deployed to [the existing Azure app](https://evala.bravestone-92178a1e.germanywestcentral.azurecontainerapps.io/study.html#/practice) from code commit `2b51b59`, after [successful CI](https://github.com/DavidSvajda/evala/actions/runs/40230576810).
+
+Image: `ghcr.io/davidsvajda/evala@sha256:820f2f6c3ad5f41a4cbf4eba33df25ea697874b07682e500a90d72d85b8bda7d`.
+
+A short isolated production-browser check confirmed the 2.2.0 manifest, Practice room with five modes, Czech/English switching, analysis notes route, retained Google configuration and no browser errors. It did not access a real user's library or run production game analysis. Google sign-in and persistent account configuration were preserved. Deployment and verification receipts are in ignored `.local-data/deployment/deployment.json` and `delivery-2.2.json`.
