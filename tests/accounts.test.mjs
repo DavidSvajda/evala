@@ -63,6 +63,17 @@ test('local document transactions serialize concurrent account updates',async()=
   assert.equal((await store.get('counter')).value.value,30);
 });
 
+test('lesson selection is validated and lesson completion cannot inflate the rated score',async()=>{
+  const running=await serverFor(await mkdtemp(join(tmpdir(),'evala-lesson-')));
+  try{
+    const user=await login(running.base,'lesson-player'),puzzle=bank.find(p=>p.themes.includes('mateIn1'));
+    const response=await fetch(running.base+'/api/account/puzzle/next',{method:'POST',headers:user.headers,body:JSON.stringify({mode:'lesson',puzzleId:puzzle.id})});const next=await response.json();assert.equal(next.puzzle.id,puzzle.id);
+    let result;
+    for(let i=1;i<puzzle.moves.length;i+=2)result=await(await fetch(running.base+'/api/account/puzzle/move',{method:'POST',headers:user.headers,body:JSON.stringify({challengeId:next.puzzle.challengeId,move:puzzle.moves[i]})})).json();
+    assert.equal(result.training.rating,800);assert.equal(result.training.solved,1);assert.equal(result.delta,0);
+  }finally{await running.close();}
+});
+
 test('deleting an account revokes sessions on every device even after signing in again',async()=>{
   const running=await serverFor(await mkdtemp(join(tmpdir(),'evala-revocation-')));
   try{

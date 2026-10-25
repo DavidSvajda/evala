@@ -17,7 +17,9 @@ const publicUser = a => ({ id: a.id, name: a.name, email: a.email, preferences: 
 function preferences(input = {}) {
   const p = {};
   for (const [key, options] of Object.entries({ boardTheme: ['sage', 'walnut', 'blue', 'slate'], pieceStyle: ['classic', 'letters'], skill: ['beginner', 'club', 'advanced'], difficulty: ['easy', 'normal', 'hard'],language:['cs','en'] })) if (options.includes(input[key])) p[key] = input[key];
-  for (const key of ['coordinates', 'legalMoves', 'sound', 'autoNext','sidebarCollapsed']) if (typeof input[key] === 'boolean') p[key] = input[key];
+  for (const key of ['coordinates', 'legalMoves', 'sound', 'autoNext','sidebarCollapsed','onboardingComplete']) if (typeof input[key] === 'boolean') p[key] = input[key];
+  if(['tactics','review','balanced'].includes(input.trainingGoal))p.trainingGoal=input.trainingGoal;
+  if(input.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(input.lesson.day)&&Array.isArray(input.lesson.ids)&&input.lesson.ids.length<=6&&input.lesson.ids.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(id))){p.lesson={day:input.lesson.day,ids:input.lesson.ids,done:Array.isArray(input.lesson.done)?input.lesson.done.filter(id=>input.lesson.ids.includes(id)).slice(0,6):[]};}
   if (typeof input.chessUsername === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(input.chessUsername)) p.chessUsername = input.chessUsername;
   if (['chesscom', 'lichess'].includes(input.chessPlatform)) p.chessPlatform = input.chessPlatform;
   return p;
@@ -149,7 +151,7 @@ export function createAccounts({ store = createDocumentStore(), googleClientId =
       if (url.pathname === '/api/account/training' && req.method === 'GET') { json(res, 200, { training: account.training }); return true; }
       if (url.pathname === '/api/account/puzzle/next' && req.method === 'POST') {
         const input = await body(req, 2000), all = await puzzles(); let response;
-        const mode = ['rated', 'review', 'daily','personal'].includes(input.mode) ? input.mode : 'rated';let personal=[];
+        const mode = ['rated', 'review', 'daily','personal','lesson'].includes(input.mode) ? input.mode : 'rated';let personal=[];
         if(mode==='personal'){
           const username=account.preferences.chessUsername||'',name=username.toLowerCase(),games=[];
           for(const item of Object.values(account.games).filter(g=>g.analyzed&&[g.white,g.black].some(n=>n?.toLowerCase()===name)).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,30)){
@@ -158,7 +160,7 @@ export function createAccounts({ store = createDocumentStore(), googleClientId =
           personal=personalPuzzles(games,username);
         }
         await mutateAccount(a => {
-          const puzzle = mode==='personal'?(personal.find(p=>a.training.history[p.id]?.dueAt<=Date.now())||personal.find(p=>!a.training.recent.includes(p.id))||personal[0]):choosePuzzle(all, trainingState(a.training), { mode, theme: String(input.theme || 'all'), difficulty: input.difficulty });
+          const puzzle = mode==='personal'?(input.puzzleId?personal.find(p=>p.id===input.puzzleId):(personal.find(p=>a.training.history[p.id]?.dueAt<=Date.now())||personal.find(p=>!a.training.recent.includes(p.id))||personal[0])):mode==='lesson'?all.find(p=>p.id===input.puzzleId):choosePuzzle(all, trainingState(a.training), { mode, theme: String(input.theme || 'all'), difficulty: input.difficulty });
           if (!puzzle) { response = { puzzle: null, training: a.training }; return a; }
           const state = startPuzzle(puzzle), challengeId = randomUUID();
           a.activePuzzle = { challengeId, puzzleId: puzzle.id, state, mode,personalPuzzle:puzzle.personal?puzzle:null, expires: Date.now() + 3600000 };

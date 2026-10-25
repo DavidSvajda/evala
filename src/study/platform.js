@@ -5,6 +5,7 @@ import { account, accountRequest, googleButton, logoutAccount, saveAccountPrefer
 import { migrateGuestGames,lastSyncStatus,clearAccountCache } from './storage.js';
 import { THEMES, trainingState, choosePuzzle, startPuzzle, playPuzzle, recordPuzzle, personalPuzzles, uciMove } from '../training/logic.js';
 import { language,setLanguage,translate } from './i18n.js';
+import { createLesson,nextLessonId,publicChesscomProfile } from '../training/lesson.js';
 
 const $ = s => document.querySelector(s);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -104,6 +105,24 @@ export async function initPlatform(context) {
     $('#recent-games').querySelectorAll('[data-open-game]').forEach(b => b.onclick = () => openGame(b.dataset.openGame));
     $('#account-invite').hidden = !!account.user; $('#home-personal').textContent = ownPuzzles().length ? `${ownPuzzles().length} ověřených pozic z tvých rozborů` : 'Z rozebraných chyb s jasným lepším tahem';
     renderTraining();
+    $('#onboarding').hidden=!!preferences?.onboardingComplete;
+    $('#onboarding-rating').disabled=training.attempted>0;
+    $('#lesson-progress').textContent=language()==='en'?`${preferences?.lesson?.done?.length||0}/6 positions practised. Your mistakes, related tactics and review.`:`${preferences?.lesson?.done?.length||0}/6 procvičených pozic. Vlastní chyby, související taktika a opakování.`;
+    renderChessProfile();
+  }
+  function renderChessProfile(){
+    const name=preferences?.chessUsername;
+    $('#chesscom-profile').replaceChildren();
+    if(!name||preferences.chessPlatform!=='chesscom')return;
+    const link=document.createElement('a');link.href='https://www.chess.com/member/'+encodeURIComponent(name);link.target='_blank';link.rel='noopener';link.textContent=name;
+    const note=document.createElement('small');note.textContent=language()==='en'?' Public data connection; ownership is not verified.':' Propojení veřejných dat; vlastnictví účtu není ověřené.';$('#chesscom-profile').append(link,note);
+  }
+  async function lessonPuzzle(){
+    const day=new Date().toISOString().slice(0,10);
+    const available=new Set([...ownPuzzles(),...bank].map(p=>p.id));
+    if(preferences.lesson?.day!==day||!preferences.lesson?.ids?.length||preferences.lesson.ids.some(id=>!available.has(id))){const lesson=createLesson(bank,context.library(),preferences.chessUsername,training,{day,goal:preferences.trainingGoal});updatePreferences({lesson});}
+    const id=nextLessonId(preferences.lesson);if(!id)return null;
+    return [...ownPuzzles(),...bank].find(p=>p.id===id)||null;
   }
   function renderIdentity() {
     if(account.user)$('#sidebar-user').setAttribute('data-i18n-ignore','');else $('#sidebar-user').removeAttribute('data-i18n-ignore');
@@ -123,7 +142,7 @@ export async function initPlatform(context) {
       else $('#google-signin-status').textContent = 'Přihlášení přes Google na tomto serveru zatím není dostupné. Knihovnu i trénink můžeš používat bez účtu.';
       return;
     }
-    root.innerHTML = `<section class="account-profile"><span class="profile-avatar">${esc(account.user.name.slice(0, 1))}</span><div><h2>${esc(account.user.name)}</h2><p>${esc(account.user.email)}</p><span class="provider-label">Účet Google</span></div><button id="logout-account" class="quiet-button">Odhlásit se</button></section><section class="account-library"><h2>Knihovna účtu</h2><p>${context.library().length} uložených partií. Rozbory a nastavení se načtou po přihlášení i na jiném zařízení.</p><div class="account-actions"><button id="import-guest-games" class="quiet-button">Převzít místní partie</button><button id="export-account" class="quiet-button">Exportovat moje data</button></div><p class="hint">Místní partie patří k režimu hosta v tomto prohlížeči. Do účtu se přenesou až tímto tlačítkem.</p></section><details class="danger-zone"><summary>Smazat účet a jeho data</summary><p>Partie a historie tréninku se trvale smažou. Přihlášení u Googlu se tím neruší. Pro potvrzení napiš SMAZAT.</p><form id="delete-account-form"><input aria-label="Potvrzení smazání účtu" pattern="SMAZAT" required autocomplete="off"><button type="submit" class="quiet-button">Smazat účet</button></form></details>`;
+    root.innerHTML = `<section class="account-profile"><span class="profile-avatar">${esc(account.user.name.slice(0, 1))}</span><div><h2>${esc(account.user.name)}</h2><p>${esc(account.user.email)}</p><span class="provider-label">Účet Google</span></div><button id="logout-account" class="quiet-button">Odhlásit se</button></section><section class="account-library"><h2>Knihovna účtu</h2><p>${context.library().length} uložených partií. Rozbory a nastavení se načtou po přihlášení i na jiném zařízení.</p><div class="account-actions"><button id="import-guest-games" class="quiet-button">Převzít místní partie</button><button id="export-account" class="quiet-button">Exportovat moje data</button></div><p class="hint">Místní partie patří k režimu hosta v tomto prohlížeči. Do účtu se přenesou až tímto tlačítkem.</p></section><details class="danger-zone"><summary>Smazat účet a jeho data</summary><p>Účet a aktivní data se smažou. Obnovovací kopie zůstanou nejvýše 7 dní. Pro potvrzení napiš SMAZAT.</p><form id="delete-account-form"><input aria-label="Potvrzení smazání účtu" pattern="SMAZAT" required autocomplete="off"><button type="submit" class="quiet-button">Smazat účet</button></form></details>`;
     $('#logout-account').onclick = async () => { try { if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.'); await logoutAccount(); } catch (e) { $('#account-error').textContent = e.message; } };
     $('#import-guest-games').onclick = async event => {
       event.target.disabled = true;
@@ -178,11 +197,14 @@ export async function initPlatform(context) {
     document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
     try {
       await getBank(); let puzzle, state, challengeId, server = false;
-      if (mode === 'personal'&&!account.user) {
+      const lesson=mode==='lesson'?await lessonPuzzle():null;
+      if(mode==='lesson'&&!lesson){$('#puzzle-status').textContent=$('#puzzle-turn').textContent='Lekce je hotová';$('#puzzle-message').textContent='Pokračuj v taktice nebo se vrať zítra k další lekci.';return;}
+      if(mode==='lesson'&&!account.user){puzzle=lesson;state=startPuzzle(puzzle);}
+      else if (mode === 'personal'&&!account.user) {
         const pool = ownPuzzles(); puzzle = pool.find(p => !training.recent.includes(p.id)) || pool[0];
         if (puzzle) state = startPuzzle(puzzle);
       } else if (account.user) {
-        const data = await accountRequest('puzzle/next', { method:'POST', body:{ mode,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty } });
+        const data = await accountRequest('puzzle/next', { method:'POST', body:{ mode:lesson?.personal?'personal':mode,puzzleId:lesson?.id,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty } });
         if (request !== generation) return;
         saveTraining(data.training); if (data.puzzle) { puzzle = data.puzzle; state = puzzle.state; challengeId = puzzle.challengeId; server = true; }
       } else { puzzle = choosePuzzle(bank, training, { mode,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty }); if (puzzle) state = startPuzzle(puzzle); }
@@ -195,7 +217,7 @@ export async function initPlatform(context) {
       current = { puzzle,state,challengeId,server,owner:owner(),mode,initialFen:state.fen };
       puzzleStarted = Date.now(); puzzleFlipped = state.color === 'b';
       $('#puzzle-status').textContent = 'Najdi nejlepší tah';
-      $('#puzzle-number').textContent = mode === 'personal' ? 'Z tvé partie · ' + puzzle.opponent : 'Úloha ' + puzzle.id;
+      $('#puzzle-number').textContent = puzzle.personal ? 'Z tvé partie · ' + puzzle.opponent : 'Úloha ' + puzzle.id;
       $('#puzzle-level').textContent=puzzle.personal?'Osobní pozice · bez kalibrovaného ratingu':`Elo úlohy: ${new Intl.NumberFormat(language()==='en'?'en-GB':'cs-CZ').format(puzzle.rating)} · ${puzzle.rating<1000?'Základní':puzzle.rating<1600?'Střední':puzzle.rating<2200?'Pokročilá':'Náročná'}`;
       $('#puzzle-subtitle').textContent = mode === 'personal' ? 'Zkus znovu rozhodující pozici ze své partie.' : mode === 'review' ? 'Vrať se k úlohám, které ti daly zabrat.' : mode === 'daily' ? 'Stejná úloha pro všechny hráče dnes.' : 'Taktické úlohy podle tvé úrovně.';
     } catch (error) { if (request === generation) { $('#puzzle-error').textContent = error.message; $('#puzzle-status').textContent = 'Úloha se nenačetla'; $('#next-puzzle').hidden = false; } }
@@ -216,6 +238,7 @@ export async function initPlatform(context) {
     $('#puzzle-message').textContent = data.message || '';
     $('.puzzle-feedback').dataset.state = done ? current.state.failed || current.state.hinted ? 'assisted' : 'success' : data.correct === false ? 'incorrect' : '';
     if (done) {
+      if(current.mode==='lesson'&&!preferences.lesson.done.includes(current.puzzle.id)){updatePreferences({lesson:{...preferences.lesson,done:[...preferences.lesson.done,current.puzzle.id]}});renderHome();}
       const themes = data.themes || current.puzzle.themes || [];
       $('#puzzle-themes').innerHTML = themes.filter(t => THEMES[t]).slice(0, 5).map(t => `<span>${THEMES[t]}</span>`).join('');
       const solution = data.solution || current.puzzle.continuation || current.puzzle.moves?.slice(1) || [];
@@ -271,6 +294,21 @@ export async function initPlatform(context) {
   document.addEventListener('evala:language',()=>{renderHome();paintPuzzle();document.title=translate(pageNames[page]||'Přehled')+' · Evala';if(page==='account')renderAccount();});
   $('#next-puzzle').onclick = loadPuzzle; $('#puzzle-hint').onclick = () => helpPuzzle(false); $('#puzzle-reveal').onclick = () => helpPuzzle(true);
   $('#flip-puzzle').onclick = () => { puzzleFlipped = !puzzleFlipped; paintPuzzle(); };
+  $('#start-lesson').onclick=()=>{mode='lesson';go('puzzles');};
+  document.addEventListener('click',async event=>{const button=event.target.closest('[data-start-lesson]');if(!button)return;event.preventDefault();await getBank();const id=button.dataset.startLesson,games=[...context.library()].sort((a,b)=>Number(b.id===id)-Number(a.id===id));updatePreferences({lesson:createLesson(bank,games,preferences.chessUsername,training,{goal:preferences.trainingGoal})});mode='lesson';go('puzzles');});
+  $('#skip-onboarding').onclick=()=>{updatePreferences({onboardingComplete:true});renderHome();};
+  $('#restart-onboarding').onclick=()=>{updatePreferences({onboardingComplete:false});go('home');};
+  $('#onboarding-form').onsubmit=async event=>{
+    event.preventDefault();const button=event.target.querySelector('[type=submit]');button.disabled=true;
+    try{
+      const raw=$('#onboarding-username').value.trim(),profile=raw?await publicChesscomProfile(raw):null;
+      if(!training.attempted){const rating=Number($('#onboarding-rating').value);if(account.user){const data=await accountRequest('profile',{method:'PATCH',body:{startingRating:rating}});saveTraining(data.training);}else saveTraining({...training,rating,initialRating:rating});}
+      const patch={onboardingComplete:true,trainingGoal:$('#onboarding-goal').value};if(profile)Object.assign(patch,{chessUsername:profile.username,chessPlatform:'chesscom'});
+      updatePreferences(patch);if(profile)context.setUsername(profile.username,'chesscom');renderHome();
+    }catch(e){$('#onboarding-status').textContent=e.message;}finally{button.disabled=false;}
+  };
+  $('#connect-chesscom').onclick=async event=>{event.target.disabled=true;try{const profile=await publicChesscomProfile($('#linked-username').value);updatePreferences({chessUsername:profile.username,chessPlatform:'chesscom'});context.setUsername(profile.username,'chesscom');renderChessProfile();$('#preference-status').textContent=translate('Veřejný profil propojen.');}catch(e){$('#preference-status').textContent=e.message;}finally{event.target.disabled=false;}};
+  $('#import-linked-profile').onclick=()=>{if(!preferences.chessUsername)return;go('games');$('#username').value=preferences.chessUsername;$('#platform').value=preferences.chessPlatform;$('#username-form').requestSubmit();};
   document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { mode = b.dataset.mode; loadPuzzle(); });
   document.querySelectorAll('[data-training-mode]').forEach(b => b.onclick = () => { mode = b.dataset.trainingMode; if (page === 'puzzles') loadPuzzle(); });
   $('#puzzle-theme').onchange = loadPuzzle;

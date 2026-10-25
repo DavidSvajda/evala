@@ -16,6 +16,7 @@ const english=[
   'Your own server and the extension',
   'The full extension can use your own server after you enable it. Its API token stays in the tab’s sessionStorage or temporary chrome.storage.session until the browser restarts. It is not shared with the chess site. Access to the server origin is requested when verifying the connection.',
   'Evala has no advertising trackers or analytics scripts. Hosting logs and requests to Google, Chess.com and Lichess are also governed by those providers’ policies. Lichess puzzles are open CC0 data; source-game links appear after solving.',
+  'Recovery copies are retained for up to seven days after data is deleted or overwritten. Access is restricted to the application administrator for recovery. Deleting an account revokes sign-in sessions immediately.',
   'Back to app',
 ];
 let language=localStorage.getItem('evala-language')==='en'?'en':'cs';

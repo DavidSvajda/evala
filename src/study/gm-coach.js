@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { lineToSan } from './game.js';
 
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
@@ -213,9 +214,22 @@ export function generateGmAdvice(move, mark, fenBefore, fenAfter, { lang = 'cs',
     : `Tah minul vynucený mat.${bestSan?' Porovnej pokračování '+bestSan+'.':''}`;
   const loss=Number.isFinite(mark.loss)?Math.round(mark.loss):null;
   if(['blunder','mistake','inaccuracy','miss'].includes(mark.kind))return en
-    ? `${move.san} reduced the position’s engine score.${bestSan?' Compare '+bestSan+'.':''}${loss!==null?' Expected-score loss: '+loss+' percentage points.':''}`
-    : `${move.san} zhoršil hodnocení pozice.${bestSan?' Porovnej pokračování '+bestSan+'.':''}${loss!==null?' Ztráta očekávaného skóre: '+loss+' procentních bodů.':''}`;
+    ? `${move.san} reduced the position’s engine score.${continuations(fenBefore,fenAfter,before,after,en,bestSan)}${loss!==null?' Expected-score loss: '+loss+' percentage points.':''}`
+    : `${move.san} zhoršil hodnocení pozice.${continuations(fenBefore,fenAfter,before,after,en,bestSan)}${loss!==null?' Ztráta očekávaného skóre: '+loss+' procentních bodů.':''}`;
   return en?`${move.san} keeps most of the position’s engine evaluation.`:`${move.san} zachovává většinu hodnocení pozice.`;
+}
+function continuations(fenBefore,fenAfter,before,after,en,bestSan){
+  let text='';
+  try{
+    const reply=after?.lines?.[0]?.pv||[],best=before?.lines?.[0]?.pv||[];
+    if(reply.length){const chess=new Chess(fenAfter),uci=reply[0],m=chess.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]});
+      const consequence=m.san.includes('#')?(en?' gives checkmate':' dává mat'):m.captured?(en?` captures on ${m.to}`:` bere na ${m.to}`):m.san.includes('+')?(en?' gives check':' dává šach'):'';
+      text+=en?` Opponent’s engine reply: ${lineToSan(fenAfter,reply,3)}${consequence}.`:` Odpověď soupeře podle enginu: ${lineToSan(fenAfter,reply,3)}${consequence}.`;
+    }
+    if(best.length)text+=en?` Compare your alternative: ${lineToSan(fenBefore,best,3)}.`:` Porovnej vlastní alternativu: ${lineToSan(fenBefore,best,3)}.`;
+    else if(bestSan)text+=en?` Compare ${bestSan}.`:` Porovnej ${bestSan}.`;
+  }catch{if(bestSan)text+=en?` Compare ${bestSan}.`:` Porovnej ${bestSan}.`;}
+  return text;
 }
 
 /**

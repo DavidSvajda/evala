@@ -27,6 +27,7 @@ def main():
     if not found:
         deploy.cli('storage', 'account', 'create', '--name', name, '--resource-group', 'evala-chess', '--location', 'germanywestcentral', '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--allow-blob-public-access', 'false', '--min-tls-version', 'TLS1_2', '--output', 'none')
     connection = json.loads(deploy.cli('storage', 'account', 'show-connection-string', '--name', name, '--resource-group', 'evala-chess', '--output', 'json'))['connectionString']
+    deploy.cli('storage', 'account', 'blob-service-properties', 'update', '--account-name', name, '--resource-group', 'evala-chess', '--enable-delete-retention', 'true', '--delete-retention-days', '7', '--enable-container-delete-retention', 'true', '--container-delete-retention-days', '7', '--output', 'none')
     private = ROOT / '.local-data' / 'deployment'
     private.mkdir(parents=True, exist_ok=True)
     target = private / 'account-storage-connection.txt'

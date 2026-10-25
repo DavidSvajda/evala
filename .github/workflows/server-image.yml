@@ -19,6 +19,10 @@ jobs:
           cache: npm
       - name: Verify application and account isolation
         run: npm ci && npm run build && npm test
+      - name: Install release browser
+        run: npx playwright install --with-deps chromium
+      - name: Verify core browser flow before publishing
+        run: node tests/release-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR
