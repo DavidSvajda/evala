@@ -16,7 +16,7 @@ Nasazovaný celek bez dalších agentů a bez rozsáhlé screenshotové matice:
 
 ## Obnova dat
 
-Obnova blobu přes Azure `Undelete` je dostupná v sedmidenní lhůtě. Přepsané dokumenty mají obnovovací kopie; jejich obnova vyžaduje zvolení správné kopie a konzistentní obnovu indexu účtu a jeho partií. Neobnovovat sessions smazaného účtu. Před obnovou uživatelských dat zastavit souběžné zápisy a zkontrolovat stav v odděleném prostoru. Ochrana je v témže účtu Azure Storage, nikoliv nezávislá záloha proti ztrátě celého úložiště. Ověřena byla obnova dočasného souboru, nikoliv hromadná obnova produkčních účtů.
+Obnova blobu přes Azure `Undelete` je dostupná v sedmidenní lhůtě. Přepsané dokumenty mají obnovovací kopie; jejich obnova vyžaduje zvolení správné kopie a konzistentní obnovu indexu účtu a jeho partií. Neobnovovat sessions smazaného účtu; při obnově profilu vždy změnit authEpoch na nové náhodné UUID, aby se staré sessions znovu nezplatnily. Před obnovou uživatelských dat zastavit souběžné zápisy a zkontrolovat stav v odděleném prostoru. Ochrana je v témže účtu Azure Storage, nikoliv nezávislá záloha proti ztrátě celého úložiště. Ověřena byla obnova dočasného souboru, nikoliv hromadná obnova produkčních účtů.
 
 ## Další krok
 
