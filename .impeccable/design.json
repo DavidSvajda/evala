@@ -1,0 +1,431 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T15:17:37.215Z",
+  "title": "Design System: Evala",
+  "extensions": {
+    "colorMeta": {
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#f5f4ee",
+        "tonalRamp": [
+          "oklch(15.00% 0.0080 98.88)",
+          "oklch(26.43% 0.0080 98.88)",
+          "oklch(37.86% 0.0080 98.88)",
+          "oklch(49.29% 0.0080 98.88)",
+          "oklch(60.71% 0.0080 98.88)",
+          "oklch(72.14% 0.0080 98.88)",
+          "oklch(83.57% 0.0080 98.88)",
+          "oklch(95.00% 0.0080 98.88)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "canonical": "#eeefe8",
+        "tonalRamp": [
+          "oklch(15.00% 0.0093 113.16)",
+          "oklch(26.43% 0.0093 113.16)",
+          "oklch(37.86% 0.0093 113.16)",
+          "oklch(49.29% 0.0093 113.16)",
+          "oklch(60.71% 0.0093 113.16)",
+          "oklch(72.14% 0.0093 113.16)",
+          "oklch(83.57% 0.0093 113.16)",
+          "oklch(95.00% 0.0093 113.16)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#fffefa",
+        "tonalRamp": [
+          "oklch(15.00% 0.0054 95.10)",
+          "oklch(26.43% 0.0054 95.10)",
+          "oklch(37.86% 0.0054 95.10)",
+          "oklch(49.29% 0.0054 95.10)",
+          "oklch(60.71% 0.0054 95.10)",
+          "oklch(72.14% 0.0054 95.10)",
+          "oklch(83.57% 0.0054 95.10)",
+          "oklch(95.00% 0.0054 95.10)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#26342c",
+        "tonalRamp": [
+          "oklch(15.00% 0.0236 159.60)",
+          "oklch(26.43% 0.0236 159.60)",
+          "oklch(37.86% 0.0236 159.60)",
+          "oklch(49.29% 0.0236 159.60)",
+          "oklch(60.71% 0.0236 159.60)",
+          "oklch(72.14% 0.0236 159.60)",
+          "oklch(83.57% 0.0236 159.60)",
+          "oklch(95.00% 0.0236 159.60)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#626c60",
+        "tonalRamp": [
+          "oklch(15.00% 0.0222 140.47)",
+          "oklch(26.43% 0.0222 140.47)",
+          "oklch(37.86% 0.0222 140.47)",
+          "oklch(49.29% 0.0222 140.47)",
+          "oklch(60.71% 0.0222 140.47)",
+          "oklch(72.14% 0.0222 140.47)",
+          "oklch(83.57% 0.0222 140.47)",
+          "oklch(95.00% 0.0222 140.47)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "canonical": "#386446",
+        "tonalRamp": [
+          "oklch(15.00% 0.0695 153.12)",
+          "oklch(26.43% 0.0695 153.12)",
+          "oklch(37.86% 0.0695 153.12)",
+          "oklch(49.29% 0.0695 153.12)",
+          "oklch(60.71% 0.0695 153.12)",
+          "oklch(72.14% 0.0695 153.12)",
+          "oklch(83.57% 0.0695 153.12)",
+          "oklch(95.00% 0.0695 153.12)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#d9ddd2",
+        "tonalRamp": [
+          "oklch(15.00% 0.0154 123.07)",
+          "oklch(26.43% 0.0154 123.07)",
+          "oklch(37.86% 0.0154 123.07)",
+          "oklch(49.29% 0.0154 123.07)",
+          "oklch(60.71% 0.0154 123.07)",
+          "oklch(72.14% 0.0154 123.07)",
+          "oklch(83.57% 0.0154 123.07)",
+          "oklch(95.00% 0.0154 123.07)"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus",
+        "canonical": "#38714c",
+        "tonalRamp": [
+          "oklch(15.00% 0.0849 153.61)",
+          "oklch(26.43% 0.0849 153.61)",
+          "oklch(37.86% 0.0849 153.61)",
+          "oklch(49.29% 0.0849 153.61)",
+          "oklch(60.71% 0.0849 153.61)",
+          "oklch(72.14% 0.0849 153.61)",
+          "oklch(83.57% 0.0849 153.61)",
+          "oklch(95.00% 0.0849 153.61)"
+        ]
+      },
+      "board-light": {
+        "role": "secondary",
+        "displayName": "Board Light",
+        "canonical": "#eeeedc",
+        "tonalRamp": [
+          "oklch(15.00% 0.0238 106.85)",
+          "oklch(26.43% 0.0238 106.85)",
+          "oklch(37.86% 0.0238 106.85)",
+          "oklch(49.29% 0.0238 106.85)",
+          "oklch(60.71% 0.0238 106.85)",
+          "oklch(72.14% 0.0238 106.85)",
+          "oklch(83.57% 0.0238 106.85)",
+          "oklch(95.00% 0.0238 106.85)"
+        ]
+      },
+      "board-dark": {
+        "role": "secondary",
+        "displayName": "Board Dark",
+        "canonical": "#88a17b",
+        "tonalRamp": [
+          "oklch(15.00% 0.0612 135.02)",
+          "oklch(26.43% 0.0612 135.02)",
+          "oklch(37.86% 0.0612 135.02)",
+          "oklch(49.29% 0.0612 135.02)",
+          "oklch(60.71% 0.0612 135.02)",
+          "oklch(72.14% 0.0612 135.02)",
+          "oklch(83.57% 0.0612 135.02)",
+          "oklch(95.00% 0.0612 135.02)"
+        ]
+      },
+      "board-last": {
+        "role": "secondary",
+        "displayName": "Board Last",
+        "canonical": "#e1d86c",
+        "tonalRamp": [
+          "oklch(15.00% 0.1304 104.47)",
+          "oklch(26.43% 0.1304 104.47)",
+          "oklch(37.86% 0.1304 104.47)",
+          "oklch(49.29% 0.1304 104.47)",
+          "oklch(60.71% 0.1304 104.47)",
+          "oklch(72.14% 0.1304 104.47)",
+          "oklch(83.57% 0.1304 104.47)",
+          "oklch(95.00% 0.1304 104.47)"
+        ]
+      },
+      "negative": {
+        "role": "secondary",
+        "displayName": "Negative",
+        "canonical": "#a94739",
+        "tonalRamp": [
+          "oklch(15.00% 0.1322 30.31)",
+          "oklch(26.43% 0.1322 30.31)",
+          "oklch(37.86% 0.1322 30.31)",
+          "oklch(49.29% 0.1322 30.31)",
+          "oklch(60.71% 0.1322 30.31)",
+          "oklch(72.14% 0.1322 30.31)",
+          "oklch(83.57% 0.1322 30.31)",
+          "oklch(95.00% 0.1322 30.31)"
+        ]
+      },
+      "companion-surface": {
+        "role": "neutral",
+        "displayName": "Companion Surface",
+        "canonical": "#191b1a",
+        "tonalRamp": [
+          "oklch(15.00% 0.0036 164.71)",
+          "oklch(26.43% 0.0036 164.71)",
+          "oklch(37.86% 0.0036 164.71)",
+          "oklch(49.29% 0.0036 164.71)",
+          "oklch(60.71% 0.0036 164.71)",
+          "oklch(72.14% 0.0036 164.71)",
+          "oklch(83.57% 0.0036 164.71)",
+          "oklch(95.00% 0.0036 164.71)"
+        ]
+      },
+      "companion-ink": {
+        "role": "neutral",
+        "displayName": "Companion Ink",
+        "canonical": "#f2f0e9",
+        "tonalRamp": [
+          "oklch(15.00% 0.0095 93.57)",
+          "oklch(26.43% 0.0095 93.57)",
+          "oklch(37.86% 0.0095 93.57)",
+          "oklch(49.29% 0.0095 93.57)",
+          "oklch(60.71% 0.0095 93.57)",
+          "oklch(72.14% 0.0095 93.57)",
+          "oklch(83.57% 0.0095 93.57)",
+          "oklch(95.00% 0.0095 93.57)"
+        ]
+      },
+      "companion-accent": {
+        "role": "neutral",
+        "displayName": "Companion Accent",
+        "canonical": "#d5b77a",
+        "tonalRamp": [
+          "oklch(15.00% 0.0861 84.38)",
+          "oklch(26.43% 0.0861 84.38)",
+          "oklch(37.86% 0.0861 84.38)",
+          "oklch(49.29% 0.0861 84.38)",
+          "oklch(60.71% 0.0861 84.38)",
+          "oklch(72.14% 0.0861 84.38)",
+          "oklch(83.57% 0.0861 84.38)",
+          "oklch(95.00% 0.0861 84.38)"
+        ]
+      },
+      "companion-muted": {
+        "role": "neutral",
+        "displayName": "Companion Muted",
+        "canonical": "#b2b6ad",
+        "tonalRamp": [
+          "oklch(15.00% 0.0133 126.43)",
+          "oklch(26.43% 0.0133 126.43)",
+          "oklch(37.86% 0.0133 126.43)",
+          "oklch(49.29% 0.0133 126.43)",
+          "oklch(60.71% 0.0133 126.43)",
+          "oklch(72.14% 0.0133 126.43)",
+          "oklch(83.57% 0.0133 126.43)",
+          "oklch(95.00% 0.0133 126.43)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Web page headings; mobile reduces to 27px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Web section headings."
+      },
+      "subheading": {
+        "displayName": "Subheading",
+        "purpose": "Smaller section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Web body text; paragraph line height is 1.65."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels and quiet actions."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Primary web button labels."
+      },
+      "accuracy": {
+        "displayName": "Accuracy",
+        "purpose": "Review accuracy, with tabular numerals."
+      }
+    },
+    "shadows": [
+      {
+        "name": "settings-drawer",
+        "value": "-8px 0 35px #24392c1a",
+        "purpose": "Transient web settings drawer."
+      },
+      {
+        "name": "toast",
+        "value": "0 8px 28px #26342c25",
+        "purpose": "Transient web status notification."
+      },
+      {
+        "name": "companion-track",
+        "value": "0 2px 10px #0003",
+        "purpose": "Separate extension evaluation track."
+      },
+      {
+        "name": "companion-popover",
+        "value": "0 12px 40px #0006",
+        "purpose": "Separate extension settings popover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "web-button-color",
+        "value": "background-color .14s, color .14s",
+        "purpose": "Web button state changes."
+      },
+      {
+        "name": "navigation-resize",
+        "value": ".22s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Rail width, content margin and board width changes."
+      },
+      {
+        "name": "web-evaluation-fill",
+        "value": "transform .25s ease-out",
+        "purpose": "Web meter fill; reduced-motion rules remove transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-min",
+        "value": "1600px"
+      },
+      {
+        "name": "compact-max",
+        "value": "1150px"
+      },
+      {
+        "name": "icon-rail-max",
+        "value": "900px"
+      },
+      {
+        "name": "mobile-max",
+        "value": "700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid green main action from the light web application.",
+      "html": "<button class=\"ds-primary\">Další úloha</button>",
+      "css": ".ds-primary{font-family:var(--font,Manrope,system-ui,sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border:0;border-radius:7px;background:var(--accent,#386446);color:var(--paper,#fffefa);font-weight:700;font-size:13px;padding:12px 18px;min-height:44px;cursor:pointer;transition:background-color .14s,color .14s}.ds-primary:hover{background:#2a5338;color:white}.ds-primary:disabled{opacity:.46;cursor:default}.ds-primary:focus-visible,.ds-quiet:focus-visible,.ds-secondary:focus-visible,.ds-field:focus-visible,.ds-nav a:focus-visible,.ds-move button:focus-visible{outline:3px solid var(--focus,#38714c);outline-offset:3px}"
+    },
+    {
+      "name": "Quiet button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Bordered supporting action for board and header tools.",
+      "html": "<button class=\"ds-quiet\">Prozkoumat</button>",
+      "css": ".ds-quiet{font-family:var(--font,Manrope,system-ui,sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line,#d9ddd2);background:transparent;color:var(--ink,#26342c);border-radius:7px;font-size:12px;font-weight:600;min-height:35px;padding:8px 12px;cursor:pointer;transition:background-color .14s,color .14s}.ds-quiet:hover{background:#e8ecdf;border-color:#c1ccb8}.ds-primary:focus-visible,.ds-quiet:focus-visible,.ds-secondary:focus-visible,.ds-field:focus-visible,.ds-nav a:focus-visible,.ds-move button:focus-visible{outline:3px solid var(--focus,#38714c);outline-offset:3px}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Pale green supporting action.",
+      "html": "<button class=\"ds-secondary\">Ověřit spojení</button>",
+      "css": ".ds-secondary{font-family:var(--font,Manrope,system-ui,sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #abbba3;background:#e9eee3;color:var(--accent,#386446);border-radius:6px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:background-color .14s,color .14s}.ds-secondary:hover{background:#dce6d4}.ds-primary:focus-visible,.ds-quiet:focus-visible,.ds-secondary:focus-visible,.ds-field:focus-visible,.ds-nav a:focus-visible,.ds-move button:focus-visible{outline:3px solid var(--focus,#38714c);outline-offset:3px}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Paper field with an external label and keyboard outline.",
+      "html": "<label class=\"ds-label\" for=\"ds-user\">Šachová přezdívka</label><input id=\"ds-user\" class=\"ds-field\" placeholder=\"Uživatelské jméno\">",
+      "css": ".ds-label{font-family:var(--font,Manrope,system-ui,sans-serif);display:block;font-size:12px;font-weight:600;color:var(--ink,#26342c);margin-bottom:7px}.ds-field{font-family:var(--font,Manrope,system-ui,sans-serif);border:1px solid #c5cdbd;border-radius:6px;padding:10px 12px;background:var(--paper,#fffefa);color:var(--ink,#26342c);max-width:100%;min-width:0;min-height:39px;font-size:13px;caret-color:var(--accent,#386446)}.ds-field::placeholder{color:#71796b;opacity:1}.ds-primary:focus-visible,.ds-quiet:focus-visible,.ds-secondary:focus-visible,.ds-field:focus-visible,.ds-nav a:focus-visible,.ds-move button:focus-visible{outline:3px solid var(--focus,#38714c);outline-offset:3px}"
+    },
+    {
+      "name": "Route navigation",
+      "kind": "nav",
+      "description": "Full-width rail route with icon, hover and current-page state.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Hlavní navigace\"><a href=\"#/home\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.65\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/></svg>Přehled</a><a href=\"#/games\">Moje partie</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:5px;padding:12px;background:#eceee5;width:188px}.ds-nav a{font-family:var(--font,Manrope,system-ui,sans-serif);display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:7px;text-align:left;font-size:14px;font-weight:600;color:#53604f;text-decoration:none;background:transparent;min-height:47px}.ds-nav svg{width:21px;height:21px;flex-shrink:0}.ds-nav a:hover{background:#e0e5d8;color:var(--ink,#26342c)}.ds-nav a[aria-current=page]{background:#d5e0cc;color:#285538}.ds-primary:focus-visible,.ds-quiet:focus-visible,.ds-secondary:focus-visible,.ds-field:focus-visible,.ds-nav a:focus-visible,.ds-move button:focus-visible{outline:3px solid var(--focus,#38714c);outline-offset:3px}"
+    },
+    {
+      "name": "Puzzle theme tag",
+      "kind": "chip",
+      "refersTo": "theme-tag",
+      "description": "A descriptive puzzle theme, not an action.",
+      "html": "<span class=\"ds-tag\">Vidlička</span>",
+      "css": ".ds-tag{font-family:var(--font,Manrope,system-ui,sans-serif);display:inline-block;font-size:12px;background:#e7ecdf;color:#4d6944;padding:4px 8px;border-radius:4px}"
+    },
+    {
+      "name": "Coach container",
+      "kind": "card",
+      "refersTo": "coach-card",
+      "description": "Tonal feedback container without a card shadow.",
+      "html": "<div class=\"ds-coach\"><strong>Vysvětlení pozice</strong><p>Vyber tah pro rozbor pozice.</p></div>",
+      "css": ".ds-coach{font-family:var(--font,Manrope,system-ui,sans-serif);margin-top:14px;background:var(--raised,#eeefe8);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;color:var(--ink,#26342c)}.ds-coach strong{font-size:12px;font-weight:700;color:var(--accent,#386446)}.ds-coach p{font-size:12px;line-height:1.6;margin:0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quiet chess clubhouse",
+    "overview": "The primary web application uses cream surfaces, forest green actions, sage and ivory chess squares, and locally hosted Manrope. A large playable board, readable notation and factual feedback give the workspace its character. Flat game rows and restrained separators keep the surrounding interface quiet.\n\nThe web has distinct overview, games, analysis, puzzles, insights, settings and account routes. Google sign-in is optional: guest and signed-in libraries remain separate, and each account has its own local library, preferences and training history. The account screen makes guest-game transfer explicit. Czech and English controls share the same visual system.\n\nThe companion browser extension is a separate compact surface: a graphite evaluation bar beside an existing chessboard, with warm white scores, muted brass accents and an anchored settings popover or popup. Its dark palette does not define the light web application's defaults. Both surfaces use Manrope, tabular score numerals and small SVG icons.",
+    "keyCharacteristics": [
+      "Cream and sage web surfaces with forest green actions.",
+      "A primary playable board and restrained, separated data rows.",
+      "Distinct routes and collapsible navigation.",
+      "Factual labels for scores, training difficulty and unavailable estimates.",
+      "A separate graphite companion evaluation bar."
+    ],
+    "rules": [
+      {
+        "name": "The Surface Context Rule",
+        "body": "Use the cream web palette for web routes; keep the graphite and brass treatment attached to the companion extension.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Data Rule",
+        "body": "Preserve tabular numerals for scores, counts and timing, and keep graph labels in HTML so chart scaling does not shrink their text.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** keep the playable board visually primary within analysis and training.",
+      "**Do** use flat rows, tonal containers and restrained separators for games and results.",
+      "**Do** preserve route separation and the collapsible navigation behavior.",
+      "**Do** pair move-summary SVG emblems with their names and counts.",
+      "**Do** keep account, guest, unavailable-rating and heuristic-estimate states explicit.",
+      "**Do** retain the shipped focus and reduced-motion treatments when reusing controls."
+    ],
+    "donts": [
+      "**Don't** apply the companion graphite palette as the light web application's default.",
+      "**Don't** restore a single report form as the web entry screen or a permanent analysis-library column.",
+      "**Don't** require every route to fit the viewport or confine all scrolling to lists.",
+      "**Don't** describe personal positions as calibrated puzzles or game-strength estimates as official ratings.",
+      "**Don't** add fabricated statistics, marketing slogans or official Chess.com badge claims."
+    ]
+  }
+}
