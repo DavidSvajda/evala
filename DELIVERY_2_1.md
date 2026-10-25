@@ -21,3 +21,7 @@ Obnova blobu přes Azure `Undelete` je dostupná v sedmidenní lhůtě. Přepsan
 ## Další krok
 
 Doplnit vhodná data a ověřit kalibraci, případně navázat skutečné Chess.com OAuth po získání podporovaného přístupu. Google přihlášení a propojení veřejného šachového profilu jsou oddělené funkce.
+
+## Nasazení
+
+Verze 2.1.0 je nasazená na https://evala.bravestone-92178a1e.germanywestcentral.azurecontainerapps.io/study.html#/home. Image `ghcr.io/davidsvajda/evala@sha256:78ec09dfdc056b711364192d19d0b125740d0500d9f7ebb62fbc12f3ece026b2` sestavil a ověřil GitHub Actions běh 40208698307 (kód bf0d628). Krátký průchod onboarding → lekce → uložený postup → profil → mobilní angličtina prošel také na produkční adrese; veřejný profil v tomto automatickém scénáři používá fixture. Reprezentativní kalibrační data a aktivace modelu zůstávají dalším krokem.
