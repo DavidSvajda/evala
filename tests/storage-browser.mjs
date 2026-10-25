@@ -27,9 +27,11 @@ const server = createAnalysisServer({ root, token: 'storage-fixture' });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const browser = await chromium.launch({
     headless: true,
-    ...(process.platform === 'win32'
-      ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
-      : {}),
+    ...(process.env.EVALA_BROWSER_EXECUTABLE
+      ? { executablePath: process.env.EVALA_BROWSER_EXECUTABLE }
+      : process.platform === 'win32'
+        ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
+        : {}),
   }),
   page = await browser.newPage();
 let delay = false,

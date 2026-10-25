@@ -8,9 +8,11 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = process.env.EVALA_BASE_URL || `http://127.0.0.1:${server.address().port}`,
   browser = await chromium.launch({
     headless: true,
-    ...(process.platform === 'win32'
-      ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
-      : {}),
+    ...(process.env.EVALA_BROWSER_EXECUTABLE
+      ? { executablePath: process.env.EVALA_BROWSER_EXECUTABLE }
+      : process.platform === 'win32'
+        ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
+        : {}),
   }),
   page = await browser.newPage({ viewport: { width: 1366, height: 768 } }),
   errors = [];

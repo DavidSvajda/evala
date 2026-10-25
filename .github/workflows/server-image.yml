@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -24,8 +24,11 @@ jobs:
           npm run format:check
           npm run build
           npm test
-      - name: Install release browser
-        run: npx playwright install --with-deps chromium
+      - name: Use the runner's installed Chrome
+        run: |
+          chrome_path="$(command -v google-chrome)"
+          "$chrome_path" --version
+          echo "EVALA_BROWSER_EXECUTABLE=$chrome_path" >> "$GITHUB_ENV"
       - name: Verify core browser flow before publishing
         run: |
           node tests/release-smoke.mjs
