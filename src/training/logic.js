@@ -34,11 +34,14 @@ export function playPuzzle(puzzle, original, uci) {
   state.fen = chess.fen(); state.complete = state.index >= puzzle.moves.length;
   return { state, correct: true, reply, message: state.complete ? 'Vyřešeno.' : 'Správně. Pokračuj.' };
 }
-export function choosePuzzle(bank, state, { theme = 'all', mode = 'rated', difficulty = 'normal', now = Date.now(), random = Math.random } = {}) {
+export function choosePuzzle(bank, state, { theme = 'all', mode = 'rated', difficulty = 'normal', now = Date.now(), random = Math.random,reviewBudget=10,reviewPausedUntil=0 } = {}) {
   let pool = theme === 'all' ? bank : bank.filter(p => p.themes.includes(theme));
   if (!pool.length) throw new Error('Pro vybrané téma nejsou dostupné úlohy.');
   const due = pool.filter(p => state.history[p.id]?.dueAt <= now);
-  if (mode === 'review') return due.sort((a, b) => state.history[a.id].dueAt - state.history[b.id].dueAt)[0] || null;
+  if (mode === 'review') {
+    if(reviewPausedUntil>now||(state.reviewDay===new Date(now).toISOString().slice(0,10)&&(state.reviewsToday||0)>=reviewBudget))return null;
+    return due.sort((a, b) => state.history[a.id].dueAt - state.history[b.id].dueAt)[0] || null;
+  }
   if (mode === 'daily') {
     const day = Math.floor(now / 86400000); return pool[day % pool.length];
   }
@@ -67,6 +70,7 @@ export function recordPuzzle(original, puzzle, success, { hinted = false, now = 
     const stats = state.themeStats[theme] ||= { attempted: 0, solved: 0 }; stats.attempted++; if (clean) stats.solved++;
   }
   const day = new Date(now).toISOString().slice(0, 10), yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
+  if(mode==='review'){state.reviewsToday=state.reviewDay===day?(state.reviewsToday||0)+1:1;state.reviewDay=day;}
   if (state.lastDay !== day) { state.streak = state.lastDay === yesterday ? state.streak + 1 : 1; state.lastDay = day; }
   state.bestStreak = Math.max(state.bestStreak, state.streak);
   state.recent = [...state.recent.filter(id => id !== puzzle.id), puzzle.id].slice(-100);

@@ -1,7 +1,8 @@
 import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
 
-export const REVIEW_VERSION=3;
+export const REVIEW_VERSION=4;
+export const SACRIFICE_VERSION=2;
 const values={p:100,n:320,b:330,r:500,q:900,k:0};
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 export function expectedPercent(score){
@@ -33,25 +34,61 @@ export function classifyMove(move,before,after,{previous}={}){
 export function brilliantEligible(move,before,after){
   const own=score=>move.color==='w'?expectedPercent(score):100-expectedPercent(score);
   const alternative=before?.lines?.[1];
-  return !!alternative && own(alternative)<85 && own(after)>=45;
+  if(!before||!after||!alternative)return false;
+  if(!move.fenBefore)return false;
+  const chess=new Chess(move.fenBefore);
+  return !chess.isCheck()&&chess.moves().length>1&&move.piece!=='p'&&!move.promotion&&
+    before.lines?.[0]?.pv?.[0]===move.uci&&[before,after,before.lines[0],alternative].every(s=>s.depth>=18)&&
+    own(alternative)<75&&own(after)>=49&&own(before)-own(alternative)>=5&&own(before)-own(after)<=2;
 }
 
 // Conservative static exchange test: a free recapture is not a sacrifice.
 // This only nominates a candidate; an additional engine search must confirm it.
 export function sacrificeCandidates(move){
-  const chess=new Chess(move.fenAfter),owner=move.color,baseline=material(chess,owner),candidates=[];
+  const chess=new Chess(move.fenAfter),owner=move.color,baseline=material(new Chess(move.fenBefore),owner),candidates=[];
   if(move.piece==='p'||move.promotion)return candidates;
-  for(const capture of chess.moves({verbose:true}).filter(m=>m.captured&&values[m.captured]>=300)){
+  // Only the moved piece may be offered. Include material won by the initial
+  // move and the entire legal exchange, not just one immediate recapture.
+  const exchange=(square,depth=0)=>{
+    let score=material(chess,owner);if(depth>=8)return score;
+    const maximize=chess.turn()===owner;
+    for(const m of chess.moves({verbose:true}).filter(m=>m.to===square&&m.captured)){
+      chess.move(m);const next=exchange(square,depth+1);chess.undo();score=maximize?Math.max(score,next):Math.min(score,next);
+    }
+    return score;
+  };
+  for(const capture of chess.moves({verbose:true}).filter(m=>m.to===move.to&&m.captured&&values[m.captured]>=300)){
     chess.move(capture);
     const capturedFen=chess.fen();
-    let bestMaterial=material(chess,owner);
-    for(const recapture of chess.moves({verbose:true}).filter(m=>m.to===capture.to&&m.captured)){
-      chess.move(recapture);bestMaterial=Math.max(bestMaterial,material(chess,owner));chess.undo();
-    }
+    const bestMaterial=exchange(capture.to);
     if(baseline-bestMaterial>=200)candidates.push({capture:capture.from+capture.to+(capture.promotion||''),fen:capturedFen,materialLoss:baseline-bestMaterial});
     chess.undo();
   }
-  return candidates.sort((a,b)=>b.materialLoss-a.materialLoss).slice(0,2);
+  return candidates.sort((a,b)=>b.materialLoss-a.materialLoss);
+}
+
+export function verifiedBrilliant(move,before,after,proof){
+  if(proof?.version!==SACRIFICE_VERSION||!brilliantEligible(move,before,after))return null;
+  const candidates=sacrificeCandidates(move);
+  if(!candidates.length||candidates.length>3)return null;
+  const own=score=>move.color==='w'?expectedPercent(score):100-expectedPercent(score);
+  if(!candidates.every(c=>{const p=proof.captures?.find(p=>p.capture===c.capture);return p?.score?.depth>=18&&own(p.score)>=49&&own(after)-own(p.score)<=3;}))return null;
+  return {kind:'brilliant',label:'Brilantní*',symbol:'!!',note:'Ověřená oběť zahrané figury: materiál po výměnách zůstává odevzdaný, všechny legální možnosti přijetí mají potvrzenou kompenzaci. Vlastní přísná klasifikace Evala.',proof:{version:SACRIFICE_VERSION,captures:candidates.map(c=>{const p=proof.captures.find(p=>p.capture===c.capture);return {capture:c.capture,score:p.score,continuation:lineToSan(move.fenAfter,[c.capture,...(p.score.lines?.[0]?.pv||[])],9)};})}};
+}
+
+// Old labels are not evidence. Rebuild them from positions and a current proof
+// on both local loads and account reads/writes, including unchanged revisions.
+export function normalizeReview(game){
+  const a=game.analysis;if(!a)return game;
+  const prior=a.moves||[],specials=a.specials||[];
+  a.moves=game.moves.map((m,i)=>{
+    const base=classifyMove(m,a.positions?.[i],a.positions?.[i+1],{previous:a.positions?.[i-1]});
+    if(!base)return null;
+    const proof=prior[i]?.proof||specials.find(([index])=>index===i)?.[1]?.proof;
+    return {...base,...verifiedBrilliant(m,a.positions?.[i],a.positions?.[i+1],proof)};
+  });
+  a.specials=a.moves.flatMap((m,i)=>m?.kind==='brilliant'?[[i,m]]:[]);
+  a.classificationVersion=REVIEW_VERSION;return game;
 }
 
 const performanceCache=new WeakMap();
@@ -100,7 +137,10 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
   const report=game.analysis,start=performance.now();let processed=0;
   const publish=(phase,index,total)=>{
     report.moves=game.moves.map((move,i)=>classifyMove(move,report.positions[i],report.positions[i+1],{previous:report.positions[i-1]}));
-    for(const [i,mark] of (report.specials||[]))if(report.moves[i])report.moves[i]={...report.moves[i],...mark};
+    for(const [i,mark] of (report.specials||[]))if(report.moves[i]){
+      const special=verifiedBrilliant(game.moves[i],report.positions[i],report.positions[i+1],mark.proof);
+      if(special)report.moves[i]={...report.moves[i],...special};
+    }
     onUpdate?.({phase,index,total,processed,elapsed:performance.now()-start,report});
   };
   for(let i=0;i<game.fens.length;i++){
@@ -130,12 +170,17 @@ export async function reviewGame(game,engine,options,{signal,onUpdate}={}){
     // only way to win. A winning score BEFORE it is not enough to reject it.
     if(!brilliantEligible(move,report.positions[i],report.positions[i+1]))continue;
     const sacrifices=sacrificeCandidates(move);if(!sacrifices.length)continue;
-    const candidate=sacrifices[0];verified++;
+    if(sacrifices.length>3)continue;
+    verified++;
     publish('brilliant',verified,Math.min(6,nominees.length));
-    const proof=await engine.search({fen:candidate.fen,history:{initialFen:game.initialFen,moves:[...game.moves.slice(0,i+1).map(m=>m.uci),candidate.capture]},settings:{...options,time:Math.max(1200,options.time*2),depth:Math.max(18,options.depth),multipv:1}},{signal});
-    const stable=proof.depth>=14&&ownExpected(proof)>=45&&ownExpected(report.positions[i+1])-ownExpected(proof)<8;
-    const special={kind:stable?'brilliant':'sacrifice',label:stable?'Brilantní*':'Zajímavá oběť',symbol:stable?'!!':'!?',note:stable?'Vlastní klasifikace Evala: nejlepší tah, skutečná oběť materiálu a engine ověřil kompenzaci po přijetí oběti. Není to odznak Chess.com.':'Kandidát na oběť. Hlubší výpočet zatím nepotvrdil všechny podmínky pro brilantní tah.',proof:{capture:candidate.capture,score:proof,continuation:lineToSan(candidate.fen,proof.lines?.[0]?.pv||[],8)}};
-    report.specials=report.specials.filter(([index])=>index!==i);report.specials.push([i,special]);
+    const proof={version:SACRIFICE_VERSION,captures:[]};
+    for(const candidate of sacrifices){
+      const score=await engine.search({fen:candidate.fen,history:{initialFen:game.initialFen,moves:[...game.moves.slice(0,i+1).map(m=>m.uci),candidate.capture]},settings:{...options,time:Math.max(1200,options.time*2),depth:Math.max(20,options.depth),multipv:1}},{signal});
+      proof.captures.push({capture:candidate.capture,score,continuation:lineToSan(candidate.fen,score.lines?.[0]?.pv||[],8)});
+      if(score.depth<18||ownExpected(score)<49||ownExpected(report.positions[i+1])-ownExpected(score)>3)break;
+    }
+    const special=verifiedBrilliant(move,report.positions[i],report.positions[i+1],proof);
+    report.specials=report.specials.filter(([index])=>index!==i);if(special)report.specials.push([i,special]);
     publish('brilliant',verified,Math.min(6,nominees.length));
   }
   report.complete=true;report.finishedAt=Date.now();publish('done',game.fens.length,game.fens.length);

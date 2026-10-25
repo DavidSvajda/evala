@@ -22,8 +22,8 @@ const paths = {
 };
 function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name] || paths.puzzle}"/></svg>`; }
 function icons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon)); }
-const PREFERENCES = { boardTheme:'sage',pieceStyle:'classic',coordinates:true,legalMoves:true,sound:false,autoNext:false,skill:'club',difficulty:'normal',chessUsername:'',chessPlatform:'chesscom',sidebarCollapsed:false };
-const pageNames = { home:'Přehled', games:'Moje partie', analysis:'Rozbor', puzzles:'Trénink', insights:'Statistiky', settings:'Nastavení', account:'Můj účet' };
+const PREFERENCES = { boardTheme:'sage',pieceStyle:'classic',coordinates:true,legalMoves:true,sound:false,autoNext:false,skill:'club',difficulty:'normal',chessUsername:'',chessPlatform:'chesscom',sidebarCollapsed:false,reviewBudget:10,reviewPausedUntil:0 };
+const pageNames = { home:'Přehled', games:'Moje partie', analysis:'Rozbor', puzzles:'Trénink', insights:'Statistiky', settings:'Nastavení', account:'Můj účet',practice:'Cvičebna' };
 
 export async function initPlatform(context) {
   let page = '', bank = [], loadingBank, preferences, sessionSolved = 0, sessionAttempted = 0, toastTimer, preferenceTimer;
@@ -52,6 +52,7 @@ export async function initPlatform(context) {
       const el = $('#' + id); if (el.type === 'checkbox') el.checked = preferences[key]; else el.value = preferences[key];
     }
     $('#puzzle-difficulty').value = preferences.difficulty;
+    $('#review-budget').value=preferences.reviewBudget;$('#review-pause-status').textContent=preferences.reviewPausedUntil>Date.now()?new Date(preferences.reviewPausedUntil).toLocaleDateString(language()==='en'?'en-GB':'cs-CZ'):'—';
   }
   function updatePreferences(patch) {
     Object.assign(preferences, patch); applyPreferences();
@@ -207,11 +208,11 @@ export async function initPlatform(context) {
         const data = await accountRequest('puzzle/next', { method:'POST', body:{ mode:lesson?.personal?'personal':mode,puzzleId:lesson?.id,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty } });
         if (request !== generation) return;
         saveTraining(data.training); if (data.puzzle) { puzzle = data.puzzle; state = puzzle.state; challengeId = puzzle.challengeId; server = true; }
-      } else { puzzle = choosePuzzle(bank, training, { mode,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty }); if (puzzle) state = startPuzzle(puzzle); }
+      } else { puzzle = choosePuzzle(bank, training, { mode,theme:$('#puzzle-theme').value,difficulty:preferences.difficulty,reviewBudget:preferences.reviewBudget,reviewPausedUntil:preferences.reviewPausedUntil }); if (puzzle) state = startPuzzle(puzzle); }
       if (request !== generation) return;
       if (!puzzle) {
-        $('#puzzle-status').textContent = mode === 'personal' ? 'Zatím nejsou vhodné pozice' : 'Opakování je hotové';
-        $('#puzzle-message').textContent = mode === 'personal' ? 'Nastav svou přezdívku v Nastavení a rozeber partie. Přidáváme jen chyby, u kterých engine našel jasně lepší tah.' : 'Další úlohy se vrátí, až nastane čas je zopakovat. Mezitím můžeš pokračovat v taktice.';
+        $('#puzzle-status').textContent = mode === 'personal' ? 'Zatím nejsou vhodné pozice' : 'Pro dnešek stačí';
+        $('#puzzle-message').textContent = mode === 'personal' ? 'Nastav svou přezdívku v Nastavení a rozeber partie. Přidáváme jen chyby, u kterých engine našel jasně lepší tah.' : 'Platí denní limit a případná pauza. Starší úlohy nemažeme; můžeš pokračovat v taktice nebo upravit limit v Nastavení.';
         $('#puzzle-hint').disabled = $('#puzzle-reveal').disabled = true; $('#puzzle-turn').textContent = 'Vyber jiný režim'; return;
       }
       current = { puzzle,state,challengeId,server,owner:owner(),mode,initialFen:state.fen };
@@ -292,6 +293,10 @@ export async function initPlatform(context) {
   $('#toggle-language').onclick=()=>updatePreferences({language:language()==='en'?'cs':'en'});
   $('#language-choice').onchange=event=>updatePreferences({language:event.target.value});
   document.addEventListener('evala:language',()=>{renderHome();paintPuzzle();document.title=translate(pageNames[page]||'Přehled')+' · Evala';if(page==='account')renderAccount();});
+  $('#review-budget').onchange=e=>updatePreferences({reviewBudget:Number(e.target.value)});
+  $('#pause-reviews').onclick=()=>updatePreferences({reviewPausedUntil:Date.now()+7*86400000});
+  $('#resume-reviews').onclick=()=>updatePreferences({reviewPausedUntil:0});
+  document.addEventListener('evala:train-theme',e=>{mode='rated';$('#puzzle-theme').value=e.detail;go('puzzles');});
   $('#next-puzzle').onclick = loadPuzzle; $('#puzzle-hint').onclick = () => helpPuzzle(false); $('#puzzle-reveal').onclick = () => helpPuzzle(true);
   $('#flip-puzzle').onclick = () => { puzzleFlipped = !puzzleFlipped; paintPuzzle(); };
   $('#start-lesson').onclick=()=>{mode='lesson';go('puzzles');};

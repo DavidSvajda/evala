@@ -1,4 +1,5 @@
 import { account, accountRequest } from './account.js';
+import { normalizeReview } from './review.js';
 let opening;
 let owner='guest';
 const saves=new Map();
@@ -29,10 +30,10 @@ export async function loadLibrary(){
       const remoteIds=new Set(remote.map(g=>g.id));
       for(const saved of local)if(!remoteIds.has(saved.id)&&saved._remoteVersion&&!saved._syncPending){await new Promise((resolve,reject)=>{const tx=db.transaction('games','readwrite');tx.objectStore('games').delete(saved.id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});byId.delete(saved.id);}
       const pending=[...byId.values()].some(g=>g._syncPending);
-      syncStatus(pending?'Některé partie čekají na synchronizaci.':'Synchronizováno',pending);return [...byId.values()].sort((a,b)=>b.createdAt-a.createdAt);
+      syncStatus(pending?'Některé partie čekají na synchronizaci.':'Synchronizováno',pending);return [...byId.values()].map(normalizeReview).sort((a,b)=>b.createdAt-a.createdAt);
     }catch(error){syncStatus(error.message,true);}
   }
-  return local.map(g=>({...g,_storageOwner:active})).sort((a,b)=>b.createdAt-a.createdAt);
+  return local.map(g=>normalizeReview({...g,_storageOwner:active})).sort((a,b)=>b.createdAt-a.createdAt);
 }
 export async function saveGame(game){
   const active=owner;if(game._storageOwner&&game._storageOwner!==active)return;

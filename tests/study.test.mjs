@@ -30,8 +30,10 @@ test('move quality is symmetric, and high evaluations do not invent brilliants',
   assert.equal(classifyMove({color:'w',uci:'e2e4'},before,before).kind,'best');
   assert.equal(expectedPercent({kind:'cp',value:0}),50);
   const game=parsePgn(DEMO_PGN);assert.ok(sacrificeCandidates(game.moves[30]).some(c=>c.capture==='d7b8'));
-  assert.equal(brilliantEligible({color:'w'},{kind:'mate',value:3,lines:[{kind:'mate',value:3},{kind:'cp',value:0}]},{kind:'mate',value:2}),true,'a forced win must not hide a sacrifice if alternatives do not win');
-  assert.equal(brilliantEligible({color:'w'},{lines:[{kind:'mate',value:3},{kind:'mate',value:4}]},{kind:'mate',value:2}),false,'an already won alternative excludes the brilliant label');
+  const move=game.moves[30],best={kind:'mate',value:3,depth:20,pv:[move.uci]},second={kind:'cp',value:0,depth:20};
+  assert.equal(brilliantEligible(move,{kind:'mate',value:3,depth:20,lines:[best,second]},{kind:'mate',value:2,depth:20}),true);
+  assert.equal(brilliantEligible(move,{kind:'mate',value:3,depth:20,lines:[best,{kind:'mate',value:4,depth:20}]},{kind:'mate',value:2,depth:20}),false);
+
 });
 
 test('server URLs prohibit credentials and insecure remote HTTP',()=>{

@@ -31,7 +31,12 @@ export function parsePgn(pgn) {
     return {san:m.san,uci:m.from+m.to+(m.promotion||''),color:m.color,from:m.from,to:m.to,piece:m.piece,captured:m.captured||null,promotion:m.promotion||null,fenBefore:m.before,fenAfter:m.after,clockAfter:clock?Number(clock[1])*3600+Number(clock[2])*60+Number(clock[3]):null};
   });
   const canonical = initialFen+'|'+moves.map(m=>m.uci).join(' ');
-  return {id:fingerprint(canonical),pgn:chess.pgn(),headers,initialFen,moves,fens:[initialFen,...moves.map(m=>m.fenAfter)],createdAt:Date.now(),analysis:null};
+  const notes={};
+  for(const [i,fen] of [initialFen,...moves.map(m=>m.fenAfter)].entries()){
+    const comment=comments.get(fen)||'',plain=/\[Evala |\[%eval/.test(comment)?'':comment.replace(/\[%[^\]]*\]/g,'').trim(),text=comment.match(/\[Evala note\]([\s\S]*?)(?=\[Evala plan\]|$)/)?.[1]?.trim()||plain,plan=comment.match(/\[Evala plan\]([\s\S]*)/)?.[1]?.trim()||'';
+    if(text||plan||comment.includes('[Evala critical]'))notes[i]={text:text.slice(0,1200),plan:plan.slice(0,800),critical:comment.includes('[Evala critical]')};
+  }
+  return {id:fingerprint(canonical),pgn:chess.pgn(),headers,initialFen,moves,fens:[initialFen,...moves.map(m=>m.fenAfter)],createdAt:Date.now(),analysis:null,learning:{notes,attempts:[]}};
 }
 
 export function parsePgnCollection(text) {
@@ -58,18 +63,24 @@ export function lineToSan(fen, pv, limit=12) {
   return result.join(' ');
 }
 
-export function annotatedPgn(game) {
+export function annotatedPgn(game,{engine=true,plies=null}={}) {
   const chess=new Chess(game.initialFen);
   Object.entries(game.headers).forEach(([k,v])=>chess.setHeader(k,v));
-  chess.setHeader('Annotator','Evala / Stockfish 19');
+  chess.setHeader('Annotator',engine?'Evala / Stockfish 19':'Evala notes');
+  const noteAt=index=>{
+    if(plies&&!plies.includes(index))return '';
+    const n=game.learning?.notes?.[index];return n?`${n.critical?'[Evala critical] ':''}${n.text?'[Evala note] '+n.text+' ':''}${n.plan?'[Evala plan] '+n.plan:''}`.replace(/[{}]/g,''):'';
+  };
+  if(noteAt(0))chess.setComment(noteAt(0));
   for(const [i,move] of game.moves.entries()) {
     chess.move(move.san);
     const result=game.analysis?.positions?.[i+1],mark=game.analysis?.moves?.[i];
-    if(!result)continue;
+    const note=noteAt(i+1);
+    if(!result||!engine){if(note)chess.setComment(note);continue;}
     const value=result.kind==='mate'?`#${result.value}`:(result.value/100).toFixed(2);
     const before=game.analysis.positions[i];
     const best=before?.lines?.[0]?.pv;
-    chess.setComment(`[%eval ${value}] ${mark?.label||''}${mark?.note?' '+mark.note:''}${best?.length?' | Engine: '+lineToSan(move.fenBefore,best,8):''}`.replace(/[{}]/g,''));
+    chess.setComment(`[%eval ${value}] ${mark?.label||''}${mark?.note?' '+mark.note:''}${best?.length?' | Engine: '+lineToSan(move.fenBefore,best,8):''} ${note}`.replace(/[{}]/g,''));
   }
   return chess.pgn({maxWidth:90});
 }

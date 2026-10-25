@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { createDocumentStore } from './document-store.mjs';
 import { parsePgn } from '../src/study/game.js';
-import { classifyMove } from '../src/study/review.js';
+import { classifyMove,normalizeReview } from '../src/study/review.js';
+import { cleanLearning } from '../src/training/practice.js';
 import { checkedResult } from '../src/study/remote.js';
 import { choosePuzzle, startPuzzle, playPuzzle, recordPuzzle, trainingState,personalPuzzles } from '../src/training/logic.js';
 
@@ -19,6 +20,8 @@ function preferences(input = {}) {
   for (const [key, options] of Object.entries({ boardTheme: ['sage', 'walnut', 'blue', 'slate'], pieceStyle: ['classic', 'letters'], skill: ['beginner', 'club', 'advanced'], difficulty: ['easy', 'normal', 'hard'],language:['cs','en'] })) if (options.includes(input[key])) p[key] = input[key];
   for (const key of ['coordinates', 'legalMoves', 'sound', 'autoNext','sidebarCollapsed','onboardingComplete']) if (typeof input[key] === 'boolean') p[key] = input[key];
   if(['tactics','review','balanced'].includes(input.trainingGoal))p.trainingGoal=input.trainingGoal;
+  if(Number.isInteger(input.reviewBudget)&&input.reviewBudget>=1&&input.reviewBudget<=50)p.reviewBudget=input.reviewBudget;
+  if(Number.isFinite(input.reviewPausedUntil))p.reviewPausedUntil=Math.max(0,Math.min(Date.now()+30*86400000,input.reviewPausedUntil));
   if(input.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(input.lesson.day)&&Array.isArray(input.lesson.ids)&&input.lesson.ids.length<=6&&input.lesson.ids.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(id))){p.lesson={day:input.lesson.day,ids:input.lesson.ids,done:Array.isArray(input.lesson.done)?input.lesson.done.filter(id=>input.lesson.ids.includes(id)).slice(0,6):[]};}
   if (typeof input.chessUsername === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(input.chessUsername)) p.chessUsername = input.chessUsername;
   if (['chesscom', 'lichess'].includes(input.chessPlatform)) p.chessPlatform = input.chessPlatform;
@@ -101,7 +104,7 @@ export function createAccounts({ store = createDocumentStore(), googleClientId =
         if (req.method === 'GET') {
           const game = account.games[id] ? (await store.get(key + ':' + account.games[id].version)).value : null;
           if (!account.games[id] || !game) throw fail('Partie nebyla nalezena.', 404);
-          json(res, 200, { game: { ...game, _remoteVersion: account.games[id].version } }); return true;
+          json(res, 200, { game: { ...normalizeReview(game), _remoteVersion: account.games[id].version } }); return true;
         }
         if (req.method === 'DELETE') {
           let version;
@@ -113,16 +116,20 @@ export function createAccounts({ store = createDocumentStore(), googleClientId =
           if (game.id !== id) throw fail('Partie neodpovídá svému identifikátoru.');
           game.createdAt = Math.max(0, Math.min(Date.now(), Number(input.createdAt) || Date.now()));
           game.notes = typeof input.notes === 'string' ? input.notes.slice(0,4000) : '';
+          game.learning=cleanLearning(input.learning||game.learning,game.moves);
           if (input.analysis) {
             const a = input.analysis;
             if (!Array.isArray(a.positions) || a.positions.length > game.fens.length) throw fail('Neplatný rozbor.');
             let positions;try{positions=a.positions.map(p => p ? checkedResult(p) : null);}catch{throw fail('Neplatné hodnocení pozice.');}
             game.analysis = { key: String(a.key || '').slice(0, 1000), version: Number(a.version) || 3, engine: a.engine === 'lite' ? 'lite' : 'full', positions, complete: positions.length === game.fens.length && positions.every(Boolean), moves: game.moves.map((m, i) => classifyMove(m, positions[i], positions[i + 1], { previous: positions[i - 1] })), finishedAt: Math.min(Date.now(), Number(a.finishedAt) || Date.now()) };
-            // Preserve bounded, user-visible engine annotations without accepting HTML.
+            // Recheck the certificate; never trust a client-supplied badge.
             for (let i = 0; i < game.analysis.moves.length; i++) {
               const source = a.moves?.[i], mark = game.analysis.moves[i];
-              if (mark && ['brilliant', 'sacrifice'].includes(source?.kind)) Object.assign(mark, { kind: source.kind, label: source.kind === 'brilliant' ? 'Brilantní*' : 'Zajímavá oběť', symbol: source.kind === 'brilliant' ? '!!' : '!?', note: String(source.note || '').slice(0, 500) });
+              if(mark&&source?.proof?.version===2&&Array.isArray(source.proof.captures)&&source.proof.captures.length<=3){
+                try{mark.proof={version:2,captures:source.proof.captures.map(p=>({capture:String(p.capture).slice(0,5),score:checkedResult(p.score)}))};}catch{/* Invalid proof falls back to ordinary quality. */}
+              }
             }
+            normalizeReview(game);
           }
           const bytes = Buffer.byteLength(JSON.stringify(game)), version = randomUUID(); let previousVersion;
           await mutateAccount(async a => {
@@ -160,7 +167,7 @@ export function createAccounts({ store = createDocumentStore(), googleClientId =
           personal=personalPuzzles(games,username);
         }
         await mutateAccount(a => {
-          const puzzle = mode==='personal'?(input.puzzleId?personal.find(p=>p.id===input.puzzleId):(personal.find(p=>a.training.history[p.id]?.dueAt<=Date.now())||personal.find(p=>!a.training.recent.includes(p.id))||personal[0])):mode==='lesson'?all.find(p=>p.id===input.puzzleId):choosePuzzle(all, trainingState(a.training), { mode, theme: String(input.theme || 'all'), difficulty: input.difficulty });
+          const puzzle = mode==='personal'?(input.puzzleId?personal.find(p=>p.id===input.puzzleId):(personal.find(p=>a.training.history[p.id]?.dueAt<=Date.now())||personal.find(p=>!a.training.recent.includes(p.id))||personal[0])):mode==='lesson'?all.find(p=>p.id===input.puzzleId):choosePuzzle(all, trainingState(a.training), { mode, theme: String(input.theme || 'all'), difficulty: input.difficulty,reviewBudget:a.preferences.reviewBudget||10,reviewPausedUntil:a.preferences.reviewPausedUntil||0 });
           if (!puzzle) { response = { puzzle: null, training: a.training }; return a; }
           const state = startPuzzle(puzzle), challengeId = randomUUID();
           a.activePuzzle = { challengeId, puzzleId: puzzle.id, state, mode,personalPuzzle:puzzle.personal?puzzle:null, expires: Date.now() + 3600000 };

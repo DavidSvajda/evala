@@ -29,11 +29,11 @@ test('Google signatures, audience, nonce, CSRF and session isolation protect a p
     const alice=await login(base,'alice'),bob=await login(base,'bob');assert.equal(alice.response.status,200);assert.notEqual(alice.user.id,bob.user.id);
     assert.match(alice.response.headers.get('set-cookie'),/HttpOnly; SameSite=Lax/);assert.ok(!JSON.stringify(alice.user).includes('credential'));
     const replay=await fetch(base+'/api/account/google',{method:'POST',headers:{Cookie:alice.replay.challengeCookie,'Content-Type':'application/json','X-CSRF-Token':alice.replay.challenge},body:JSON.stringify({credential:alice.replay.credential})});assert.equal(replay.status,403);
-    const game=parsePgn(pgn);game.notes='Remember the diagonal.';
+    const game=parsePgn(pgn);game.notes='Remember the diagonal.';game.learning={notes:{1:{text:'My candidate',critical:true}},attempts:[],selfAnalysis:true};game.analysis={positions:game.fens.map(()=>({kind:'cp',value:0,depth:18,lines:[{kind:'cp',value:0,depth:18,pv:['f2f3']}]})),moves:game.moves.map(()=>({kind:'brilliant',note:'forged'})),complete:true};
     const path='/api/account/library/'+game.id;
     assert.equal((await fetch(base+path,{method:'PUT',headers:{Cookie:alice.cookie,'Content-Type':'application/json'},body:JSON.stringify(game)})).status,403);
     let response=await fetch(base+path,{method:'PUT',headers:alice.headers,body:JSON.stringify(game)});assert.equal(response.status,200);const {version}=await response.json();
-    const saved=await (await fetch(base+path,{headers:alice.headers})).json();assert.equal(saved.game.notes,game.notes);assert.equal(saved.game._remoteVersion,version);
+    const saved=await (await fetch(base+path,{headers:alice.headers})).json();assert.equal(saved.game.notes,game.notes);assert.equal(saved.game._remoteVersion,version);assert.equal(saved.game.learning.notes[1].text,'My candidate');assert.equal(saved.game.learning.selfAnalysis,true);assert.ok(saved.game.analysis.moves.every(m=>m.kind!=='brilliant'));
     assert.equal((await fetch(base+path,{headers:bob.headers})).status,404);assert.equal((await (await fetch(base+'/api/account/library',{headers:bob.headers})).json()).games.length,0);
     assert.equal((await fetch(base+path,{method:'PUT',headers:alice.headers,body:JSON.stringify(game)})).status,409,'stale device must not overwrite a saved game');
     response=await fetch(base+'/api/account/profile',{method:'PATCH',headers:alice.headers,body:JSON.stringify({preferences:{boardTheme:'blue',pieceStyle:'letters',token:'never-store'}})});assert.equal(response.status,200);
