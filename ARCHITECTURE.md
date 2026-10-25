@@ -25,7 +25,7 @@ No SQL database is used. Storage keys are hashed, and game keys include the auth
 
 `src/study/app.js` coordinates the library and analysis board. `platform.js` coordinates navigation, preferences, dashboard and puzzle interactions. Account DOM/lifecycle actions live in `account-panel.js`; notation, summary and game-row markup live in `src/study/views/`. Reusable icons, chess previews and HTML escaping live in `src/ui/`.
 
-Chess rules, result validation, move classification and training selection remain separate from their views. `src/core/engine-result.js` can be used by server and browser without importing browser transport. `review-stream.js` defines the versioned incremental transport. `uci.js` serializes engine commands, handles cancellation/readiness, preserves Hash within a game and bounds scoped result reuse.
+Chess rules, result validation, move classification and training selection remain separate from their views. `src/core/engine-result.js` and `src/core/game-analytics.js` serve server and browser without importing browser transport or rendering. `review-stream.js` defines the versioned incremental transport. `uci.js` serializes engine commands, handles cancellation/readiness, preserves Hash within a game and bounds scoped result reuse.
 
 Guest and account IndexedDB libraries remain separate. A server-issued account generation invalidates old pending data after account deletion/recreation. Requests are bound to the expected account/generation; client code discards responses after identity changes. Browser preferences never contain the Google ID token or account session cookie.
 
