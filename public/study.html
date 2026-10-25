@@ -1,64 +1,802 @@
 <!doctype html>
-<html lang="cs"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>Evala</title><link rel="icon" href="icons/32.png"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="study.css"><link rel="stylesheet" href="study-responsive.css"><link rel="stylesheet" href="review.css"><link rel="stylesheet" href="navigation.css"><script src="study.js" type="module"></script><link rel="stylesheet" href="learning.css"></head><body>
-<a class="skip-link" href="#page-content">Přejít na obsah</a>
-<aside class="app-sidebar"><a class="wordmark" href="#/home"><span id="brand"></span>evala<span class="brand-period">.</span></a>
-<nav class="main-navigation" aria-label="Hlavní navigace">
-<a href="#/home" data-route="home"><span data-icon="home"></span>Přehled</a>
-<a href="#/games" data-route="games"><span data-icon="games"></span>Moje partie<span id="nav-game-count" class="nav-count"></span></a>
-<button id="view-review" data-route="analysis" aria-pressed="false"><span data-icon="analysis"></span>Rozbor</button>
-<a href="#/puzzles" data-route="puzzles"><span data-icon="puzzle"></span>Trénink<span class="nav-count" id="nav-review-count"></span></a>
-<button id="view-analytics" data-route="insights" aria-pressed="false"><span data-icon="chart"></span>Statistiky</button>
-<a href="#/practice" data-route="practice"><span data-icon="book"></span>Cvičebna</a>
-<a href="#/settings" data-route="settings"><span data-icon="settings"></span>Nastavení</a>
-</nav><div class="sidebar-bottom"><div class="sidebar-engine"><span class="status-dot"></span><span id="engine-badge">Stockfish 19</span></div><a href="#/account" id="sidebar-account" class="sidebar-account"><span class="avatar" id="sidebar-avatar" data-icon="user"></span><span><strong id="sidebar-user">Host</strong><small id="sidebar-storage">Uloženo v prohlížeči</small></span><span data-icon="chevron"></span></a></div></aside>
-<div class="app-main"><header class="study-header"><button id="toggle-sidebar" class="icon-button" aria-label="Skrýt boční panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 4h18v16H3zM9 4v16m8-12-4 4 4 4"/></svg></button><span id="page-label">Přehled</span><span class="header-spacer"></span><button id="toggle-language" class="quiet-button" aria-label="Jazyk aplikace">EN</button><span id="sync-status" role="status"></span><button id="toggle-library" class="quiet-button"><span data-icon="plus"></span>Importovat</button><button id="toggle-settings" class="icon-button" aria-label="Nastavení enginu" aria-expanded="false" aria-controls="study-settings"><span data-icon="settings"></span></button><a href="#/account" class="header-signin" id="header-signin">Přihlásit se</a></header>
-<div id="page-content" tabindex="-1">
-<main class="overview-page page" data-page="home"><div class="page-heading"><div><h1 id="welcome-title">Přehled</h1><p id="today-date"></p></div><a href="#/games" class="primary-link"><span data-icon="plus"></span>Importovat partii</a></div>
-<section id="onboarding" class="setup-strip" hidden><h2>Nastav si trénink</h2><form id="onboarding-form"><label>Chess.com profil nebo přezdívka<input id="onboarding-username" placeholder="https://www.chess.com/member/jmeno" autocomplete="off"></label><label>Přibližná úroveň<select id="onboarding-rating"><option value="400">400</option><option value="800" selected>800</option><option value="1200">1200</option><option value="1600">1600</option><option value="2000">2000</option><option value="2400">2400</option><option value="2800">2800</option></select></label><label>Cíl tréninku<select id="onboarding-goal"><option value="balanced">Partie i taktika</option><option value="tactics">Taktické kombinace</option><option value="review">Opakovat vlastní chyby</option></select></label><div class="setup-actions"><button class="primary-button" type="submit">Uložit a pokračovat</button><button class="text-button" type="button" id="skip-onboarding">Později</button></div><p id="onboarding-status" role="status"></p></form></section><section class="lesson-strip"><div><h2>Osobní lekce · 10 minut</h2><p id="lesson-progress" data-i18n-ignore></p></div><button class="quiet-button" id="start-lesson">Začít lekci</button></section>
-<div class="overview-grid"><section class="home-training"><div class="section-title"><h2>Trénink na dnes</h2><span id="home-training-count"></span></div><a href="#/puzzles" class="home-puzzle-link" data-training-mode="daily" aria-label="Otevřít taktickou úlohu"><div id="home-board" class="mini-chessboard" aria-hidden="true"></div><div class="home-board-caption"><span id="home-to-move">Bílý na tahu</span><span>Řešit úlohu <span data-icon="arrow"></span></span></div></a></section>
-<section class="daily-plan"><h2>Co chceš procvičit?</h2><a href="#/puzzles" class="plan-row" data-training-mode="rated"><span class="plan-icon" data-icon="puzzle"></span><span><strong>Taktické úlohy</strong><small>Obtížnost podle tvých výsledků</small></span><span data-icon="arrow"></span></a><a href="#/puzzles" class="plan-row" data-training-mode="review"><span class="plan-icon" data-icon="repeat"></span><span><strong>Opakování chyb</strong><small id="home-due">Zatím nemáš úlohy k opakování</small></span><span data-icon="arrow"></span></a><a href="#/puzzles" class="plan-row" data-training-mode="personal"><span class="plan-icon" data-icon="games"></span><span><strong>Pozice z tvých partií</strong><small id="home-personal">Z rozebraných chyb s jasným lepším tahem</small></span><span data-icon="arrow"></span></a>
-<div class="training-record"><h3>Tvoje výsledky v úlohách</h3><dl><div><dt>Hodnocení úloh</dt><dd id="home-rating">800</dd></div><div><dt>Vyřešeno bez pomoci</dt><dd id="home-solved">0</dd></div><div><dt>Dny v řadě</dt><dd id="home-streak">0</dd></div></dl><p>Hodnocení úloh je samostatné. Není to tvoje herní Elo.</p></div>
-<div class="account-invite" id="account-invite"><span data-icon="cloud"></span><div><strong>Ulož si partie ke svému účtu</strong><p>Po přihlášení budou rozbory a trénink dostupné i na jiném zařízení.</p><a href="#/account">Přihlásit se přes Google</a></div></div></section></div>
-<section class="recent-section"><div class="section-title"><h2>Poslední partie</h2><a href="#/games">Celá knihovna <span data-icon="arrow"></span></a></div><div id="recent-games"></div></section></main>
-<main class="games-page page" data-page="games" hidden><div class="page-heading"><div><h1>Moje partie</h1><p>Import, uložené rozbory a vlastní poznámky.</p></div><button id="sync-library" class="quiet-button"><span data-icon="cloud"></span>Synchronizovat</button></div><section class="library" aria-label="Knihovna partií"><div class="section-title"><h2>Knihovna</h2><span id="library-count">0</span></div><div class="library-filters"><input id="library-search" type="search" placeholder="Hráč, zahájení nebo datum" aria-label="Hledat partii"><select id="library-filter" aria-label="Filtrovat knihovnu"><option value="all">Všechny partie</option><option value="analyzed">Rozebrané</option><option value="pending">Bez rozboru</option></select></div><details id="import-panel" open><summary>Importovat partie</summary><form id="username-form"><label for="username">Uživatelské jméno</label><div class="source-row"><select id="platform" aria-label="Zdroj partií"><option value="chesscom">Chess.com</option><option value="lichess">Lichess</option></select><input id="username" placeholder="Tvoje přezdívka" autocomplete="off" maxlength="40" required></div><button id="import-username" class="secondary-button" type="submit">Načíst posledních 20</button></form><span class="import-or">nebo vlastní PGN</span><label class="file-button" for="pgn-file">Vybrat soubor .pgn<input id="pgn-file" type="file" accept=".pgn,.txt,application/x-chess-pgn"></label><textarea id="pgn-input" rows="3" placeholder="Vlož zápis PGN…" aria-label="PGN zápis partie" spellcheck="false"></textarea><button id="import-pgn" class="text-button">Importovat vložené PGN</button><p id="import-status" class="inline-status" role="status"></p></details><div id="game-list" class="game-list"></div><button id="demo-game" class="demo-game text-button">Ukázková partie</button><p class="storage-note">Uloženo v tomto prohlížeči.</p></section></main>
-<main class="workspace" data-page="analysis" hidden>
-
-<section class="position-workspace" aria-label="Pozice a vývoj partie"><div class="game-heading"><div><h1 id="game-title">Vyber partii</h1><p id="game-subtitle">Vyber partii v knihovně nebo importuj PGN.</p></div><button id="flip-board" class="icon-button" aria-label="Otočit šachovnici"></button><details class="game-actions"><summary title="Další akce partie">Partie</summary><div class="export-row"><button id="export-pgn" class="text-button">Exportovat PGN</button><button id="delete-game" class="text-button">Smazat partii</button></div></details></div><div class="board-stage"><div class="study-eval" role="meter" aria-label="Hodnocení z pohledu bílého" aria-valuemin="-10" aria-valuemax="10" aria-valuenow="0"><div class="eval-white"></div><span class="eval-midpoint"></span><span class="eval-score">—</span><span class="eval-depth"></span></div><div id="study-board" tabindex="0"></div></div><div id="promotion" class="promotion" hidden><span>Proměnit pěšce na:</span><button data-promotion="q">Dámu</button><button data-promotion="r">Věž</button><button data-promotion="b">Střelce</button><button data-promotion="n">Jezdce</button></div><div class="board-toolbar"><div class="navigation"><button id="first-move" class="icon-button" aria-label="Začátek partie"></button><button id="previous-move" class="icon-button" aria-label="Předchozí tah"></button><button id="next-move" class="icon-button" aria-label="Další tah"></button><button id="last-move" class="icon-button" aria-label="Konec partie"></button></div><span id="position-label">Výchozí pozice</span><button id="return-game" class="quiet-button" hidden>Zpět do partie</button><button id="copy-fen" class="quiet-button" title="Zkopírovat FEN aktuální pozice">FEN</button><button id="analyze-position" class="quiet-button" title="Spočítat aktuální pozici">Prozkoumat</button></div><div class="board-caption"><div id="board-feedback" role="status" aria-live="polite"><span>Výchozí pozice</span></div><span class="keyboard-hint">← → procházet tahy</span></div><div class="graph-heading"><h2>Průběh partie</h2><span id="graph-caption">Z pohledu bílého</span></div><div id="eval-graph" class="eval-graph"><p class="empty-graph">Graf se zobrazí po rozboru.</p></div></section>
-<aside class="analysis-panel" aria-label="Výsledky a nastavení rozboru"><section id="study-settings" class="study-settings" hidden><div class="section-title"><h2>Nastavení rozboru</h2><button id="close-settings" class="icon-button" aria-label="Zavřít nastavení"></button></div><label for="engine-choice">Engine</label><select id="engine-choice"><option value="full">Stockfish 19 Full NNUE · ~100 MB</option><option value="lite">Stockfish 19 Lite · úsporný</option></select><label for="profile">Profil rozboru</label><select id="profile"><option value="quick">Rychlý · 0,3 s / pozici</option><option value="balanced">Vyvážený · 0,75 s / pozici</option><option value="deep">Důkladný · 2 s / pozici</option><option value="custom">Vlastní nastavení</option></select><div class="option-row"><label for="study-depth">Max. hloubka</label><input id="study-depth" type="number" min="6" max="30" value="18"></div><div class="option-row"><label for="study-time">Čas na pozici (ms)</label><input id="study-time" type="number" min="100" max="10000" step="100" value="750"></div><div class="option-row"><label for="study-lines">Počet variant</label><select id="study-lines"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div><div class="option-row"><label for="study-hash">Paměť Hash (MB)</label><select id="study-hash"><option>16</option><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div><label class="check-row"><span>Šipka nejlepšího tahu</span><input id="study-arrows" type="checkbox" checked></label><div class="section-rule"></div><label for="backend">Kde počítat</label><select id="backend"><option value="local">V tomto prohlížeči · zdarma</option><option value="server">Na vlastním serveru</option></select><div id="server-fields" hidden><label for="server-url">HTTPS adresa serveru</label><input id="server-url" type="url" placeholder="https://evala.example.cz"><label for="server-token">API token · jen pro tuto kartu</label><input id="server-token" type="password" autocomplete="off"><button id="test-server" class="secondary-button">Ověřit spojení</button><p id="server-status" class="inline-status" role="status"></p><p class="hint">Serveru odešleš pozice a tahy. Knihovna zůstává v prohlížeči. Server vždy používá plný engine.</p></div><p class="hint">Hloubka i čas jsou horní limity. Více variant zpomalí prohledávání. Rozbor kritických tahů přidá krátký druhý průchod.</p></section>
-<section class="review-controls"><div class="section-title"><h2>Rozbor partie</h2><span id="review-state">Připraveno</span></div><button id="review-game" class="primary-button">Rozebrat partii <span id="review-arrow"></span></button><div id="review-progress" class="review-progress" hidden><progress id="progress" max="100" value="0" aria-label="Průběh rozboru"></progress><p id="progress-text" role="status"></p></div><p id="review-estimate" class="hint">První průchod se zobrazí postupně.</p><p id="app-error" class="app-error" role="alert"></p></section>
-<div class="analysis-tabs" role="tablist" aria-label="Obsah rozboru"><button id="analysis-summary-tab" role="tab" data-analysis-tab="summary" aria-selected="true">Shrnutí</button><button id="analysis-moves-tab" role="tab" data-analysis-tab="moves" aria-selected="false">Tahy</button><button id="analysis-lines-tab" role="tab" data-analysis-tab="lines" aria-selected="false">Varianty</button></div><section id="review-summary-empty" data-panel-section="summary"><h3>Vyber partii a spusť rozbor</h3><p>Zobrazí se přesnost obou hráčů, přehled kvality tahů a podklady pro odhad výkonu.</p></section><section id="summary" class="summary" data-panel-section="summary" hidden></section>
-<section class="move-feedback" data-panel-section="moves"><div id="move-classification"></div><p id="move-explanation">Vyber tah nebo spusť rozbor.</p><div id="gm-coach-card" class="gm-coach-card" hidden><div class="gm-coach-header"><span class="gm-coach-title">Poznámka k tahu</span><div class="gm-coach-actions"><button id="gm-voice-btn" class="icon-button gm-voice-btn" title="Přečíst poznámku" aria-label="Přečíst poznámku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg></button><button id="gm-retry-btn" class="quiet-button gm-retry-btn" hidden>Zkusit lepší tah</button></div></div><div id="position-sharpness" class="sharpness-chip" hidden></div><p id="gm-coach-text" class="gm-coach-text" data-i18n-ignore></p><div id="threat-radar-card" class="threat-radar-card" hidden><span id="threat-text" data-i18n-ignore></span><button id="threat-toggle" class="quiet-button threat-toggle" aria-pressed="false">Ukázat hrozbu</button></div><div id="imbalances-list" class="imbalances-list" data-i18n-ignore></div></div><p id="retry-feedback" class="inline-status" role="status"></p></section>
-<section class="lines-section" data-panel-section="lines"><div class="section-title"><h2>Varianty</h2><span id="lines-state">—</span></div><div id="engine-lines"><p class="panel-empty">Varianty se zobrazí po výpočtu.</p></div><p id="inspect-status" class="inline-status" role="status"></p></section>
-<section class="moves-section" data-panel-section="moves"><div class="section-title"><h2>Tahy</h2><select id="move-filter" aria-label="Filtrovat tahy"><option value="all">Všechny tahy</option><option value="critical">Klíčové tahy</option><option value="errors">Chyby</option><option value="best">Nejlepší</option><option value="brilliant">Brilantní</option></select></div><div class="notation-head"><span>Tah</span><span>Bílý</span><span>Černý</span></div><button id="next-critical" class="text-button">Další klíčový tah →</button><div id="move-list" class="move-list"><p class="panel-empty">Nejprve importuj partii.</p></div></section><details class="game-note" data-panel-section="lines"><summary>Poznámka k partii</summary><textarea id="game-note" maxlength="4000" rows="3" placeholder="Co jsi počítal, co si chceš ověřit…" aria-label="Poznámka k partii"></textarea></details><details class="classification-note" data-panel-section="summary"><summary>Jak se tahy hodnotí</summary><p>Vlastní klasifikace Evala, nikoli odznaky Chess.com. Skóre tahů používá převod hodnocení z veřejné formule Lichess. Skvělý tah vyžaduje výrazně horší druhou variantu. Promarněná šance označuje minutý mat nebo nevyužitou chybu soupeře. Brilantní tah vyžaduje ověřenou oběť zahrané figury, materiálovou ztrátu po výměnách a kompenzaci pro všechny přijaté oběti v hloubce alespoň 18. Starší neověřené odznaky se přepočítají. Hlubší rozbor může hodnocení změnit.</p></details></aside>
-</main>
-<main id="analytics-workspace" class="analytics-workspace" data-page="insights" hidden>
-<div class="analytics-heading"><div><h1>Přehled hráče</h1><p>Načti své partie a vyber, které chceš rozebrat.</p></div><div class="share-action"><button id="report-share" class="quiet-button">Sdílet aplikaci</button><span id="report-share-status" role="status"></span></div></div>
-<section class="player-setup" aria-label="Načíst a rozebrat partie"><div id="report-complete-bar" hidden><strong id="report-complete-summary"></strong><button id="report-edit" class="quiet-button" type="button">Změnit výběr</button></div>
-<form id="report-form" class="report-form">
-<label>Uživatelské jméno<input id="report-username" required maxlength="40" autocomplete="off" placeholder="Tvoje přezdívka"></label>
-<label>Odkud<select id="report-platform"><option value="chesscom">Chess.com</option><option value="lichess">Lichess</option></select></label>
-<label>Posledních<select id="report-count"><option value="10">10 partií</option><option value="20" selected>20 partií</option><option value="30">30 partií</option><option value="50">50 partií</option><option value="100">100 partií</option></select></label>
-<label>Rozbor<select id="report-profile"><option value="quick">Rychlý přehled</option><option value="balanced">Podrobný</option></select></label>
-<button id="load-report" class="primary-button" type="submit">Načíst partie <span>→</span></button>
-</form><p id="report-status" class="inline-status" role="status">Veřejné dokončené partie. Bez přihlášení k šachovému účtu.</p>
-<div id="report-selection" hidden><details id="report-selection-details" open><summary>Vybrat partie <span id="report-selected"></span></summary><label class="report-check-all"><input id="report-all" type="checkbox" checked> Vybrat všechny načtené</label><div id="report-game-list"></div></details><div class="report-start"><button id="report-analyze" class="primary-button" type="button">Rozebrat vybrané</button><p id="report-estimate" class="hint"></p></div></div>
-<div id="report-progress" hidden><progress id="report-meter" value="0" max="100" aria-label="Rozbor vybraných partií"></progress><div class="report-progress-row"><p id="report-progress-text" role="status"></p><button id="report-cancel" class="quiet-button" hidden>Pozastavit</button></div></div>
-</section><form id="insights-form" class="insights-filters">
-<input id="insight-username" type="hidden">
-<label>Barva<select id="insight-color"><option value="all">Obě barvy</option><option value="w">Bílými</option><option value="b">Černými</option></select></label>
-<label>Tempo<select id="insight-time"><option value="all">Všechna tempa</option><option value="bullet">Bullet</option><option value="blitz">Blitz</option><option value="rapid">Rapid</option><option value="classical">Klasické</option><option value="unknown">Bez údaje</option></select></label>
-<label>Výsledek<select id="insight-result"><option value="all">Všechny výsledky</option><option value="win">Výhry</option><option value="draw">Remízy</option><option value="loss">Prohry</option></select></label>
-
-</form><div id="analytics-content"></div>
-</main>
-<main class="puzzles-page page" data-page="puzzles" hidden><div class="page-heading"><div><h1>Trénink</h1><p id="puzzle-subtitle">Taktické úlohy podle tvé úrovně.</p></div><div class="puzzle-rating"><span>Hodnocení úloh</span><strong id="puzzle-rating">800</strong><span id="rating-change" role="status"></span></div></div>
-<div class="training-tabs" role="group" aria-label="Režim tréninku"><button data-mode="rated" aria-pressed="true">Taktika</button><button data-mode="review" aria-pressed="false">Opakování <span id="due-count"></span></button><button data-mode="personal" aria-pressed="false">Z mých partií</button><button data-mode="daily" aria-pressed="false">Denní úloha</button><button data-mode="lesson" aria-pressed="false">Moje lekce</button></div>
-<div class="puzzle-layout"><section class="puzzle-board-area"><div class="puzzle-player"><span id="puzzle-player-dot" class="player-dot"></span><strong id="puzzle-turn">Načítám úlohu…</strong><button id="flip-puzzle" class="icon-button" aria-label="Otočit šachovnici"><span data-icon="flip"></span></button></div><div id="puzzle-board" tabindex="0"></div><div class="puzzle-board-footer"><span id="puzzle-number"></span><strong id="puzzle-level"></strong><span id="puzzle-time">0:00</span></div><div id="puzzle-promotion" class="promotion" hidden><span>Proměnit na</span><button data-piece="q">Dámu</button><button data-piece="r">Věž</button><button data-piece="b">Střelce</button><button data-piece="n">Jezdce</button></div></section>
-<aside class="puzzle-panel"><section class="puzzle-feedback" aria-live="polite"><span class="feedback-icon" data-icon="puzzle" id="puzzle-feedback-icon"></span><h2 id="puzzle-status">Najdi nejlepší tah</h2><p id="puzzle-message">Spočítej pokračování a zahraj tah na šachovnici.</p><div id="puzzle-themes" class="theme-tags"></div><div id="puzzle-solution"></div><a id="puzzle-source" target="_blank" rel="noopener" hidden>Partie na Lichess</a><button id="next-puzzle" class="primary-button" hidden>Další úloha <span data-icon="arrow"></span></button><div class="puzzle-help"><button id="puzzle-hint" class="quiet-button">Nápověda</button><button id="puzzle-reveal" class="text-button">Ukázat řešení</button></div></section>
-<section class="puzzle-options"><label for="puzzle-theme">Téma</label><select id="puzzle-theme"><option value="all">Všechna témata</option><option value="mateIn1">Mat jedním tahem</option><option value="mateIn2">Mat dvěma tahy</option><option value="fork">Vidlička</option><option value="pin">Vazba</option><option value="hangingPiece">Napadená figura</option><option value="backRankMate">Mat na poslední řadě</option><option value="defensiveMove">Obrana</option><option value="quietMove">Tichý tah</option><option value="endgame">Koncovka</option><option value="sacrifice">Oběť</option></select><label for="puzzle-difficulty">Obtížnost</label><select id="puzzle-difficulty"><option value="easy">Lehčí · −250</option><option value="normal" selected>Moje úroveň</option><option value="hard">Těžší · +250</option></select><p class="hint">Po chybě dostaneš přístupnější úlohu. Nápověda a odkryté řešení se nepočítají jako samostatné vyřešení.</p></section><section class="puzzle-session"><h3>Tato návštěva</h3><p><strong id="session-solved">0</strong> vyřešeno bez pomoci <span>·</span> <span id="session-attempted">0</span> pokusů</p></section><a class="puzzle-credit" href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">Úlohy Lichess · CC0</a></aside></div><p id="puzzle-error" class="app-error" role="alert"></p></main>
-<main class="settings-page page" data-page="settings" hidden><div class="page-heading"><div><h1>Nastavení</h1><p>Šachovnice, ovládání a propojený šachový profil.</p></div></div><div class="settings-layout"><section class="settings-fields"><label class="setting-line"><span>Jazyk aplikace</span><select id="language-choice"><option value="cs">Čeština</option><option value="en">English</option></select></label><h2>Vzhled šachovnice</h2><div class="board-swatches" role="group" aria-label="Barva šachovnice"><button data-board-theme="sage" aria-pressed="true"><span class="swatch sage"></span>Zelená</button><button data-board-theme="walnut" aria-pressed="false"><span class="swatch walnut"></span>Ořech</button><button data-board-theme="blue" aria-pressed="false"><span class="swatch blue"></span>Modrá</button><button data-board-theme="slate" aria-pressed="false"><span class="swatch slate"></span>Šedá</button></div><label class="setting-line"><span>Figury</span><select id="piece-style"><option value="classic">Klasické</option><option value="letters">Písmena</option></select></label><label class="setting-line"><span>Souřadnice polí</span><input id="show-coordinates" type="checkbox" checked></label><label class="setting-line"><span>Zvýraznit legální tahy</span><input id="show-legal" type="checkbox" checked></label><label class="setting-line"><span>Zvuk při tahu</span><input id="move-sound" type="checkbox"></label><label class="setting-line"><span>Automaticky další úloha</span><input id="auto-next" type="checkbox"></label>
-<h2>Opakování bez dohánění</h2><label for="review-budget">Denní limit opakování (UTC)</label><select id="review-budget"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select><p class="hint">Počet čekajících úloh není denní povinnost. Fronta zůstane uložená i během pauzy.</p><div class="setup-actions"><button id="pause-reviews" class="quiet-button">Pauza na 7 dní</button><button id="resume-reviews" class="text-button">Obnovit opakování</button></div><p>Pauza do: <span id="review-pause-status">—</span></p><h2>Výchozí úroveň úloh</h2><label for="starting-rating">Přibližná úroveň před prvním pokusem</label><select id="starting-rating"><option value="400">400 · učím se pravidla</option><option value="800" selected>800 · začátečník</option><option value="1200">1 200 · mírně pokročilý</option><option value="1600">1 600 · klubový hráč</option><option value="2000">2 000 · zkušený hráč</option><option value="2400">2 400 · výkonnostní hráč</option><option value="2800">2 800 · náročné kombinace</option></select><p class="hint">Po prvním pokusu se obtížnost upravuje podle výsledků. Toto nastavení pak zůstane uzamčené.</p><h2>Šachový profil</h2><p class="section-description">Přezdívka určuje tvoji barvu ve statistikách a pozice pro osobní trénink. Neslouží jako přihlášení.</p><label for="linked-platform">Herní server</label><select id="linked-platform"><option value="chesscom">Chess.com</option><option value="lichess">Lichess</option></select><label for="linked-username">Přezdívka</label><input id="linked-username" maxlength="40" placeholder="Tvoje přezdívka" autocomplete="off"><button id="save-chess-profile" class="primary-button">Uložit profil</button><button id="connect-chesscom" type="button" class="quiet-button">Propojit veřejný profil Chess.com</button><div id="chesscom-profile" class="profile-link" data-i18n-ignore></div><button id="import-linked-profile" class="text-button" type="button">Načíst partie propojeného profilu</button><button id="restart-onboarding" class="text-button" type="button">Úvodní nastavení</button><p id="preference-status" class="inline-status" role="status"></p>
-<h2>Zobrazení rozboru</h2><label for="experience-level">Úroveň zobrazení</label><select id="experience-level"><option value="beginner">Základní · nejprve vysvětlení</option><option value="club">Klubová · tahy a varianty</option><option value="advanced">Pokročilá · plné údaje enginu</option></select><p class="section-description">Výpočty enginu se nemění. U základního zobrazení jsou podrobné varianty sbalené.</p><button id="open-engine-settings" class="quiet-button">Nastavení výpočtu <span data-icon="arrow"></span></button></section><aside class="settings-preview"><div id="preview-board" class="mini-chessboard" aria-label="Náhled vzhledu šachovnice"></div><p>Změny vzhledu se použijí ve všech šachovnicích Evaly.</p></aside></div></main>
-<main class="practice-page page" data-page="practice" hidden><div id="practice-root" data-i18n-ignore></div></main>
-<main class="account-page page" data-page="account" hidden><div class="page-heading"><div><h1>Můj účet</h1><p>Uložené partie a trénink na tvých zařízeních.</p></div></div><section class="account-content" id="account-content"></section><p id="account-error" class="app-error" role="alert"></p></main>
-</div><footer class="study-footer"><span>Evala · Stockfish 19</span><a href="privacy.html" target="_blank" rel="noopener">Soukromí</a></footer></div><div id="toast" class="toast" role="status" hidden></div></body></html>
+<html lang="cs"
+  ><head
+    ><meta charset="UTF-8" /><meta
+      name="viewport"
+      content="width=device-width,initial-scale=1" /><meta
+      name="theme-color"
+      content="#f4f3ec" /><title>Evala</title
+    ><link rel="icon" href="icons/32.png" /><link rel="stylesheet" href="theme.css" /><link
+      rel="stylesheet"
+      href="study.css" /><link rel="stylesheet" href="study-responsive.css" /><link
+      rel="stylesheet"
+      href="review.css" /><link rel="stylesheet" href="navigation.css" /><script
+      src="study.js"
+      type="module"
+    ></script
+    ><link rel="stylesheet" href="learning.css" /></head
+  ><body>
+    <a class="skip-link" href="#page-content">Přejít na obsah</a>
+    <aside class="app-sidebar"
+      ><a class="wordmark" href="#/home"
+        ><span id="brand"></span>evala<span class="brand-period">.</span></a
+      >
+      <nav class="main-navigation" aria-label="Hlavní navigace">
+        <a href="#/home" data-route="home"><span data-icon="home"></span>Přehled</a>
+        <a href="#/games" data-route="games"
+          ><span data-icon="games"></span>Moje partie<span
+            id="nav-game-count"
+            class="nav-count"
+          ></span
+        ></a>
+        <button id="view-review" data-route="analysis" aria-pressed="false"
+          ><span data-icon="analysis"></span>Rozbor</button
+        >
+        <a href="#/puzzles" data-route="puzzles"
+          ><span data-icon="puzzle"></span>Trénink<span
+            class="nav-count"
+            id="nav-review-count"
+          ></span
+        ></a>
+        <button id="view-analytics" data-route="insights" aria-pressed="false"
+          ><span data-icon="chart"></span>Statistiky</button
+        >
+        <a href="#/practice" data-route="practice"><span data-icon="book"></span>Cvičebna</a>
+        <a href="#/settings" data-route="settings"
+          ><span data-icon="settings"></span>Nastavení</a
+        > </nav
+      ><div class="sidebar-bottom"
+        ><div class="sidebar-engine"
+          ><span class="status-dot"></span><span id="engine-badge">Stockfish 19</span></div
+        ><a href="#/account" id="sidebar-account" class="sidebar-account"
+          ><span class="avatar" id="sidebar-avatar" data-icon="user"></span
+          ><span
+            ><strong id="sidebar-user">Host</strong
+            ><small id="sidebar-storage">Uloženo v prohlížeči</small></span
+          ><span data-icon="chevron"></span></a></div
+    ></aside>
+    <div class="app-main"
+      ><header class="study-header"
+        ><button
+          id="toggle-sidebar"
+          class="icon-button"
+          aria-label="Skrýt boční panel"
+          aria-expanded="true"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            aria-hidden="true"
+          >
+            <path d="M3 4h18v16H3zM9 4v16m8-12-4 4 4 4" /></svg></button
+        ><span id="page-label">Přehled</span><span class="header-spacer"></span
+        ><button id="toggle-language" class="quiet-button" aria-label="Jazyk aplikace">EN</button
+        ><span id="sync-status" role="status"></span
+        ><button id="toggle-library" class="quiet-button"
+          ><span data-icon="plus"></span>Importovat</button
+        ><button
+          id="toggle-settings"
+          class="icon-button"
+          aria-label="Nastavení enginu"
+          aria-expanded="false"
+          aria-controls="study-settings"
+          ><span data-icon="settings"></span></button
+        ><a href="#/account" class="header-signin" id="header-signin">Přihlásit se</a></header
+      >
+      <div id="page-content" tabindex="-1">
+        <main class="overview-page page" data-page="home"
+          ><div class="page-heading"
+            ><div><h1 id="welcome-title">Přehled</h1><p id="today-date"></p></div
+            ><a href="#/games" class="primary-link"
+              ><span data-icon="plus"></span>Importovat partii</a
+            ></div
+          >
+          <section id="onboarding" class="setup-strip" hidden
+            ><h2>Nastav si trénink</h2
+            ><form id="onboarding-form"
+              ><label
+                >Chess.com profil nebo přezdívka<input
+                  id="onboarding-username"
+                  placeholder="https://www.chess.com/member/jmeno"
+                  autocomplete="off" /></label
+              ><label
+                >Přibližná úroveň<select id="onboarding-rating"
+                  ><option value="400">400</option
+                  ><option value="800" selected>800</option
+                  ><option value="1200">1200</option
+                  ><option value="1600">1600</option
+                  ><option value="2000">2000</option
+                  ><option value="2400">2400</option
+                  ><option value="2800">2800</option></select
+                ></label
+              ><label
+                >Cíl tréninku<select id="onboarding-goal"
+                  ><option value="balanced">Partie i taktika</option
+                  ><option value="tactics">Taktické kombinace</option
+                  ><option value="review">Opakovat vlastní chyby</option></select
+                ></label
+              ><div class="setup-actions"
+                ><button class="primary-button" type="submit">Uložit a pokračovat</button
+                ><button class="text-button" type="button" id="skip-onboarding"
+                  >Později</button
+                ></div
+              ><p id="onboarding-status" role="status"></p></form></section
+          ><section class="lesson-strip"
+            ><div><h2>Osobní lekce · 10 minut</h2><p id="lesson-progress" data-i18n-ignore></p></div
+            ><button class="quiet-button" id="start-lesson">Začít lekci</button></section
+          >
+          <div class="overview-grid"
+            ><section class="home-training"
+              ><div class="section-title"
+                ><h2>Trénink na dnes</h2><span id="home-training-count"></span></div
+              ><a
+                href="#/puzzles"
+                class="home-puzzle-link"
+                data-training-mode="daily"
+                aria-label="Otevřít taktickou úlohu"
+                ><div id="home-board" class="mini-chessboard" aria-hidden="true"></div
+                ><div class="home-board-caption"
+                  ><span id="home-to-move">Bílý na tahu</span
+                  ><span>Řešit úlohu <span data-icon="arrow"></span></span></div></a
+            ></section>
+            <section class="daily-plan"
+              ><h2>Co chceš procvičit?</h2
+              ><a href="#/puzzles" class="plan-row" data-training-mode="rated"
+                ><span class="plan-icon" data-icon="puzzle"></span
+                ><span
+                  ><strong>Taktické úlohy</strong
+                  ><small>Obtížnost podle tvých výsledků</small></span
+                ><span data-icon="arrow"></span></a
+              ><a href="#/puzzles" class="plan-row" data-training-mode="review"
+                ><span class="plan-icon" data-icon="repeat"></span
+                ><span
+                  ><strong>Opakování chyb</strong
+                  ><small id="home-due">Zatím nemáš úlohy k opakování</small></span
+                ><span data-icon="arrow"></span></a
+              ><a href="#/puzzles" class="plan-row" data-training-mode="personal"
+                ><span class="plan-icon" data-icon="games"></span
+                ><span
+                  ><strong>Pozice z tvých partií</strong
+                  ><small id="home-personal">Z rozebraných chyb s jasným lepším tahem</small></span
+                ><span data-icon="arrow"></span
+              ></a>
+              <div class="training-record"
+                ><h3>Tvoje výsledky v úlohách</h3
+                ><dl
+                  ><div><dt>Hodnocení úloh</dt><dd id="home-rating">800</dd></div
+                  ><div><dt>Vyřešeno bez pomoci</dt><dd id="home-solved">0</dd></div
+                  ><div><dt>Dny v řadě</dt><dd id="home-streak">0</dd></div></dl
+                ><p>Hodnocení úloh je samostatné. Není to tvoje herní Elo.</p></div
+              >
+              <div class="account-invite" id="account-invite"
+                ><span data-icon="cloud"></span
+                ><div
+                  ><strong>Ulož si partie ke svému účtu</strong
+                  ><p>Po přihlášení budou rozbory a trénink dostupné i na jiném zařízení.</p
+                  ><a href="#/account">Přihlásit se přes Google</a></div
+                ></div
+              ></section
+            ></div
+          >
+          <section class="recent-section"
+            ><div class="section-title"
+              ><h2>Poslední partie</h2
+              ><a href="#/games">Celá knihovna <span data-icon="arrow"></span></a></div
+            ><div id="recent-games"></div></section
+        ></main>
+        <main class="games-page page" data-page="games" hidden
+          ><div class="page-heading"
+            ><div><h1>Moje partie</h1><p>Import, uložené rozbory a vlastní poznámky.</p></div
+            ><button id="sync-library" class="quiet-button"
+              ><span data-icon="cloud"></span>Synchronizovat</button
+            ></div
+          ><section class="library" aria-label="Knihovna partií"
+            ><div class="section-title"><h2>Knihovna</h2><span id="library-count">0</span></div
+            ><div class="library-filters"
+              ><input
+                id="library-search"
+                type="search"
+                placeholder="Hráč, zahájení nebo datum"
+                aria-label="Hledat partii"
+              /><select id="library-filter" aria-label="Filtrovat knihovnu"
+                ><option value="all">Všechny partie</option
+                ><option value="analyzed">Rozebrané</option
+                ><option value="pending">Bez rozboru</option></select
+              ></div
+            ><details id="import-panel" open
+              ><summary>Importovat partie</summary
+              ><form id="username-form"
+                ><label for="username">Uživatelské jméno</label
+                ><div class="source-row"
+                  ><select id="platform" aria-label="Zdroj partií"
+                    ><option value="chesscom">Chess.com</option
+                    ><option value="lichess">Lichess</option></select
+                  ><input
+                    id="username"
+                    placeholder="Tvoje přezdívka"
+                    autocomplete="off"
+                    maxlength="40"
+                    required /></div
+                ><button id="import-username" class="secondary-button" type="submit"
+                  >Načíst posledních 20</button
+                ></form
+              ><span class="import-or">nebo vlastní PGN</span
+              ><label class="file-button" for="pgn-file"
+                >Vybrat soubor .pgn<input
+                  id="pgn-file"
+                  type="file"
+                  accept=".pgn,.txt,application/x-chess-pgn" /></label
+              ><textarea
+                id="pgn-input"
+                rows="3"
+                placeholder="Vlož zápis PGN…"
+                aria-label="PGN zápis partie"
+                spellcheck="false"
+              ></textarea
+              ><button id="import-pgn" class="text-button">Importovat vložené PGN</button
+              ><p id="import-status" class="inline-status" role="status"></p></details
+            ><div id="game-list" class="game-list"></div
+            ><button id="demo-game" class="demo-game text-button">Ukázková partie</button
+            ><p class="storage-note">Uloženo v tomto prohlížeči.</p></section
+          ></main
+        >
+        <main class="workspace" data-page="analysis" hidden>
+          <section class="position-workspace" aria-label="Pozice a vývoj partie"
+            ><div class="game-heading"
+              ><div
+                ><h1 id="game-title">Vyber partii</h1
+                ><p id="game-subtitle">Vyber partii v knihovně nebo importuj PGN.</p></div
+              ><button id="flip-board" class="icon-button" aria-label="Otočit šachovnici"></button
+              ><details class="game-actions"
+                ><summary title="Další akce partie">Partie</summary
+                ><div class="export-row"
+                  ><button id="export-pgn" class="text-button">Exportovat PGN</button
+                  ><button id="delete-game" class="text-button">Smazat partii</button></div
+                ></details
+              ></div
+            ><div class="board-stage"
+              ><div
+                class="study-eval"
+                role="meter"
+                aria-label="Hodnocení z pohledu bílého"
+                aria-valuemin="-10"
+                aria-valuemax="10"
+                aria-valuenow="0"
+                ><div class="eval-white"></div><span class="eval-midpoint"></span
+                ><span class="eval-score">—</span><span class="eval-depth"></span></div
+              ><div id="study-board" tabindex="0"></div></div
+            ><div id="promotion" class="promotion" hidden
+              ><span>Proměnit pěšce na:</span><button data-promotion="q">Dámu</button
+              ><button data-promotion="r">Věž</button><button data-promotion="b">Střelce</button
+              ><button data-promotion="n">Jezdce</button></div
+            ><div class="board-toolbar"
+              ><div class="navigation"
+                ><button id="first-move" class="icon-button" aria-label="Začátek partie"></button
+                ><button id="previous-move" class="icon-button" aria-label="Předchozí tah"></button
+                ><button id="next-move" class="icon-button" aria-label="Další tah"></button
+                ><button id="last-move" class="icon-button" aria-label="Konec partie"></button></div
+              ><span id="position-label">Výchozí pozice</span
+              ><button id="return-game" class="quiet-button" hidden>Zpět do partie</button
+              ><button id="copy-fen" class="quiet-button" title="Zkopírovat FEN aktuální pozice"
+                >FEN</button
+              ><button id="analyze-position" class="quiet-button" title="Spočítat aktuální pozici"
+                >Prozkoumat</button
+              ></div
+            ><div class="board-caption"
+              ><div id="board-feedback" role="status" aria-live="polite"
+                ><span>Výchozí pozice</span></div
+              ><span class="keyboard-hint">← → procházet tahy</span></div
+            ><div class="graph-heading"
+              ><h2>Průběh partie</h2><span id="graph-caption">Z pohledu bílého</span></div
+            ><div id="eval-graph" class="eval-graph"
+              ><p class="empty-graph">Graf se zobrazí po rozboru.</p></div
+            ></section
+          >
+          <aside class="analysis-panel" aria-label="Výsledky a nastavení rozboru"
+            ><section id="study-settings" class="study-settings" hidden
+              ><div class="section-title"
+                ><h2>Nastavení rozboru</h2
+                ><button
+                  id="close-settings"
+                  class="icon-button"
+                  aria-label="Zavřít nastavení"
+                ></button></div
+              ><label for="engine-choice">Engine</label
+              ><select id="engine-choice"
+                ><option value="full">Stockfish 19 Full NNUE · ~100 MB</option
+                ><option value="lite">Stockfish 19 Lite · úsporný</option></select
+              ><label for="profile">Profil rozboru</label
+              ><select id="profile"
+                ><option value="quick">Rychlý · 0,3 s / pozici</option
+                ><option value="balanced">Vyvážený · 0,75 s / pozici</option
+                ><option value="deep">Důkladný · 2 s / pozici</option
+                ><option value="custom">Vlastní nastavení</option></select
+              ><div class="option-row"
+                ><label for="study-depth">Max. hloubka</label
+                ><input id="study-depth" type="number" min="6" max="30" value="18" /></div
+              ><div class="option-row"
+                ><label for="study-time">Čas na pozici (ms)</label
+                ><input
+                  id="study-time"
+                  type="number"
+                  min="100"
+                  max="10000"
+                  step="100"
+                  value="750" /></div
+              ><div class="option-row"
+                ><label for="study-lines">Počet variant</label
+                ><select id="study-lines"
+                  ><option>1</option
+                  ><option>2</option
+                  ><option selected>3</option
+                  ><option>4</option
+                  ><option>5</option></select
+                ></div
+              ><div class="option-row"
+                ><label for="study-hash">Paměť Hash (MB)</label
+                ><select id="study-hash"
+                  ><option>16</option
+                  ><option>32</option
+                  ><option selected>64</option
+                  ><option>128</option
+                  ><option>256</option></select
+                ></div
+              ><label class="check-row"
+                ><span>Šipka nejlepšího tahu</span
+                ><input id="study-arrows" type="checkbox" checked /></label
+              ><div class="section-rule"></div><label for="backend">Kde počítat</label
+              ><select id="backend"
+                ><option value="local">V tomto prohlížeči · zdarma</option
+                ><option value="server">Na vlastním serveru</option></select
+              ><div id="server-fields" hidden
+                ><label for="server-url">HTTPS adresa serveru</label
+                ><input id="server-url" type="url" placeholder="https://evala.example.cz" /><label
+                  for="server-token"
+                  >API token · jen pro tuto kartu</label
+                ><input id="server-token" type="password" autocomplete="off" /><button
+                  id="test-server"
+                  class="secondary-button"
+                  >Ověřit spojení</button
+                ><p id="server-status" class="inline-status" role="status"></p
+                ><p class="hint"
+                  >Serveru odešleš pozice a tahy. Knihovna zůstává v prohlížeči. Server vždy používá
+                  plný engine.</p
+                ></div
+              ><p class="hint"
+                >Hloubka i čas jsou horní limity. Více variant zpomalí prohledávání. Rozbor
+                kritických tahů přidá krátký druhý průchod.</p
+              ></section
+            >
+            <section class="review-controls"
+              ><div class="section-title"
+                ><h2>Rozbor partie</h2><span id="review-state">Připraveno</span></div
+              ><button id="review-game" class="primary-button"
+                >Rozebrat partii <span id="review-arrow"></span></button
+              ><div id="review-progress" class="review-progress" hidden
+                ><progress id="progress" max="100" value="0" aria-label="Průběh rozboru"></progress
+                ><p id="progress-text" role="status"></p></div
+              ><p id="review-estimate" class="hint">První průchod se zobrazí postupně.</p
+              ><p id="app-error" class="app-error" role="alert"></p
+            ></section>
+            <div class="analysis-tabs" role="tablist" aria-label="Obsah rozboru"
+              ><button
+                id="analysis-summary-tab"
+                role="tab"
+                data-analysis-tab="summary"
+                aria-selected="true"
+                >Shrnutí</button
+              ><button
+                id="analysis-moves-tab"
+                role="tab"
+                data-analysis-tab="moves"
+                aria-selected="false"
+                >Tahy</button
+              ><button
+                id="analysis-lines-tab"
+                role="tab"
+                data-analysis-tab="lines"
+                aria-selected="false"
+                >Varianty</button
+              ></div
+            ><section id="review-summary-empty" data-panel-section="summary"
+              ><h3>Vyber partii a spusť rozbor</h3
+              ><p
+                >Zobrazí se přesnost obou hráčů, přehled kvality tahů a podklady pro odhad
+                výkonu.</p
+              ></section
+            ><section id="summary" class="summary" data-panel-section="summary" hidden></section>
+            <section class="move-feedback" data-panel-section="moves"
+              ><div id="move-classification"></div
+              ><p id="move-explanation">Vyber tah nebo spusť rozbor.</p
+              ><div id="gm-coach-card" class="gm-coach-card" hidden
+                ><div class="gm-coach-header"
+                  ><span class="gm-coach-title">Poznámka k tahu</span
+                  ><div class="gm-coach-actions"
+                    ><button
+                      id="gm-voice-btn"
+                      class="icon-button gm-voice-btn"
+                      title="Přečíst poznámku"
+                      aria-label="Přečíst poznámku"
+                      ><svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"
+                        /></svg></button
+                    ><button id="gm-retry-btn" class="quiet-button gm-retry-btn" hidden
+                      >Zkusit lepší tah</button
+                    ></div
+                  ></div
+                ><div id="position-sharpness" class="sharpness-chip" hidden></div
+                ><p id="gm-coach-text" class="gm-coach-text" data-i18n-ignore></p
+                ><div id="threat-radar-card" class="threat-radar-card" hidden
+                  ><span id="threat-text" data-i18n-ignore></span
+                  ><button
+                    id="threat-toggle"
+                    class="quiet-button threat-toggle"
+                    aria-pressed="false"
+                    >Ukázat hrozbu</button
+                  ></div
+                ><div id="imbalances-list" class="imbalances-list" data-i18n-ignore></div></div
+              ><p id="retry-feedback" class="inline-status" role="status"></p
+            ></section>
+            <section class="lines-section" data-panel-section="lines"
+              ><div class="section-title"><h2>Varianty</h2><span id="lines-state">—</span></div
+              ><div id="engine-lines"
+                ><p class="panel-empty">Varianty se zobrazí po výpočtu.</p></div
+              ><p id="inspect-status" class="inline-status" role="status"></p
+            ></section>
+            <section class="moves-section" data-panel-section="moves"
+              ><div class="section-title"
+                ><h2>Tahy</h2
+                ><select id="move-filter" aria-label="Filtrovat tahy"
+                  ><option value="all">Všechny tahy</option
+                  ><option value="critical">Klíčové tahy</option
+                  ><option value="errors">Chyby</option
+                  ><option value="best">Nejlepší</option
+                  ><option value="brilliant">Brilantní</option></select
+                ></div
+              ><div class="notation-head"><span>Tah</span><span>Bílý</span><span>Černý</span></div
+              ><button id="next-critical" class="text-button">Další klíčový tah →</button
+              ><div id="move-list" class="move-list"
+                ><p class="panel-empty">Nejprve importuj partii.</p></div
+              ></section
+            ><details class="game-note" data-panel-section="lines"
+              ><summary>Poznámka k partii</summary
+              ><textarea
+                id="game-note"
+                maxlength="4000"
+                rows="3"
+                placeholder="Co jsi počítal, co si chceš ověřit…"
+                aria-label="Poznámka k partii"
+              ></textarea></details
+            ><details class="classification-note" data-panel-section="summary"
+              ><summary>Jak se tahy hodnotí</summary
+              ><p
+                >Vlastní klasifikace Evala, nikoli odznaky Chess.com. Skóre tahů používá převod
+                hodnocení z veřejné formule Lichess. Skvělý tah vyžaduje výrazně horší druhou
+                variantu. Promarněná šance označuje minutý mat nebo nevyužitou chybu soupeře.
+                Brilantní tah vyžaduje ověřenou oběť zahrané figury, materiálovou ztrátu po výměnách
+                a kompenzaci pro všechny přijaté oběti v hloubce alespoň 18. Starší neověřené
+                odznaky se přepočítají. Hlubší rozbor může hodnocení změnit.</p
+              ></details
+            ></aside
+          >
+        </main>
+        <main id="analytics-workspace" class="analytics-workspace" data-page="insights" hidden>
+          <div class="analytics-heading"
+            ><div><h1>Přehled hráče</h1><p>Načti své partie a vyber, které chceš rozebrat.</p></div
+            ><div class="share-action"
+              ><button id="report-share" class="quiet-button">Sdílet aplikaci</button
+              ><span id="report-share-status" role="status"></span></div
+          ></div>
+          <section class="player-setup" aria-label="Načíst a rozebrat partie"
+            ><div id="report-complete-bar" hidden
+              ><strong id="report-complete-summary"></strong
+              ><button id="report-edit" class="quiet-button" type="button"
+                >Změnit výběr</button
+              ></div
+            >
+            <form id="report-form" class="report-form">
+              <label
+                >Uživatelské jméno<input
+                  id="report-username"
+                  required
+                  maxlength="40"
+                  autocomplete="off"
+                  placeholder="Tvoje přezdívka"
+              /></label>
+              <label
+                >Odkud<select id="report-platform"
+                  ><option value="chesscom">Chess.com</option
+                  ><option value="lichess">Lichess</option></select
+                ></label
+              >
+              <label
+                >Posledních<select id="report-count"
+                  ><option value="10">10 partií</option
+                  ><option value="20" selected>20 partií</option
+                  ><option value="30">30 partií</option
+                  ><option value="50">50 partií</option
+                  ><option value="100">100 partií</option></select
+                ></label
+              >
+              <label
+                >Rozbor<select id="report-profile"
+                  ><option value="quick">Rychlý přehled</option
+                  ><option value="balanced">Podrobný</option></select
+                ></label
+              >
+              <button id="load-report" class="primary-button" type="submit"
+                >Načíst partie <span>→</span></button
+              > </form
+            ><p id="report-status" class="inline-status" role="status"
+              >Veřejné dokončené partie. Bez přihlášení k šachovému účtu.</p
+            >
+            <div id="report-selection" hidden
+              ><details id="report-selection-details" open
+                ><summary>Vybrat partie <span id="report-selected"></span></summary
+                ><label class="report-check-all"
+                  ><input id="report-all" type="checkbox" checked /> Vybrat všechny načtené</label
+                ><div id="report-game-list"></div></details
+              ><div class="report-start"
+                ><button id="report-analyze" class="primary-button" type="button"
+                  >Rozebrat vybrané</button
+                ><p id="report-estimate" class="hint"></p></div
+            ></div>
+            <div id="report-progress" hidden
+              ><progress
+                id="report-meter"
+                value="0"
+                max="100"
+                aria-label="Rozbor vybraných partií"
+              ></progress
+              ><div class="report-progress-row"
+                ><p id="report-progress-text" role="status"></p
+                ><button id="report-cancel" class="quiet-button" hidden>Pozastavit</button></div
+              ></div
+            > </section
+          ><form id="insights-form" class="insights-filters">
+            <input id="insight-username" type="hidden" />
+            <label
+              >Barva<select id="insight-color"
+                ><option value="all">Obě barvy</option
+                ><option value="w">Bílými</option
+                ><option value="b">Černými</option></select
+              ></label
+            >
+            <label
+              >Tempo<select id="insight-time"
+                ><option value="all">Všechna tempa</option
+                ><option value="bullet">Bullet</option
+                ><option value="blitz">Blitz</option
+                ><option value="rapid">Rapid</option
+                ><option value="classical">Klasické</option
+                ><option value="unknown">Bez údaje</option></select
+              ></label
+            >
+            <label
+              >Výsledek<select id="insight-result"
+                ><option value="all">Všechny výsledky</option
+                ><option value="win">Výhry</option
+                ><option value="draw">Remízy</option
+                ><option value="loss">Prohry</option></select
+              ></label
+            > </form
+          ><div id="analytics-content"></div>
+        </main>
+        <main class="puzzles-page page" data-page="puzzles" hidden
+          ><div class="page-heading"
+            ><div><h1>Trénink</h1><p id="puzzle-subtitle">Taktické úlohy podle tvé úrovně.</p></div
+            ><div class="puzzle-rating"
+              ><span>Hodnocení úloh</span><strong id="puzzle-rating">800</strong
+              ><span id="rating-change" role="status"></span></div
+          ></div>
+          <div class="training-tabs" role="group" aria-label="Režim tréninku"
+            ><button data-mode="rated" aria-pressed="true">Taktika</button
+            ><button data-mode="review" aria-pressed="false"
+              >Opakování <span id="due-count"></span></button
+            ><button data-mode="personal" aria-pressed="false">Z mých partií</button
+            ><button data-mode="daily" aria-pressed="false">Denní úloha</button
+            ><button data-mode="lesson" aria-pressed="false">Moje lekce</button></div
+          >
+          <div class="puzzle-layout"
+            ><section class="puzzle-board-area"
+              ><div class="puzzle-player"
+                ><span id="puzzle-player-dot" class="player-dot"></span
+                ><strong id="puzzle-turn">Načítám úlohu…</strong
+                ><button id="flip-puzzle" class="icon-button" aria-label="Otočit šachovnici"
+                  ><span data-icon="flip"></span></button></div
+              ><div id="puzzle-board" tabindex="0"></div
+              ><div class="puzzle-board-footer"
+                ><span id="puzzle-number"></span><strong id="puzzle-level"></strong
+                ><span id="puzzle-time">0:00</span></div
+              ><div id="puzzle-promotion" class="promotion" hidden
+                ><span>Proměnit na</span><button data-piece="q">Dámu</button
+                ><button data-piece="r">Věž</button><button data-piece="b">Střelce</button
+                ><button data-piece="n">Jezdce</button></div
+              ></section
+            >
+            <aside class="puzzle-panel"
+              ><section class="puzzle-feedback" aria-live="polite"
+                ><span class="feedback-icon" data-icon="puzzle" id="puzzle-feedback-icon"></span
+                ><h2 id="puzzle-status">Najdi nejlepší tah</h2
+                ><p id="puzzle-message">Spočítej pokračování a zahraj tah na šachovnici.</p
+                ><div id="puzzle-themes" class="theme-tags"></div><div id="puzzle-solution"></div
+                ><a id="puzzle-source" target="_blank" rel="noopener" hidden>Partie na Lichess</a
+                ><button id="next-puzzle" class="primary-button" hidden
+                  >Další úloha <span data-icon="arrow"></span></button
+                ><div class="puzzle-help"
+                  ><button id="puzzle-hint" class="quiet-button">Nápověda</button
+                  ><button id="puzzle-reveal" class="text-button">Ukázat řešení</button></div
+                ></section
+              >
+              <section class="puzzle-options"
+                ><label for="puzzle-theme">Téma</label
+                ><select id="puzzle-theme"
+                  ><option value="all">Všechna témata</option
+                  ><option value="mateIn1">Mat jedním tahem</option
+                  ><option value="mateIn2">Mat dvěma tahy</option
+                  ><option value="fork">Vidlička</option
+                  ><option value="pin">Vazba</option
+                  ><option value="hangingPiece">Napadená figura</option
+                  ><option value="backRankMate">Mat na poslední řadě</option
+                  ><option value="defensiveMove">Obrana</option
+                  ><option value="quietMove">Tichý tah</option
+                  ><option value="endgame">Koncovka</option
+                  ><option value="sacrifice">Oběť</option></select
+                ><label for="puzzle-difficulty">Obtížnost</label
+                ><select id="puzzle-difficulty"
+                  ><option value="easy">Lehčí · −250</option
+                  ><option value="normal" selected>Moje úroveň</option
+                  ><option value="hard">Těžší · +250</option></select
+                ><p class="hint"
+                  >Po chybě dostaneš přístupnější úlohu. Nápověda a odkryté řešení se nepočítají
+                  jako samostatné vyřešení.</p
+                ></section
+              ><section class="puzzle-session"
+                ><h3>Tato návštěva</h3
+                ><p
+                  ><strong id="session-solved">0</strong> vyřešeno bez pomoci <span>·</span>
+                  <span id="session-attempted">0</span> pokusů</p
+                ></section
+              ><a
+                class="puzzle-credit"
+                href="https://database.lichess.org/#puzzles"
+                target="_blank"
+                rel="noopener"
+                >Úlohy Lichess · CC0</a
+              ></aside
+            ></div
+          ><p id="puzzle-error" class="app-error" role="alert"></p
+        ></main>
+        <main class="settings-page page" data-page="settings" hidden
+          ><div class="page-heading"
+            ><div
+              ><h1>Nastavení</h1><p>Šachovnice, ovládání a propojený šachový profil.</p></div
+            ></div
+          ><div class="settings-layout"
+            ><section class="settings-fields"
+              ><label class="setting-line"
+                ><span>Jazyk aplikace</span
+                ><select id="language-choice"
+                  ><option value="cs">Čeština</option
+                  ><option value="en">English</option></select
+                ></label
+              ><h2>Vzhled šachovnice</h2
+              ><div class="board-swatches" role="group" aria-label="Barva šachovnice"
+                ><button data-board-theme="sage" aria-pressed="true"
+                  ><span class="swatch sage"></span>Zelená</button
+                ><button data-board-theme="walnut" aria-pressed="false"
+                  ><span class="swatch walnut"></span>Ořech</button
+                ><button data-board-theme="blue" aria-pressed="false"
+                  ><span class="swatch blue"></span>Modrá</button
+                ><button data-board-theme="slate" aria-pressed="false"
+                  ><span class="swatch slate"></span>Šedá</button
+                ></div
+              ><label class="setting-line"
+                ><span>Figury</span
+                ><select id="piece-style"
+                  ><option value="classic">Klasické</option
+                  ><option value="letters">Písmena</option></select
+                ></label
+              ><label class="setting-line"
+                ><span>Souřadnice polí</span
+                ><input id="show-coordinates" type="checkbox" checked /></label
+              ><label class="setting-line"
+                ><span>Zvýraznit legální tahy</span
+                ><input id="show-legal" type="checkbox" checked /></label
+              ><label class="setting-line"
+                ><span>Zvuk při tahu</span><input id="move-sound" type="checkbox" /></label
+              ><label class="setting-line"
+                ><span>Automaticky další úloha</span><input id="auto-next" type="checkbox"
+              /></label>
+              <h2>Opakování bez dohánění</h2
+              ><label for="review-budget">Denní limit opakování (UTC)</label
+              ><select id="review-budget"
+                ><option value="5">5</option
+                ><option value="10" selected>10</option
+                ><option value="20">20</option
+                ><option value="50">50</option></select
+              ><p class="hint"
+                >Počet čekajících úloh není denní povinnost. Fronta zůstane uložená i během
+                pauzy.</p
+              ><div class="setup-actions"
+                ><button id="pause-reviews" class="quiet-button">Pauza na 7 dní</button
+                ><button id="resume-reviews" class="text-button">Obnovit opakování</button></div
+              ><p>Pauza do: <span id="review-pause-status">—</span></p
+              ><h2>Výchozí úroveň úloh</h2
+              ><label for="starting-rating">Přibližná úroveň před prvním pokusem</label
+              ><select id="starting-rating"
+                ><option value="400">400 · učím se pravidla</option
+                ><option value="800" selected>800 · začátečník</option
+                ><option value="1200">1 200 · mírně pokročilý</option
+                ><option value="1600">1 600 · klubový hráč</option
+                ><option value="2000">2 000 · zkušený hráč</option
+                ><option value="2400">2 400 · výkonnostní hráč</option
+                ><option value="2800">2 800 · náročné kombinace</option></select
+              ><p class="hint"
+                >Po prvním pokusu se obtížnost upravuje podle výsledků. Toto nastavení pak zůstane
+                uzamčené.</p
+              ><h2>Šachový profil</h2
+              ><p class="section-description"
+                >Přezdívka určuje tvoji barvu ve statistikách a pozice pro osobní trénink. Neslouží
+                jako přihlášení.</p
+              ><label for="linked-platform">Herní server</label
+              ><select id="linked-platform"
+                ><option value="chesscom">Chess.com</option
+                ><option value="lichess">Lichess</option></select
+              ><label for="linked-username">Přezdívka</label
+              ><input
+                id="linked-username"
+                maxlength="40"
+                placeholder="Tvoje přezdívka"
+                autocomplete="off" /><button id="save-chess-profile" class="primary-button"
+                >Uložit profil</button
+              ><button id="connect-chesscom" type="button" class="quiet-button"
+                >Propojit veřejný profil Chess.com</button
+              ><div id="chesscom-profile" class="profile-link" data-i18n-ignore></div
+              ><button id="import-linked-profile" class="text-button" type="button"
+                >Načíst partie propojeného profilu</button
+              ><button id="restart-onboarding" class="text-button" type="button"
+                >Úvodní nastavení</button
+              ><p id="preference-status" class="inline-status" role="status"></p>
+              <h2>Zobrazení rozboru</h2><label for="experience-level">Úroveň zobrazení</label
+              ><select id="experience-level"
+                ><option value="beginner">Základní · nejprve vysvětlení</option
+                ><option value="club">Klubová · tahy a varianty</option
+                ><option value="advanced">Pokročilá · plné údaje enginu</option></select
+              ><p class="section-description"
+                >Výpočty enginu se nemění. U základního zobrazení jsou podrobné varianty sbalené.</p
+              ><button id="open-engine-settings" class="quiet-button"
+                >Nastavení výpočtu <span data-icon="arrow"></span></button></section
+            ><aside class="settings-preview"
+              ><div
+                id="preview-board"
+                class="mini-chessboard"
+                aria-label="Náhled vzhledu šachovnice"
+              ></div
+              ><p>Změny vzhledu se použijí ve všech šachovnicích Evaly.</p></aside
+            ></div
+          ></main
+        >
+        <main class="practice-page page" data-page="practice" hidden
+          ><div id="practice-root" data-i18n-ignore></div
+        ></main>
+        <main class="account-page page" data-page="account" hidden
+          ><div class="page-heading"
+            ><div><h1>Můj účet</h1><p>Uložené partie a trénink na tvých zařízeních.</p></div></div
+          ><section class="account-content" id="account-content"></section
+          ><p id="account-error" class="app-error" role="alert"></p
+        ></main> </div
+      ><footer class="study-footer"
+        ><span>Evala · Stockfish 19</span
+        ><a href="privacy.html" target="_blank" rel="noopener">Soukromí</a></footer
+      ></div
+    ><div id="toast" class="toast" role="status" hidden></div></body
+></html>

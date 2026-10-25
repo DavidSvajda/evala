@@ -9,16 +9,26 @@ const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
  */
 export function detectThreats(fen, { lang = 'cs' } = {}) {
   let baseChess;
-  try { baseChess=new Chess(fen); } catch { return null; }
+  try {
+    baseChess = new Chess(fen);
+  } catch {
+    return null;
+  }
   // A free-move probe is meaningless when a check must be answered or play has ended.
-  if(baseChess.isCheck()||baseChess.isGameOver())return null;
-  const tokens=fen.split(' '),currentTurn=tokens[1],opponentTurn=currentTurn==='w'?'b':'w';
-  tokens[1]=opponentTurn;tokens[3]='-';
+  if (baseChess.isCheck() || baseChess.isGameOver()) return null;
+  const tokens = fen.split(' '),
+    currentTurn = tokens[1],
+    opponentTurn = currentTurn === 'w' ? 'b' : 'w';
+  tokens[1] = opponentTurn;
+  tokens[3] = '-';
   let opponentChess;
-  try { opponentChess=new Chess(tokens.join(' ')); } catch { return null; }
+  try {
+    opponentChess = new Chess(tokens.join(' '));
+  } catch {
+    return null;
+  }
   const moves = opponentChess.moves({ verbose: true });
   const threats = [];
-
 
   for (const m of moves) {
     // 1. Checkmate in 1
@@ -30,9 +40,10 @@ export function detectThreats(fen, { lang = 'cs' } = {}) {
         to: m.to,
         uci: m.from + m.to + (m.promotion || ''),
         san: m.san,
-        desc: lang === 'en'
-          ? `Immediate checkmate threat with ${m.san}!`
-          : `Okamžitá hrozba matu tahem ${m.san}!`
+        desc:
+          lang === 'en'
+            ? `Immediate checkmate threat with ${m.san}!`
+            : `Okamžitá hrozba matu tahem ${m.san}!`,
       });
       continue;
     }
@@ -52,9 +63,10 @@ export function detectThreats(fen, { lang = 'cs' } = {}) {
           to: m.to,
           uci: m.from + m.to + (m.promotion || ''),
           san: m.san,
-          desc: lang === 'en'
-            ? `If given another move, the opponent can capture on ${victimSquare}: ${m.san}.`
-            : `Soupeř může příštím tahem sebrat nekrytou figuru na ${victimSquare}: ${m.san}.`
+          desc:
+            lang === 'en'
+              ? `If given another move, the opponent can capture on ${victimSquare}: ${m.san}.`
+              : `Soupeř může příštím tahem sebrat nekrytou figuru na ${victimSquare}: ${m.san}.`,
         });
       }
     }
@@ -64,18 +76,22 @@ export function detectThreats(fen, { lang = 'cs' } = {}) {
       // simulate opponent move and see if it attacks 2 high value pieces
       opponentChess.move(m);
       const attackedPieces = [];
-      for (const [fileIndex, file] of [...'abcdefgh'].entries()) {
+      for (const file of 'abcdefgh') {
         for (let rank = 1; rank <= 8; rank++) {
           const sq = file + rank;
           const piece = baseChess.get(sq);
-          if (piece && piece.color === currentTurn && opponentChess.attackers(sq, opponentTurn).includes(m.to)) {
+          if (
+            piece &&
+            piece.color === currentTurn &&
+            opponentChess.attackers(sq, opponentTurn).includes(m.to)
+          ) {
             attackedPieces.push({ sq, piece: piece.type });
           }
         }
       }
       opponentChess.undo();
 
-      if (attackedPieces.filter(p => PIECE_VALUES[p.piece] >= 300).length >= 2) {
+      if (attackedPieces.filter((p) => PIECE_VALUES[p.piece] >= 300).length >= 2) {
         threats.push({
           severity: 35,
           type: 'fork',
@@ -83,9 +99,10 @@ export function detectThreats(fen, { lang = 'cs' } = {}) {
           to: m.to,
           uci: m.from + m.to + (m.promotion || ''),
           san: m.san,
-          desc: lang === 'en'
-            ? `Tactical fork threat with ${m.san} attacking multiple pieces`
-            : `Taktická vidlička tahem ${m.san} s napadením více figur`
+          desc:
+            lang === 'en'
+              ? `Tactical fork threat with ${m.san} attacking multiple pieces`
+              : `Taktická vidlička tahem ${m.san} s napadením více figur`,
         });
       }
     }
@@ -100,16 +117,39 @@ export function detectThreats(fen, { lang = 'cs' } = {}) {
  * Distinguishes razor-sharp "only-move" positions from flexible, forgiving positions.
  */
 export function assessSharpness(lines = [], { lang = 'cs' } = {}) {
-  const en=lang==='en',normal={type:'normal',label:'',detail:''};
-  if(lines.length<2||lines.slice(0,2).some(line=>!Number.isFinite(line.value)||(line.depth||0)<12))return normal;
-  const [first,second]=lines;
-  if(first.kind==='mate'||second.kind==='mate')return normal;
-  const gap=Math.abs(first.value-second.value);
-  return gap>=180
-    ? {type:'sharp',label:en?'Large gap between candidates':'Velký rozdíl mezi variantami',detail:en?'The first engine line scores substantially better than the second. This is not a measure of human difficulty.':'První varianta enginu vychází výrazně lépe než druhá. Nejde o měření obtížnosti pro člověka.'}
-    : gap<=30
-      ? {type:'calm',label:en?'Similar candidate evaluations':'Podobné hodnocení variant',detail:en?'The two engine lines differ by at most 0.30 pawns.':'První dvě varianty se liší nejvýše o 0,30 pěšce.'}
-      : {type:'dynamic',label:en?'Compare the candidates':'Porovnej varianty',detail:en?'The engine finds a difference between the candidate moves.':'Engine našel rozdíl mezi možnými pokračováními.'};
+  const en = lang === 'en',
+    normal = { type: 'normal', label: '', detail: '' };
+  if (
+    lines.length < 2 ||
+    lines.slice(0, 2).some((line) => !Number.isFinite(line.value) || (line.depth || 0) < 12)
+  )
+    return normal;
+  const [first, second] = lines;
+  if (first.kind === 'mate' || second.kind === 'mate') return normal;
+  const gap = Math.abs(first.value - second.value);
+  return gap >= 180
+    ? {
+        type: 'sharp',
+        label: en ? 'Large gap between candidates' : 'Velký rozdíl mezi variantami',
+        detail: en
+          ? 'The first engine line scores substantially better than the second. This is not a measure of human difficulty.'
+          : 'První varianta enginu vychází výrazně lépe než druhá. Nejde o měření obtížnosti pro člověka.',
+      }
+    : gap <= 30
+      ? {
+          type: 'calm',
+          label: en ? 'Similar candidate evaluations' : 'Podobné hodnocení variant',
+          detail: en
+            ? 'The two engine lines differ by at most 0.30 pawns.'
+            : 'První dvě varianty se liší nejvýše o 0,30 pěšce.',
+        }
+      : {
+          type: 'dynamic',
+          label: en ? 'Compare the candidates' : 'Porovnej varianty',
+          detail: en
+            ? 'The engine finds a difference between the candidate moves.'
+            : 'Engine našel rozdíl mezi možnými pokračováními.',
+        };
 }
 
 /**
@@ -121,11 +161,10 @@ export function analyzeImbalances(fen, { lang = 'cs' } = {}) {
   const board = chess.board();
   const imbalances = [];
 
-  let whiteBishops = 0, blackBishops = 0;
-  let whiteKnights = 0, blackKnights = 0;
-  let whiteRooks = 0, blackRooks = 0;
-  let whiteQueen = 0, blackQueen = 0;
-  let whitePawns = 0, blackPawns = 0;
+  let whiteBishops = 0,
+    blackBishops = 0;
+  let whiteKnights = 0,
+    blackKnights = 0;
 
   for (const row of board) {
     for (const square of row) {
@@ -133,24 +172,22 @@ export function analyzeImbalances(fen, { lang = 'cs' } = {}) {
       if (square.color === 'w') {
         if (square.type === 'b') whiteBishops++;
         if (square.type === 'n') whiteKnights++;
-        if (square.type === 'r') whiteRooks++;
-        if (square.type === 'q') whiteQueen++;
-        if (square.type === 'p') whitePawns++;
       } else {
         if (square.type === 'b') blackBishops++;
         if (square.type === 'n') blackKnights++;
-        if (square.type === 'r') blackRooks++;
-        if (square.type === 'q') blackQueen++;
-        if (square.type === 'p') blackPawns++;
       }
     }
   }
 
   // 1. Bishop pair advantage
   if (whiteBishops >= 2 && blackBishops < 2) {
-    imbalances.push(lang === 'en' ? 'White holds the bishop pair' : 'Bílý má výhodu dvojice střelců');
+    imbalances.push(
+      lang === 'en' ? 'White holds the bishop pair' : 'Bílý má výhodu dvojice střelců',
+    );
   } else if (blackBishops >= 2 && whiteBishops < 2) {
-    imbalances.push(lang === 'en' ? 'Black holds the bishop pair' : 'Černý má výhodu dvojice střelců');
+    imbalances.push(
+      lang === 'en' ? 'Black holds the bishop pair' : 'Černý má výhodu dvojice střelců',
+    );
   }
 
   // 2. Minor piece exchange imbalance
@@ -167,7 +204,9 @@ export function analyzeImbalances(fen, { lang = 'cs' } = {}) {
       // check if passed
       const color = piece.color;
       const forwardRanks = color === 'w' ? [rank + 1, 8] : [1, rank - 1];
-      const adjacentFiles = ['abcdefgh'[fileIndex - 1], file, 'abcdefgh'[fileIndex + 1]].filter(Boolean);
+      const adjacentFiles = ['abcdefgh'[fileIndex - 1], file, 'abcdefgh'[fileIndex + 1]].filter(
+        Boolean,
+      );
 
       let isPassed = true;
       for (const f of adjacentFiles) {
@@ -185,7 +224,7 @@ export function analyzeImbalances(fen, { lang = 'cs' } = {}) {
         imbalances.push(
           lang === 'en'
             ? `Dangerous passed pawn on ${file}${rank}`
-            : `Nebezpečný volný pěšec na ${file}${rank}`
+            : `Nebezpečný volný pěšec na ${file}${rank}`,
         );
       }
     }
@@ -198,37 +237,82 @@ export function analyzeImbalances(fen, { lang = 'cs' } = {}) {
  * Explains only the move evidence supplied by the engine.
  * Explains root strategic reasons (loose piece, pawn weakness, tempo loss, king safety).
  */
-export function generateGmAdvice(move, mark, fenBefore, fenAfter, { lang = 'cs', bestSan = '', before, after } = {}) {
-  const en=lang==='en';
-  if(!mark)return en?'Analyse this move to compare the continuations.':'Spusť rozbor a porovnej pokračování.';
-  if(mark.kind==='brilliant')return en
-    ? `${move.san}: the engine verified compensation after accepting the material sacrifice.`
-    : `${move.san}: engine ověřil kompenzaci po přijetí oběti materiálu.`;
-  if(mark.kind==='great')return en
-    ? `${move.san} scores substantially better than the second engine candidate.`
-    : `${move.san} vychází výrazně lépe než druhá varianta enginu.`;
-  if(mark.kind==='best')return en?`${move.san} matches the engine’s first choice.`:`${move.san} odpovídá první volbě enginu.`;
-  const sign=move.color==='w'?1:-1;
-  if(before?.kind==='mate'&&before.value*sign>0&&!(after?.kind==='mate'&&after.value*sign>0))return en
-    ? `The move missed a forced mate.${bestSan?' Compare '+bestSan+'.':''}`
-    : `Tah minul vynucený mat.${bestSan?' Porovnej pokračování '+bestSan+'.':''}`;
-  const loss=Number.isFinite(mark.loss)?Math.round(mark.loss):null;
-  if(['blunder','mistake','inaccuracy','miss'].includes(mark.kind))return en
-    ? `${move.san} reduced the position’s engine score.${continuations(fenBefore,fenAfter,before,after,en,bestSan)}${loss!==null?' Expected-score loss: '+loss+' percentage points.':''}`
-    : `${move.san} zhoršil hodnocení pozice.${continuations(fenBefore,fenAfter,before,after,en,bestSan)}${loss!==null?' Ztráta očekávaného skóre: '+loss+' procentních bodů.':''}`;
-  return en?`${move.san} keeps most of the position’s engine evaluation.`:`${move.san} zachovává většinu hodnocení pozice.`;
+export function generateGmAdvice(
+  move,
+  mark,
+  fenBefore,
+  fenAfter,
+  { lang = 'cs', bestSan = '', before, after } = {},
+) {
+  const en = lang === 'en';
+  if (!mark)
+    return en
+      ? 'Analyse this move to compare the continuations.'
+      : 'Spusť rozbor a porovnej pokračování.';
+  if (mark.kind === 'brilliant')
+    return en
+      ? `${move.san}: the engine verified compensation after accepting the material sacrifice.`
+      : `${move.san}: engine ověřil kompenzaci po přijetí oběti materiálu.`;
+  if (mark.kind === 'great')
+    return en
+      ? `${move.san} scores substantially better than the second engine candidate.`
+      : `${move.san} vychází výrazně lépe než druhá varianta enginu.`;
+  if (mark.kind === 'best')
+    return en
+      ? `${move.san} matches the engine’s first choice.`
+      : `${move.san} odpovídá první volbě enginu.`;
+  const sign = move.color === 'w' ? 1 : -1;
+  if (
+    before?.kind === 'mate' &&
+    before.value * sign > 0 &&
+    !(after?.kind === 'mate' && after.value * sign > 0)
+  )
+    return en
+      ? `The move missed a forced mate.${bestSan ? ' Compare ' + bestSan + '.' : ''}`
+      : `Tah minul vynucený mat.${bestSan ? ' Porovnej pokračování ' + bestSan + '.' : ''}`;
+  const loss = Number.isFinite(mark.loss) ? Math.round(mark.loss) : null;
+  if (['blunder', 'mistake', 'inaccuracy', 'miss'].includes(mark.kind))
+    return en
+      ? `${move.san} reduced the position’s engine score.${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Expected-score loss: ' + loss + ' percentage points.' : ''}`
+      : `${move.san} zhoršil hodnocení pozice.${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Ztráta očekávaného skóre: ' + loss + ' procentních bodů.' : ''}`;
+  return en
+    ? `${move.san} keeps most of the position’s engine evaluation.`
+    : `${move.san} zachovává většinu hodnocení pozice.`;
 }
-function continuations(fenBefore,fenAfter,before,after,en,bestSan){
-  let text='';
-  try{
-    const reply=after?.lines?.[0]?.pv||[],best=before?.lines?.[0]?.pv||[];
-    if(reply.length){const chess=new Chess(fenAfter),uci=reply[0],m=chess.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]});
-      const consequence=m.san.includes('#')?(en?' gives checkmate':' dává mat'):m.captured?(en?` captures on ${m.to}`:` bere na ${m.to}`):m.san.includes('+')?(en?' gives check':' dává šach'):'';
-      text+=en?` Opponent’s engine reply: ${lineToSan(fenAfter,reply,3)}${consequence}.`:` Odpověď soupeře podle enginu: ${lineToSan(fenAfter,reply,3)}${consequence}.`;
+function continuations(fenBefore, fenAfter, before, after, en, bestSan) {
+  let text = '';
+  try {
+    const reply = after?.lines?.[0]?.pv || [],
+      best = before?.lines?.[0]?.pv || [];
+    if (reply.length) {
+      const chess = new Chess(fenAfter),
+        uci = reply[0],
+        m = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+      const consequence = m.san.includes('#')
+        ? en
+          ? ' gives checkmate'
+          : ' dává mat'
+        : m.captured
+          ? en
+            ? ` captures on ${m.to}`
+            : ` bere na ${m.to}`
+          : m.san.includes('+')
+            ? en
+              ? ' gives check'
+              : ' dává šach'
+            : '';
+      text += en
+        ? ` Opponent’s engine reply: ${lineToSan(fenAfter, reply, 3)}${consequence}.`
+        : ` Odpověď soupeře podle enginu: ${lineToSan(fenAfter, reply, 3)}${consequence}.`;
     }
-    if(best.length)text+=en?` Compare your alternative: ${lineToSan(fenBefore,best,3)}.`:` Porovnej vlastní alternativu: ${lineToSan(fenBefore,best,3)}.`;
-    else if(bestSan)text+=en?` Compare ${bestSan}.`:` Porovnej ${bestSan}.`;
-  }catch{if(bestSan)text+=en?` Compare ${bestSan}.`:` Porovnej ${bestSan}.`;}
+    if (best.length)
+      text += en
+        ? ` Compare your alternative: ${lineToSan(fenBefore, best, 3)}.`
+        : ` Porovnej vlastní alternativu: ${lineToSan(fenBefore, best, 3)}.`;
+    else if (bestSan) text += en ? ` Compare ${bestSan}.` : ` Porovnej ${bestSan}.`;
+  } catch {
+    if (bestSan) text += en ? ` Compare ${bestSan}.` : ` Porovnej ${bestSan}.`;
+  }
   return text;
 }
 

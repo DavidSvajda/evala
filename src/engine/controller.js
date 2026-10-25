@@ -20,22 +20,35 @@ export class EngineController {
     this.emit({ type: 'status', state: 'loading' });
     try {
       this.worker = this.makeWorker();
-      this.worker.onmessage = event => this.onLine(String(event.data));
-      this.worker.onerror = event => {
+      this.worker.onmessage = (event) => this.onLine(String(event.data));
+      this.worker.onerror = (event) => {
         console.error('Evala worker:', event.message || 'Worker load error', event.filename || '');
         this.fail('Engine se nepodařilo načíst. Obnov stránku nebo znovu načti rozšíření.');
       };
-      this.bootTimer = setTimeout(() => this.fail('Načítání enginu trvá příliš dlouho. Obnov stránku.'), 20000);
+      this.bootTimer = setTimeout(
+        () => this.fail('Načítání enginu trvá příliš dlouho. Obnov stránku.'),
+        20000,
+      );
       this.worker.postMessage('uci');
-    } catch { this.fail('WebAssembly engine není dostupný. Zkontroluj instalaci rozšíření.'); }
+    } catch {
+      this.fail('WebAssembly engine není dostupný. Zkontroluj instalaci rozšíření.');
+    }
   }
 
   analyze(request) {
     if (!Number.isSafeInteger(request.id) || !validPosition(request.fen)) {
-      this.emit({ type: 'error', id: request.id, message: 'Neplatná nebo nepodporovaná šachová pozice.' });
+      this.emit({
+        type: 'error',
+        id: request.id,
+        message: 'Neplatná nebo nepodporovaná šachová pozice.',
+      });
       return;
     }
-    this.pending = { id: request.id, fen: request.fen, settings: sanitizeSettings(request.settings) };
+    this.pending = {
+      id: request.id,
+      fen: request.fen,
+      settings: sanitizeSettings(request.settings),
+    };
     this.boot();
     if (this.active) this.stopActive();
     else this.runPending();
@@ -72,7 +85,10 @@ export class EngineController {
   }
 
   onLine(line) {
-    if (line === 'uciok') { this.worker?.postMessage('isready'); return; }
+    if (line === 'uciok') {
+      this.worker?.postMessage('isready');
+      return;
+    }
     if (line === 'readyok' && !this.ready) {
       clearTimeout(this.bootTimer);
       this.ready = true;
@@ -80,7 +96,10 @@ export class EngineController {
       this.runPending();
       return;
     }
-    if (/CRITICAL ERROR|Aborted\(/i.test(line)) { this.fail('Engine odmítl pozici. Přepni na standardní šachy a obnov stránku.'); return; }
+    if (/CRITICAL ERROR|Aborted\(/i.test(line)) {
+      this.fail('Engine odmítl pozici. Přepni na standardní šachy a obnov stránku.');
+      return;
+    }
     if (line.startsWith('bestmove')) {
       clearTimeout(this.stopTimer);
       if (this.active && !this.stopping) this.emit({ type: 'done', id: this.active.id });
@@ -95,7 +114,10 @@ export class EngineController {
     }
   }
 
-  pause() { this.pending = null; this.stopActive(); }
+  pause() {
+    this.pending = null;
+    this.stopActive();
+  }
 
   fail(message) {
     const id = this.pending?.id ?? this.active?.id;

@@ -1,102 +1,85 @@
 import http from 'node:http';
-import { readFile,stat } from 'node:fs/promises';
-import { resolve,sep,extname } from 'node:path';
-import { timingSafeEqual } from 'node:crypto';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Chess } from 'chess.js';
-import { StudyEngine,searchSettings } from '../src/study/uci.js';
-import { validPosition } from '../src/core/position.js';
+import { StudyEngine } from '../src/study/uci.js';
 import { nodeWorker } from './worker.mjs';
 import { createPublicReviews } from './public-reviews.mjs';
 import { createAccounts } from './accounts.mjs';
+import { createAnalysisApi } from './analysis-api.mjs';
+import { createStaticFiles } from './static-files.mjs';
+import { allowOrigin, constantTimeEqual, securityHeaders } from './security.mjs';
+import { httpError, sendError } from './http.mjs';
 
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.wasm':'application/wasm','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.json':'application/json','.txt':'text/plain; charset=utf-8'};
-const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
-export function createAnalysisServer({token=process.env.API_TOKEN||'',concurrency=Number(process.env.ENGINE_CONCURRENCY||1),origins=(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),allowExtensionOrigins=process.env.ALLOW_EXTENSION_ORIGINS==='true',publicReports=process.env.PUBLIC_REPORTS==='true',publicBudgetSeconds=Number(process.env.PUBLIC_ENGINE_SECONDS||1800),root=resolve('dist'),accounts={}}={}){
-  const limit=Math.max(1,Math.min(4,Math.floor(concurrency)||1));
-  const slots=Array.from({length:limit},()=>({engine:new StudyEngine(()=>nodeWorker()),busy:false}));
-  const originsSet=new Set(origins),rates=new Map();
-  const authorized=req=>!token||equal(req.headers.authorization||'','Bearer '+token);
-  const reports=createPublicReviews({slots,enabled:publicReports,isOwner:authorized,budgetSeconds:Math.max(1,Math.min(7200,publicBudgetSeconds||1800))});
-  const identity=createAccounts({puzzlePath:resolve(root,'data/puzzles.json'),...accounts});
-  const json=(res,status,object)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(object));};
-  const server=http.createServer(async(req,res)=>{
-    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');
-    const origin=req.headers.origin;
-    const sameOrigin=origin&&(()=>{try{return new URL(origin).host===req.headers.host;}catch{return false;}})();
-    // Chrome extensions still need the personal bearer token on every API call.
-    // Only preflight is unauthenticated; ordinary website origins remain blocked.
-    const extensionOrigin=allowExtensionOrigins&&!!token&&/^chrome-extension:\/\/[a-p]{32}$/.test(origin||'');
-    if(origin&&!sameOrigin&&!extensionOrigin&&!originsSet.has(origin)){json(res,403,{error:'Origin is not allowed. Configure ALLOWED_ORIGINS.'});return;}
-    if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
-    if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-CSRF-Token','Access-Control-Max-Age':'600'});res.end();return;}
-    let url;try{url=new URL(req.url,'http://localhost');}catch{json(res,400,{error:'Bad URL'});return;}
-    if(await identity.handle(req,res,url))return;
-    if(await reports.handle(req,res,url))return;
-    if(url.pathname==='/api/health'){
-      if(!publicReports&&!authorized(req)){json(res,401,{error:'Invalid token'});return;}
-      json(res,200,{ok:true,engine:'Stockfish 19 Full',slots:limit,busy:slots.filter(s=>s.busy).length,publicReports});return;
-    }
-    if(url.pathname==='/api/analyze'){
-      if(req.method!=='POST'){json(res,405,{error:'Use POST'});return;}
-      const owner=authorized(req);
-      if(!owner&&(!publicReports||!reports.session(req))){json(res,401,{error:'Invalid token or session'});return;}
-      const now=Date.now(),ip=req.socket.remoteAddress;
-      const rate=rates.get(ip)||{start:now,count:0};
-      if(now-rate.start>60000){rate.start=now;rate.count=0;}
-      if(++rate.count>300){json(res,429,{error:'Too many requests'});return;}
-      rates.set(ip,rate);if(rates.size>1000)for(const [key,value] of rates)if(now-value.start>60000)rates.delete(key);
-      let slot;
-      const controller=new AbortController();
-      let body='',sent=false;
-      const timeout=setTimeout(()=>controller.abort(),30000);
-      const send=data=>{if(!res.destroyed&&!res.writableEnded)res.write(JSON.stringify(data)+'\n');};
-      res.on('close',()=>{if(!res.writableFinished)controller.abort();});
-      try{
-        for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>65536)throw new Error('Request exceeds 64 KB');}
-        const request=JSON.parse(body);
-        if(!validPosition(request.fen))throw new Error('Invalid FEN');
-        if(request.history){
-          const {initialFen,moves}=request.history;
-          if(!validPosition(initialFen)||!Array.isArray(moves)||moves.length>600)throw new Error('Invalid history');
-          const chess=new Chess(initialFen);
-          for(const uci of moves){if(typeof uci!=='string'||!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci))throw new Error('Invalid UCI move');chess.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]});}
-          if(chess.fen()!==new Chess(request.fen).fen())throw new Error('History does not match FEN');
-        }
-        const opts=searchSettings(request.settings);
-        request.cacheScope=reports.cacheScope(req);
-        request.settings={...opts,time:Math.min(opts.time,owner?5000:500),hash:Math.min(opts.hash,owner?128:64),depth:Math.min(opts.depth,owner?28:18),multipv:Math.min(opts.multipv,owner?5:3),engine:'full'};
-        slot=slots.find(s=>!s.busy);
-        if(!slot){res.setHeader('Retry-After','2');json(res,429,{error:'Engine is busy. Retry shortly.'});return;}
-        if(!owner)reports.reserve(req,request.settings.time/1000);
-        slot.busy=true;
-        res.writeHead(200,{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-cache, no-transform','X-Accel-Buffering':'no'});sent=true;
-        let last=0;
-        const result=await slot.engine.search(request,{signal:controller.signal,onInfo:info=>{if(Date.now()-last>100){last=Date.now();send({type:'info',result:info});}}});
-        send({type:'done',result});res.end();
-      }catch(error){
-        if(sent){send({type:'error',message:error.name==='AbortError'?'Výpočet byl zrušen.':error.message});res.end();}
-        else if(!res.destroyed)json(res,error.status||400,{error:error.message});
-      }finally{clearTimeout(timeout);if(slot)slot.busy=false;reports.pump();}
+export function createAnalysisServer({
+  token = process.env.API_TOKEN || '',
+  concurrency = Number(process.env.ENGINE_CONCURRENCY || 1),
+  origins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
+  allowExtensionOrigins = process.env.ALLOW_EXTENSION_ORIGINS === 'true',
+  publicReports = process.env.PUBLIC_REPORTS === 'true',
+  publicBudgetSeconds = Number(process.env.PUBLIC_ENGINE_SECONDS || 1800),
+  root = resolve('dist'),
+  accounts = {},
+} = {}) {
+  const limit = Math.max(1, Math.min(4, Math.floor(concurrency) || 1));
+  const slots = Array.from({ length: limit }, () => ({
+    engine: new StudyEngine(() => nodeWorker()),
+    busy: false,
+  }));
+  const authorized = (req) =>
+    !token || constantTimeEqual(req.headers.authorization || '', 'Bearer ' + token);
+  const reports = createPublicReviews({
+    slots,
+    enabled: publicReports,
+    isOwner: authorized,
+    budgetSeconds: Math.max(1, Math.min(7200, publicBudgetSeconds || 1800)),
+  });
+  const identity = createAccounts({ puzzlePath: resolve(root, 'data/puzzles.json'), ...accounts });
+  const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
+  const staticFiles = createStaticFiles({ root, publicReports });
+  const originsSet = new Set(origins);
+  async function handle(req, res) {
+    securityHeaders(req, res);
+    allowOrigin(req, res, { origins: originsSet, allowExtensionOrigins, token });
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers':
+          'Content-Type, Authorization, X-CSRF-Token, X-Evala-Account, X-Evala-Generation',
+        'Access-Control-Max-Age': '600',
+      });
+      res.end();
       return;
     }
-    if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Method not allowed'});return;}
-    try{
-      const path=resolve(root,'.'+decodeURIComponent(url.pathname==='/'?'/study.html':url.pathname));
-      if(!path.startsWith(root+sep)||(await stat(path)).isDirectory()){json(res,404,{error:'Not found'});return;}
-      let data=await readFile(path);
-      if(path.endsWith(sep+'study.html'))data=Buffer.from(data.toString('utf8').replace('</head>',`<meta name="evala-backend" content="server">${publicReports?'<meta name="evala-public" content="true">':''}</head>`));
-      res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Content-Security-Policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; frame-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'self'",'Cache-Control':path.endsWith('.wasm')?'public, max-age=86400':'no-cache'});
-      res.end(req.method==='HEAD'?undefined:data);
-    }catch{json(res,404,{error:'Not found'});}
+    let url;
+    try {
+      url = new URL(req.url, 'http://localhost');
+    } catch {
+      throw httpError(400, 'Bad URL');
+    }
+    if (await identity.handle(req, res, url)) return;
+    if (await reports.handle(req, res, url)) return;
+    if (await analyze(req, res, url)) return;
+    if (url.pathname.startsWith('/api/')) throw httpError(404, 'Not found');
+    await staticFiles(req, res, url);
+  }
+  // Node's HTTP callback does not consume rejected async functions.
+  const server = http.createServer((req, res) => {
+    handle(req, res).catch((error) => sendError(res, error));
   });
-  server.requestTimeout=35000;server.headersTimeout=10000;
-  server.on('close',()=>slots.forEach(s=>s.engine.dispose()));
+  server.requestTimeout = 35000;
+  server.headersTimeout = 10000;
+  server.on('close', () => slots.forEach((s) => s.engine.dispose()));
   return server;
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
-  const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT||8080);
-  if(!['127.0.0.1','localhost','::1'].includes(host)&&!process.env.API_TOKEN)throw new Error('Set API_TOKEN before binding a public interface.');
-  const server=createAnalysisServer();server.listen(port,host,()=>console.log(`Evala server listening on ${host}:${port}. Engine: Stockfish 19 Full.`));
-  for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>process.exit(0)));
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const host = process.env.HOST || '127.0.0.1',
+    port = Number(process.env.PORT || 8080);
+  if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !process.env.API_TOKEN)
+    throw new Error('Set API_TOKEN before binding a public interface.');
+  const server = createAnalysisServer();
+  server.listen(port, host, () =>
+    console.log(`Evala server listening on ${host}:${port}. Engine: Stockfish 19 Full.`),
+  );
+  for (const signal of ['SIGINT', 'SIGTERM'])
+    process.on(signal, () => server.close(() => process.exit(0)));
 }

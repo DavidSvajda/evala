@@ -1,6 +1,151 @@
-.app-sidebar{transition:width .22s cubic-bezier(.16,1,.3,1)}.app-main{transition:margin-left .22s cubic-bezier(.16,1,.3,1)}.position-workspace,.puzzle-board-area{transition:max-width .22s cubic-bezier(.16,1,.3,1)}
-#toggle-sidebar svg{width:19px;height:19px}.puzzle-board-footer{align-items:center;gap:12px;flex-wrap:wrap}#puzzle-level{font-size:12px;font-weight:650;color:var(--ink);margin-left:auto}#puzzle-time{min-width:34px;text-align:right;font-variant-numeric:tabular-nums}#language-choice{min-width:110px}#toggle-language{font-size:11px;min-width:37px;padding:7px 9px}
-body[data-sidebar-collapsed=true] .app-sidebar{width:72px}body[data-sidebar-collapsed=true] .app-main{margin-left:72px}body[data-sidebar-collapsed=true] .wordmark{font-size:0;padding:0;justify-content:center;gap:0}body[data-sidebar-collapsed=true] .brand-period{display:none}body[data-sidebar-collapsed=true] .main-navigation{padding:9px}body[data-sidebar-collapsed=true] .main-navigation>a,body[data-sidebar-collapsed=true] .main-navigation>button{font-size:0;justify-content:center;padding:14px;gap:0}body[data-sidebar-collapsed=true] .main-navigation .nav-count,body[data-sidebar-collapsed=true] .sidebar-engine,body[data-sidebar-collapsed=true] .sidebar-account>span:nth-child(2),body[data-sidebar-collapsed=true] .sidebar-account>span:last-child{display:none}body[data-sidebar-collapsed=true] .sidebar-account{justify-content:center}body[data-sidebar-collapsed=true] .sidebar-bottom{padding:12px}body[data-sidebar-collapsed=true] #toggle-sidebar svg{transform:rotate(180deg)}body[data-sidebar-collapsed=true] .position-workspace{max-width:calc(100vh - 240px)}body[data-sidebar-collapsed=true] .puzzle-layout{grid-template-columns:minmax(0,calc(100vh - 240px)) 300px}body[data-sidebar-collapsed=true] .home-puzzle-link{max-width:540px}body[data-sidebar-collapsed=true] .toast{left:calc(50% + 36px)}
-@media(max-width:1150px){body[data-sidebar-collapsed=true] .puzzle-layout{grid-template-columns:minmax(0,1fr) 260px}}
-@media(max-width:700px){.study-header{gap:8px}.study-header #page-label{display:none}.study-header #toggle-library{font-size:0;width:32px;padding:7px;min-height:32px}.study-header #toggle-library svg{width:17px;height:17px}.study-header #toggle-sidebar{width:32px;height:32px;min-height:32px}.study-header #toggle-language{min-height:32px}.puzzle-board-footer{font-size:11px;gap:8px}#puzzle-level{font-size:11px}body[data-sidebar-collapsed=true] .app-sidebar{display:none}body[data-sidebar-collapsed=true] .app-main{margin-left:0}body[data-sidebar-collapsed=true] .position-workspace{max-width:none}body[data-sidebar-collapsed=true] .puzzle-layout{grid-template-columns:1fr}body[data-sidebar-collapsed=true] .toast{left:50%}}
-@media(prefers-reduced-motion:reduce){.app-sidebar,.app-main,.position-workspace,.puzzle-board-area{transition:none}}
+.app-sidebar {
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-main {
+  transition: margin-left 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.position-workspace,
+.puzzle-board-area {
+  transition: max-width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#toggle-sidebar svg {
+  width: 19px;
+  height: 19px;
+}
+.puzzle-board-footer {
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#puzzle-level {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink);
+  margin-left: auto;
+}
+#puzzle-time {
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#language-choice {
+  min-width: 110px;
+}
+#toggle-language {
+  font-size: 11px;
+  min-width: 37px;
+  padding: 7px 9px;
+}
+body[data-sidebar-collapsed='true'] .app-sidebar {
+  width: 72px;
+}
+body[data-sidebar-collapsed='true'] .app-main {
+  margin-left: 72px;
+}
+body[data-sidebar-collapsed='true'] .wordmark {
+  font-size: 0;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+body[data-sidebar-collapsed='true'] .brand-period {
+  display: none;
+}
+body[data-sidebar-collapsed='true'] .main-navigation {
+  padding: 9px;
+}
+body[data-sidebar-collapsed='true'] .main-navigation > a,
+body[data-sidebar-collapsed='true'] .main-navigation > button {
+  font-size: 0;
+  justify-content: center;
+  padding: 14px;
+  gap: 0;
+}
+body[data-sidebar-collapsed='true'] .main-navigation .nav-count,
+body[data-sidebar-collapsed='true'] .sidebar-engine,
+body[data-sidebar-collapsed='true'] .sidebar-account > span:nth-child(2),
+body[data-sidebar-collapsed='true'] .sidebar-account > span:last-child {
+  display: none;
+}
+body[data-sidebar-collapsed='true'] .sidebar-account {
+  justify-content: center;
+}
+body[data-sidebar-collapsed='true'] .sidebar-bottom {
+  padding: 12px;
+}
+body[data-sidebar-collapsed='true'] #toggle-sidebar svg {
+  transform: rotate(180deg);
+}
+body[data-sidebar-collapsed='true'] .position-workspace {
+  max-width: calc(100vh - 240px);
+}
+body[data-sidebar-collapsed='true'] .puzzle-layout {
+  grid-template-columns: minmax(0, calc(100vh - 240px)) 300px;
+}
+body[data-sidebar-collapsed='true'] .home-puzzle-link {
+  max-width: 540px;
+}
+body[data-sidebar-collapsed='true'] .toast {
+  left: calc(50% + 36px);
+}
+@media (max-width: 1150px) {
+  body[data-sidebar-collapsed='true'] .puzzle-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+}
+@media (max-width: 700px) {
+  .study-header {
+    gap: 8px;
+  }
+  .study-header #page-label {
+    display: none;
+  }
+  .study-header #toggle-library {
+    font-size: 0;
+    width: 32px;
+    padding: 7px;
+    min-height: 32px;
+  }
+  .study-header #toggle-library svg {
+    width: 17px;
+    height: 17px;
+  }
+  .study-header #toggle-sidebar {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+  .study-header #toggle-language {
+    min-height: 32px;
+  }
+  .puzzle-board-footer {
+    font-size: 11px;
+    gap: 8px;
+  }
+  #puzzle-level {
+    font-size: 11px;
+  }
+  body[data-sidebar-collapsed='true'] .app-sidebar {
+    display: none;
+  }
+  body[data-sidebar-collapsed='true'] .app-main {
+    margin-left: 0;
+  }
+  body[data-sidebar-collapsed='true'] .position-workspace {
+    max-width: none;
+  }
+  body[data-sidebar-collapsed='true'] .puzzle-layout {
+    grid-template-columns: 1fr;
+  }
+  body[data-sidebar-collapsed='true'] .toast {
+    left: 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .app-main,
+  .position-workspace,
+  .puzzle-board-area {
+    transition: none;
+  }
+}

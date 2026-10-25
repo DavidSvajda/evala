@@ -10,5 +10,11 @@ dist-bar/
 __pycache__/
 *.log
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 .local-data/
 .azure-cli-venv/
