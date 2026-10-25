@@ -27,6 +27,9 @@ try{
     await page.setViewportSize({width,height:width===390?844:768});
     for(const route of ['home','games','analysis','puzzles','insights','settings','account']){
       await page.goto(base+'/study.html#/'+route);await page.locator(`main[data-page="${route}"]`).waitFor();await page.locator('#home-board img').first().waitFor({state:'attached'});
+      await page.evaluate(()=>document.fonts.ready);
+      // Resizing animates the navigation rail for 220 ms. Measure the settled layout.
+      await page.waitForTimeout(300);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`production overflow: ${route} ${width}`);
       if(['analysis','puzzles','account'].includes(route))await page.screenshot({path:`.impeccable/review/production-${route}-${width}.png`,fullPage:true});
     }
