@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { phaseOf, errorReason, timeClass } from '../study/analytics.js';
+import { phaseOf, errorReason, timeClass } from '../core/game-analytics.js';
 
 export const ownColor = (game, name) =>
   ['w', 'b'].find(
