@@ -3,7 +3,7 @@ let opening;
 let owner='guest';
 const saves=new Map();
 export let lastSyncStatus={message:'',error:false};
-export function setStorageIdentity(user){owner=user?.id||'guest';opening=null;}
+export function setStorageIdentity(user){opening?.then(db=>db.close()).catch(()=>{});owner=user?.id||'guest';opening=null;lastSyncStatus={message:'',error:false};}
 function database(){
   if(!opening)opening=new Promise((resolve,reject)=>{
     const request=indexedDB.open(owner==='guest'?'evala-study':'evala-study-'+owner,1);
@@ -28,7 +28,8 @@ export async function loadLibrary(){
       }
       const remoteIds=new Set(remote.map(g=>g.id));
       for(const saved of local)if(!remoteIds.has(saved.id)&&saved._remoteVersion&&!saved._syncPending){await new Promise((resolve,reject)=>{const tx=db.transaction('games','readwrite');tx.objectStore('games').delete(saved.id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});byId.delete(saved.id);}
-      syncStatus('Synchronizováno');return [...byId.values()].sort((a,b)=>b.createdAt-a.createdAt);
+      const pending=[...byId.values()].some(g=>g._syncPending);
+      syncStatus(pending?'Některé partie čekají na synchronizaci.':'Synchronizováno',pending);return [...byId.values()].sort((a,b)=>b.createdAt-a.createdAt);
     }catch(error){syncStatus(error.message,true);}
   }
   return local.map(g=>({...g,_storageOwner:active})).sort((a,b)=>b.createdAt-a.createdAt);
@@ -46,13 +47,19 @@ export async function saveGame(game){
   });saves.set(key,task);await task;if(saves.get(key)===task)saves.delete(key);
 }
 export async function removeGame(id){const db=await database();if(account.user)await accountRequest('library/'+id,{method:'DELETE'});return new Promise((resolve,reject)=>{const tx=db.transaction('games','readwrite');tx.objectStore('games').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+export async function clearAccountCache(){
+  if(owner==='guest')return;
+  const db=await database();
+  await new Promise((resolve,reject)=>{const tx=db.transaction('games','readwrite');tx.objectStore('games').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+}
 export async function migrateGuestGames(){
   if(!account.user)return 0;
   const request=indexedDB.open('evala-study',1),db=await new Promise((resolve,reject)=>{request.onupgradeneeded=()=>request.result.createObjectStore('games',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
   const games=await localGames(db);db.close();const existing=new Set((await accountRequest('library')).games.map(g=>g.id));let count=0;
-  for(const game of games){if(existing.has(game.id))continue;delete game._remoteVersion;delete game._storageOwner;await saveGame(game);if(game._syncPending)throw new Error(lastSyncStatus.message||'Partie čekají na synchronizaci. Zkontroluj připojení a zkus to znovu.');count++;}return count;
+  for(const game of games){if(existing.has(game.id))continue;delete game._remoteVersion;delete game._storageOwner;await saveGame(game);if(game._syncPending)throw new Error(lastSyncStatus.error?lastSyncStatus.message:'Partie čekají na synchronizaci. Zkontroluj připojení a zkus to znovu.');count++;}return count;
 }
 
 export const STUDY_DEFAULTS={engine:'full',depth:18,time:750,multipv:3,hash:64,profile:'balanced',arrows:true,backend:'local',serverUrl:''};
-export function getPreferences(defaults={}){try{return {...STUDY_DEFAULTS,...defaults,...JSON.parse(localStorage.getItem('evala-study-options')||'{}')};}catch{return {...STUDY_DEFAULTS,...defaults};}}
-export function savePreferences(settings){const {token,...safe}=settings;localStorage.setItem('evala-study-options',JSON.stringify(safe));}
+const optionsKey=()=>owner==='guest'?'evala-study-options':'evala-study-options:'+owner;
+export function getPreferences(defaults={}){try{return {...STUDY_DEFAULTS,...defaults,...JSON.parse(localStorage.getItem(optionsKey())||'{}')};}catch{return {...STUDY_DEFAULTS,...defaults};}}
+export function savePreferences(settings){const {token,...safe}=settings;localStorage.setItem(optionsKey(),JSON.stringify(safe));}

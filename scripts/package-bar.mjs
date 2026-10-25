@@ -15,7 +15,7 @@ for (const path of [
   'background.js', 'bridge.js', 'content.js', 'offscreen.js', 'offscreen.html',
   'popup.html', 'popup.js', 'popup.css', 'theme.css',
   'demo.html', 'demo.js', 'demo.css', 'engine.html', 'engine-frame.js',
-  'engine-source.json', 'privacy.html', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+  'engine-source.json', 'privacy.html', 'privacy.js', 'study.css', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
   'icons', 'fonts', 'pieces',
 ]) await cp(resolve(root, 'dist', path), resolve(out, path), { recursive: true });
 await mkdir(resolve(out, 'engine'), { recursive: true });
@@ -36,6 +36,8 @@ const popupPath = resolve(out, 'popup.html');
 await writeFile(popupPath, (await readFile(popupPath, 'utf8'))
   .replace(/<button class="study-link demo-link">[\s\S]*?<\/button>/, '')
   .replace('Stockfish 19 ·', 'Stockfish 19 Lite ·'));
+const privacyPath=resolve(out,'privacy.html');
+await writeFile(privacyPath,(await readFile(privacyPath,'utf8')).replace('study.html#/account','demo.html'));
 const noticesPath = resolve(out, 'THIRD_PARTY_NOTICES.md');
 await writeFile(noticesPath, (await readFile(noticesPath, 'utf8'))
   .replace('Stockfish 19 Full NNUE and Lite single-thread', 'Stockfish 19 Lite single-thread')

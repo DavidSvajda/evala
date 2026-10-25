@@ -1,5 +1,11 @@
 # Ověření Evala
 
+## Verze 2.0.1 — dokončení a kontrola 25. října
+
+Podrobný výsledek je v [AUDIT_2026-10-25.md](AUDIT_2026-10-25.md). Prošlo 34 jednotkových a integračních kontrol, rozšířený průchod aplikací, skutečné Azure Blob Storage v dočasném testovacím prostoru a skutečný produkční web. Uživatel potvrdil dokončení Google přihlášení. Doplněné průchody zahrnují hledání lepšího tahu, mluvenou poznámku, přenos tréninku, oddělené přezdívky účtů, export a smazání bez opětovného obnovení lokální kopie.
+
+`node tests/cloud-accounts.mjs` potřebuje ignorovaný místní soubor s connection stringem a vytvoří pouze dočasný kontejner. `node tests/production-browser.mjs` používá čistý profil a krátkou PGN fixture. Oba testy rozlišují automatický testovací podpis od skutečného Google přihlášení.
+
 ## Verze 2.0.0
 
 - `npm test`: 29 úspěšných kontrol, včetně všech 4 459 legálních řešení úloh, adaptivního výběru, minimálních podkladů pro odhad výkonu, účtů, CSRF, nonce, oddělení knihoven, konfliktů verzí a odvolání všech sessions po smazání účtu.

@@ -1,6 +1,6 @@
 {
   "name": "evala",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "description": "Local Stockfish evaluation bar for Chess.com and Lichess",
@@ -13,6 +13,8 @@
     "test:extension": "node tests/extension.mjs",
     "test:study": "node tests/study-browser.mjs",
     "test:platform": "node tests/platform-browser.mjs",
+    "test:cloud-accounts": "node tests/cloud-accounts.mjs",
+    "test:production": "node tests/production-browser.mjs",
     "test:remote-bar": "node tests/remote-bar.mjs",
     "server": "node server/index.mjs",
     "serve": "node scripts/serve.mjs",

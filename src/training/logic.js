@@ -80,7 +80,7 @@ export function personalPuzzles(games, username = '') {
     for (const [index, move] of game.moves.entries()) {
       const mark = game.analysis?.moves?.[index], before = game.analysis?.positions?.[index];
       const [best, second] = before?.lines || [];
-      if (move.color !== own || !mark || mark.loss < 10 || !best?.pv?.length || !second || before.depth < 14) continue;
+      if (move.color !== own || !mark || mark.loss < 10 || !best?.pv?.length || !second || before.depth < 14 || best.depth < 14 || second.depth < 14 || !Number.isFinite(best.depth) || !Number.isFinite(second.depth)) continue;
       const sign = own === 'w' ? 1 : -1;
       const distinct = best.kind === 'mate' && best.value * sign > 0 && second.kind !== 'mate' || best.kind === 'cp' && second.kind === 'cp' && (best.value - second.value) * sign >= 100;
       if (!distinct || best.pv[0] === move.uci) continue;

@@ -1,4 +1,10 @@
 export const EN = {
+  'Některé partie čekají na synchronizaci.':'Some games are waiting to sync.',
+  'Poznámka k tahu':'Move note','Přečíst poznámku':'Read move note','Zkusit lepší tah':'Try a better move','Ukázat hrozbu':'Show threat','Skrýt hrozbu':'Hide threat',
+  'Zahraj lepší tah na šachovnici.':'Play a better move on the board.','Tento tah není doporučené pokračování. Zkus jiný.':'That is not the recommended continuation. Try another.','Správně. Našel jsi doporučený tah.':'Correct. You found the recommended move.',
+  '? To nen? nejlep?? tah. Zkus to znovu!':'? Not the best move. Try again!',
+  '? Ostr? pozice':'? Razor-sharp',
+
   'Pokračovat pomocí Googlu':'Continue with Google',
   'Bílý +':'White +','Černý −':'Black −','Fáze':'Phase','Skvělý':'Great',
   'Skóre výsledků = (výhry + ½ remíz) / partie. Skóre tahů je vlastní výpočet Evala, nikoli přesnost Chess.com. Částečné rozbory jsou zahrnuty jen svými hotovými tahy. Způsob ukončení se doplňuje pouze z konečné pozice nebo PGN.':'Result score = (wins + ½ draws) / games. Move scores use Evala’s own calculation. Partial analyses include only completed moves. Termination is taken from the final position or PGN.',

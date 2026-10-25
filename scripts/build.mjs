@@ -13,7 +13,7 @@ await cp(resolve(root, 'public'), out, { recursive: true });
 const common = { absWorkingDir: resolve(root), tsconfigRaw: {}, bundle: true, target: 'chrome111', logLevel: 'info', legalComments: 'eof', minify: true };
 await build({ ...common, entryPoints: ['src/content.js','src/bridge.js','src/background.js','src/engine/frame.js','src/engine/offscreen.js'], outdir: out, entryNames: '[name]', format: 'iife', loader: { '.css': 'text' } });
 // Extension entrypoints may use top-level await; browsers load these as modules.
-await build({ ...common, entryPoints: {'popup':'src/popup.js','demo':'src/demo.js','study':'src/study/app.js'}, outdir: out, format: 'esm', loader: { '.css': 'text' } });
+await build({ ...common, entryPoints: {'popup':'src/popup.js','demo':'src/demo.js','study':'src/study/app.js','privacy':'src/privacy.js'}, outdir: out, format: 'esm', loader: { '.css': 'text' } });
 await cp(resolve(out,'frame.js'), resolve(out,'engine-frame.js'));
 await rm(resolve(out,'frame.js'));
 await cp(resolve(root,'src/ui/theme.css'), resolve(out,'theme.css'));

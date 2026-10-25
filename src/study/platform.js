@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 import { StudyBoard } from './board.js';
 import { lineToSan } from './game.js';
 import { account, accountRequest, googleButton, logoutAccount, saveAccountPreferences } from './account.js';
-import { migrateGuestGames,lastSyncStatus } from './storage.js';
+import { migrateGuestGames,lastSyncStatus,clearAccountCache } from './storage.js';
 import { THEMES, trainingState, choosePuzzle, startPuzzle, playPuzzle, recordPuzzle, personalPuzzles, uciMove } from '../training/logic.js';
 import { language,setLanguage,translate } from './i18n.js';
 
@@ -127,7 +127,7 @@ export async function initPlatform(context) {
     $('#logout-account').onclick = async () => { try { if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.'); await logoutAccount(); } catch (e) { $('#account-error').textContent = e.message; } };
     $('#import-guest-games').onclick = async event => {
       event.target.disabled = true;
-      try { const count = await migrateGuestGames(); await context.reload(); renderHome(); toast(`Přeneseno ${count} partií.`); }
+      try { const count = await migrateGuestGames(); await context.reload(); renderHome();renderAccount(); toast(`Přeneseno ${count} partií.`); }
       catch (e) { $('#account-error').textContent = e.message; }
       finally { event.target.disabled = false; }
     };
@@ -137,7 +137,7 @@ export async function initPlatform(context) {
     };
     $('#delete-account-form').onsubmit = async event => {
       event.preventDefault(); if (event.target.querySelector('input').value !== 'SMAZAT') return;
-      try { if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.'); await accountRequest('delete', { method:'POST', body:{} }); Object.assign(account, { user:null,csrf:'',training:null }); document.dispatchEvent(new CustomEvent('evala:identity', { detail:null })); }
+      try { if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.'); await accountRequest('delete', { method:'POST', body:{} }); await clearAccountCache();localStorage.removeItem(prefKey());localStorage.removeItem(trainingKey());Object.assign(account, { user:null,csrf:'',training:null }); document.dispatchEvent(new CustomEvent('evala:identity', { detail:null })); }
       catch (e) { $('#account-error').textContent = e.message; }
     };
   }
@@ -156,6 +156,7 @@ export async function initPlatform(context) {
   }
   function paintPuzzle() {
     if (!current) return;
+    $('#flip-puzzle').disabled=false;
     const uci = current.state.lastMove;
     puzzleBoard.interactive = !busy && !current.state.complete;
     puzzleBoard.set(current.state.fen, { flipped:puzzleFlipped, lastMove:uci ? uciMove(uci) : null });
@@ -168,7 +169,8 @@ export async function initPlatform(context) {
     $('#puzzle-status').textContent = 'Najdi nejlepší tah'; $('#puzzle-message').textContent = 'Spočítej pokračování a zahraj tah na šachovnici.';
     $('.puzzle-feedback').dataset.state = ''; $('#puzzle-themes').replaceChildren(); $('#puzzle-solution').replaceChildren(); $('#puzzle-source').hidden = true; $('#next-puzzle').hidden = true;
     $('#puzzle-error').textContent = ''; $('#rating-change').textContent = ''; $('#puzzle-promotion').hidden = true;
-    $('#puzzle-time').textContent='0:00';
+    $('#puzzle-time').textContent='';$('#puzzle-number').textContent='';$('#puzzle-level').textContent='';$('#puzzle-turn').textContent='Načítám úlohu…';
+    $('#puzzle-hint').disabled=$('#puzzle-reveal').disabled=$('#flip-puzzle').disabled=true;puzzleBoard.grid.replaceChildren();puzzleBoard.arrows.replaceChildren();
   }
   async function loadPuzzle() {
     const request = ++generation; clearTimeout(autoTimer); clearTimeout(replayTimer); busy = true; current = null; puzzleBoard.interactive = false;
@@ -266,7 +268,7 @@ export async function initPlatform(context) {
   $('#toggle-sidebar').onclick=()=>updatePreferences({sidebarCollapsed:!preferences.sidebarCollapsed});
   $('#toggle-language').onclick=()=>updatePreferences({language:language()==='en'?'cs':'en'});
   $('#language-choice').onchange=event=>updatePreferences({language:event.target.value});
-  document.addEventListener('evala:language',()=>{renderHome();document.title=translate(pageNames[page]||'Přehled')+' · Evala';if(page==='account')renderAccount();});
+  document.addEventListener('evala:language',()=>{renderHome();paintPuzzle();document.title=translate(pageNames[page]||'Přehled')+' · Evala';if(page==='account')renderAccount();});
   $('#next-puzzle').onclick = loadPuzzle; $('#puzzle-hint').onclick = () => helpPuzzle(false); $('#puzzle-reveal').onclick = () => helpPuzzle(true);
   $('#flip-puzzle').onclick = () => { puzzleFlipped = !puzzleFlipped; paintPuzzle(); };
   document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { mode = b.dataset.mode; loadPuzzle(); });
@@ -286,7 +288,7 @@ export async function initPlatform(context) {
   document.addEventListener('evala:library', renderHome);
   document.addEventListener('evala:sync', event => { $('#sync-status').textContent = event.detail.message; $('#sync-status').classList.toggle('sync-error', event.detail.error); });
   document.addEventListener('evala:identity', async event => {
-    ++generation; clearTimeout(autoTimer); clearTimeout(preferenceTimer); current = null;
+    ++generation; clearTimeout(autoTimer); clearTimeout(preferenceTimer); current = null;sessionSolved=0;sessionAttempted=0;
     await context.onIdentity(event.detail); loadState(); renderIdentity(); renderHome(); if (page === 'account') renderAccount();
   });
   const fromUrl = () => go(location.hash.replace(/^#\/?/, '') || (new URLSearchParams(location.search).get('view') === 'review' ? 'analysis' : 'home'));

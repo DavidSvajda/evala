@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Chess } from 'chess.js';
 import { choosePuzzle, startPuzzle, playPuzzle, recordPuzzle, trainingState, personalPuzzles } from '../src/training/logic.js';
+import { parsePgn } from '../src/study/game.js';
 
 const { puzzles } = JSON.parse(await readFile('public/data/puzzles.json', 'utf8'));
 test('the shipped CC0 bank contains thousands of legal, complete rated solutions across beginner and expert levels', () => {
@@ -35,4 +36,12 @@ test('a wrong legal move preserves the original position and hints do not earn a
   assert.equal(result.correct,false);assert.equal(result.state.fen,state.fen);assert.equal(result.state.failed,true);
   const grade=recordPuzzle(trainingState(),puzzle,true,{hinted:true});assert.equal(grade.state.solved,0);assert.ok(grade.delta<0);
   assert.equal(personalPuzzles([], 'friend').length,0);
+});
+
+test('personal puzzles use only the named player and a clear alternative confirmed at sufficient depth',()=>{
+  const game=parsePgn('[White "Friend"]\n[Black "Opponent"]\n\n1. f3 e5 2. g4 Qh4#');
+  game.analysis={moves:[null,null,{loss:40},null],positions:[null,null,{depth:18,lines:[{kind:'cp',value:0,depth:18,pv:['g2g3']},{kind:'cp',value:-200,depth:18,pv:['h2h3']}]},null,null]};
+  const personal=personalPuzzles([game],'Friend');assert.equal(personal.length,1);assert.equal(personal[0].rating,null);assert.deepEqual(personal[0].moves,['g2g3']);assert.equal(personalPuzzles([game],'SomeoneElse').length,0);
+  assert.equal(playPuzzle(personal[0],startPuzzle(personal[0]),'g2g3').state.complete,true);
+  game.analysis.positions[2].lines[1].depth=8;assert.equal(personalPuzzles([game],'Friend').length,0);
 });

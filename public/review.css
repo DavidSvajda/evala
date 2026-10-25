@@ -26,3 +26,21 @@
 .analysis-panel .move-pair{grid-template-columns:29px minmax(0,1fr) minmax(0,1fr);gap:4px;min-height:37px}.analysis-panel .move-pair:nth-child(even){background:#eff1e9}.analysis-panel .move-button{gap:4px;font-size:14px;min-height:34px;padding:6px 7px}.move-button .move-symbol{margin-left:auto;display:flex}.move-button .move-emblem{width:18px;height:18px}.move-button .move-emblem svg{width:13px;height:13px}.move-button .notation-eval{font-size:11px;color:var(--muted);margin-left:auto;font-weight:500}.move-button .move-san{white-space:nowrap}.move-button.filtered-out{opacity:.5}.analysis-panel .moves-section{padding-top:18px}.analysis-panel .move-feedback{padding-top:18px;min-height:90px}.analysis-panel .lines-section{border-bottom:0}.analysis-panel .line-san{font-size:13px}.analysis-panel .engine-line{padding:12px 0}.analysis-panel .line-head{font-size:11px}.analysis-panel .line-head strong{font-size:14px}.analysis-panel .classification-note{font-size:11px}
 @media(max-width:1150px){.analysis-tabs{gap:18px}.analysis-tabs button{font-size:12px}.summary .summary-players{gap:12px}.accuracy-value{font-size:24px}.move-summary-row{grid-template-columns:31px minmax(0,1fr) 31px;gap:3px}.move-summary-row>span{gap:7px;font-size:11px}.move-summary-row .move-emblem{width:21px;height:21px}.summary-coverage{font-size:11px}.move-button .notation-eval{display:none}}
 @media(max-width:700px){.analysis-tabs{gap:30px}.analysis-tabs button{font-size:14px}.summary .summary-players{gap:25px}.summary .summary-name{font-size:14px}.accuracy-value{font-size:28px}.summary-caption,.summary-side,.performance-estimate>span,.performance-estimate>small{font-size:12px}.summary .performance-estimate>strong{font-size:21px}.move-summary-row{grid-template-columns:45px minmax(0,1fr) 45px;gap:8px;min-height:39px}.move-summary-row>span{font-size:13px;gap:12px}.move-summary-row>button{font-size:16px;min-height:36px}.move-summary-row .move-emblem{width:26px;height:26px}.summary-coverage{font-size:11px}.performance-method summary{font-size:12px}.analysis-panel .move-list{max-height:420px}.analysis-panel .move-button{font-size:15px;min-height:39px}.move-button .notation-eval{display:inline;font-size:11px}.notation-head{font-size:12px}#next-critical{font-size:12px}}
+
+.gm-coach-card{margin-top:14px;background:var(--raised);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.eval-graph{position:relative}.eval-graph .graph-label{position:absolute;left:8px;font-size:12px;line-height:16px;color:var(--muted);pointer-events:none}.graph-label-white{top:4px}.graph-label-black{bottom:4px}
+.gm-coach-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gm-coach-title{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--accent)}
+.gm-coach-actions{display:flex;align-items:center;gap:8px}
+.gm-voice-btn{width:36px;height:36px}.gm-voice-btn svg{width:18px;height:18px}
+.gm-retry-btn{font-size:12px}
+.gm-coach-text{font-size:12px;line-height:1.6;color:var(--ink);margin:0}
+.sharpness-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:650;padding:3px 8px;border-radius:12px;width:fit-content}
+.sharpness-chip.sharp{background:#fde8e8;color:#c62828;border:1px solid #f8b4b4}
+.sharpness-chip.calm{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.sharpness-chip.dynamic{background:#fff8e1;color:#f57f17;border:1px solid #ffe082}
+.threat-radar-card{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;font-size:12px;color:#923c30;border-top:1px solid var(--line)}
+.threat-toggle{font-size:12px}.threat-toggle[aria-pressed=true]{color:var(--accent);background:var(--raised)}
+.imbalances-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.imbalance-chip{font-size:12px;color:var(--muted);padding:3px 0}#retry-feedback[data-state=success]{color:var(--accent)}#retry-feedback[data-state=incorrect]{color:#923c30}
+@media(max-width:700px){.gm-coach-header{align-items:flex-start;flex-wrap:wrap}.gm-voice-btn,.gm-retry-btn,.threat-toggle{min-height:44px;min-width:44px}}

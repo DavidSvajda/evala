@@ -32,6 +32,17 @@ try{
   await page.locator('#review-game').click();await page.waitForFunction(()=>document.querySelector('#review-state').textContent==='Uloženo',{}, {timeout:60000});
   assert.equal(await page.locator('#summary [data-color="w"]').evaluateAll(buttons=>buttons.reduce((n,b)=>n+Number(b.textContent),0)),2);
   await page.locator('#summary [data-jump-kind="blunder"][data-color="w"]').click();assert.match(await page.locator('#position-label').textContent(),/g4/);
+  await page.locator('#gm-coach-card').waitFor();assert.doesNotMatch(await page.locator('#gm-coach-text').textContent(),/velmistrov|harmonii|neodvratiteln/i);
+  await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:'.impeccable/review/coach-desktop.png',fullPage:true});
+  await page.evaluate(()=>{if(window.speechSynthesis)window.speechSynthesis.speak=utterance=>window.__spokenNote=utterance.text;});
+  if(await page.locator('#gm-voice-btn').isEnabled()){await page.locator('#gm-voice-btn').click();assert.ok(await page.evaluate(()=>window.__spokenNote?.length>10));}
+  const retry=await page.evaluate(async()=>{const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('evala-study',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});const games=await new Promise(resolve=>{const request=db.transaction('games').objectStore('games').getAll();request.onsuccess=()=>resolve(request.result);});db.close();return {fen:games[0].fens[2],best:games[0].analysis.positions[2].lines[0].pv[0]};});
+  await page.locator('#gm-retry-btn').click();assert.match(await page.locator('#retry-feedback').textContent(),/Zahraj lepší tah/);
+  const incorrect=new Chess(retry.fen).moves({verbose:true}).find(m=>m.from+m.to+(m.promotion||'')!==retry.best);
+  for(const square of [incorrect.from,incorrect.to])await page.locator(`#study-board [data-square="${square}"]`).click();
+  assert.match(await page.locator('#retry-feedback').textContent(),/Zkus jiný/);assert.equal(await page.locator('#return-game').isVisible(),false);
+  for(const square of [retry.best.slice(0,2),retry.best.slice(2,4)])await page.locator(`#study-board [data-square="${square}"]`).click();
+  assert.match(await page.locator('#retry-feedback').textContent(),/Správně/);await page.locator('#return-game').waitFor();await page.locator('#return-game').click();
   await page.keyboard.press('Home');const initial=await page.locator('#position-label').textContent();await page.keyboard.press('ArrowRight');assert.notEqual(await page.locator('#position-label').textContent(),initial);
   await page.locator('#analysis-lines-tab').click();await page.locator('.game-note>summary').click();await page.locator('#game-note').fill('Zkontrolovat slabou diagonálu ke králi.');await page.locator('#game-note').blur();
   assert.equal(workers,0);assert.equal(wasm,0);
@@ -47,12 +58,21 @@ try{
   const wrong=new Chess(startPuzzle(puzzle).fen).moves({verbose:true}).map(m=>m.from+m.to+(m.promotion||'')).find(m=>m!==puzzle.moves[1]);await playMove(wrong);
   await page.waitForFunction(()=>document.querySelector('.puzzle-feedback').dataset.state==='incorrect');await page.locator('#puzzle-hint').click();await page.locator('#puzzle-reveal').click();await page.locator('#replay-solution').waitFor();
   await signIn(page);await page.waitForFunction(()=>document.querySelector('#sidebar-user').textContent==='Ukázkový účet');
-  await route('account');await page.locator('#import-guest-games').click();await page.waitForFunction(()=>document.querySelector('#nav-game-count').textContent==='1');await page.locator('#toast').waitFor({state:'hidden'});await page.screenshot({path:'.impeccable/review/account-signed-in.png',fullPage:true});
-  await route('settings');await page.locator('[data-board-theme="blue"]').click();await page.waitForTimeout(800);
+  await route('account');await page.locator('#import-guest-games').click();await page.waitForFunction(()=>document.querySelector('#nav-game-count').textContent==='1');await page.locator('#toast').waitFor({state:'hidden'});assert.match(await page.locator('.account-library>p').first().textContent(),/^1 /);await page.screenshot({path:'.impeccable/review/account-signed-in.png',fullPage:true});
+  await route('settings');assert.equal(await page.locator('#linked-username').inputValue(),'');await page.locator('[data-board-theme="blue"]').click();await page.locator('#linked-username').fill('AccountPlayer');await page.locator('#save-chess-profile').click();await page.waitForTimeout(800);
+  await route('puzzles');await page.waitForFunction(()=>document.querySelector('#puzzle-status').textContent==='Najdi nejlepší tah');
+  id=(await page.locator('#puzzle-number').textContent()).replace('Úloha ','').trim();puzzle=bank.find(p=>p.id===id);
+  for(let i=1;i<puzzle.moves.length;i+=2)await playMove(puzzle.moves[i]);
+  await page.waitForFunction(()=>document.querySelector('.puzzle-feedback').dataset.state==='success');
+  const accountTraining=await page.evaluate(async()=>await(await fetch('/api/account/training')).json());assert.equal(accountTraining.training.solved,1);
+  await page.locator('[data-mode="personal"]').click();await page.waitForFunction(()=>document.querySelector('#puzzle-status').textContent==='Zatím nejsou vhodné pozice');assert.equal(await page.locator('#puzzle-level').textContent(),'');assert.equal(await page.locator('#puzzle-board [data-square]').count(),0);
+  await page.locator('[data-mode="review"]').click();await page.waitForFunction(()=>document.querySelector('#puzzle-status').textContent==='Opakování je hotové');assert.equal(await page.locator('#puzzle-level').textContent(),'');await page.locator('[data-mode="rated"]').click();await page.waitForFunction(()=>document.querySelector('#puzzle-status').textContent==='Najdi nejlepší tah');
   const other=await browser.newContext({viewport:{width:1440,height:900}}),second=await other.newPage();second.on('pageerror',e=>errors.push(e.message));await second.goto(base+'/study.html');await second.locator('#home-board img').first().waitFor({state:'attached'});await signIn(second);await second.locator('#home-board img').first().waitFor({state:'attached'});
   assert.equal(await second.locator('#nav-game-count').textContent(),'1');assert.equal(await second.locator('body').getAttribute('data-board-theme'),'blue');
+  const restoredTraining=await second.evaluate(async()=>await(await fetch('/api/account/training')).json());assert.equal(restoredTraining.training.solved,1);
   await second.goto(base+'/study.html#/games');await second.locator('.game-item').first().click();await second.locator('#analysis-lines-tab').click();await second.locator('.game-note>summary').click();assert.equal(await second.locator('#game-note').inputValue(),'Zkontrolovat slabou diagonálu ke králi.');assert.equal(await second.locator('#review-state').textContent(),'Uloženo');await other.close();
   await route('account');await page.locator('#logout-account').click();await page.waitForFunction(()=>document.querySelector('#sidebar-user').textContent==='Host');
+  await route('settings');assert.equal(await page.locator('#linked-username').inputValue(),'Friend');assert.equal(await page.locator('#insight-username').inputValue(),'Friend');
   await route('games');assert.equal(await page.locator('.game-item').count(),1);
   await route('analysis');const wide=await page.locator('#study-board').boundingBox();await page.locator('#toggle-sidebar').click();await page.waitForFunction(width=>document.querySelector('#study-board').getBoundingClientRect().width>width+30,wide.width);await page.screenshot({path:'.impeccable/review/analysis-collapsed.png',fullPage:true});await page.locator('#toggle-sidebar').click();
   await page.locator('#toggle-language').click();await page.waitForFunction(()=>document.documentElement.lang==='en');
@@ -73,9 +93,14 @@ try{
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${name} overflow at ${viewport.width}`);
       const filename=viewport.width===1440&&name==='home'?'desktop':viewport.width===390&&name==='home'?'mobile':`${name}-${viewport.width}`;
       await page.screenshot({path:`.impeccable/review/${filename}.png`,fullPage:true});
-      if(name==='analysis'){await page.locator('#analysis-moves-tab').click();await page.screenshot({path:`.impeccable/review/analysis-moves-${viewport.width}.png`,fullPage:true});await page.locator('#analysis-summary-tab').click();}
+      if(name==='analysis'){await page.locator('#analysis-moves-tab').click();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`.impeccable/review/analysis-moves-${viewport.width}.png`,fullPage:true});if(viewport.width===390){await page.locator('.move-button[data-ply="3"]').click();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:'.impeccable/review/coach-mobile.png',fullPage:true});}await page.locator('#analysis-summary-tab').click();}
     }
   }
   assert.deepEqual(errors,[]);
+  await page.goto(base+'/privacy.html');await page.locator('#privacy-language').click();assert.equal(await page.locator('html').getAttribute('lang'),'en');assert.equal(await page.locator('h1').textContent(),'Privacy in Evala');await page.locator('#privacy-language').click();
+  await page.goto(base+'/study.html#/account');await page.locator('#home-board img').first().waitFor({state:'attached'});await signIn(page);await page.waitForFunction(()=>document.querySelector('#sidebar-user').textContent==='Ukázkový účet');
+  const downloadPromise=page.waitForEvent('download');await page.locator('#export-account').click();const download=await downloadPromise,chunks=[];for await(const chunk of await download.createReadStream())chunks.push(chunk);const exported=JSON.parse(Buffer.concat(chunks).toString());assert.equal(exported.games.length,1);assert.equal(exported.training.solved,1);assert.ok(!('csrf' in exported));
+  await page.locator('.danger-zone>summary').click();await page.locator('#delete-account-form input').fill('SMAZAT');await page.locator('#delete-account-form button').click();await page.waitForFunction(()=>document.querySelector('#sidebar-user').textContent==='Host');
+  assert.equal(await page.locator('#nav-game-count').textContent(),'1');await signIn(page);await page.waitForFunction(()=>document.querySelector('#sidebar-user').textContent==='Ukázkový účet');assert.equal(await page.locator('#nav-game-count').textContent(),'');
   console.log('PASS: routed pages, real hosted Stockfish review, keyboard, notes, legal multi-move puzzles, wrong moves/hints, persistence, signed account fixtures, isolated cross-device sync, guest restoration, themes, and responsive layouts. Google signature verification uses a local test key; real Google sign-in is verified separately.');
 }finally{await browser.close();server.closeAllConnections();await new Promise(done=>server.close(done));}

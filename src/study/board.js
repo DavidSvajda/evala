@@ -1,6 +1,8 @@
 import { Chess } from 'chess.js';
 import { moveIcon } from '../ui/move-icons.js';
+import { language } from './i18n.js';
 const names={p:'pěšec',n:'jezdec',b:'střelec',r:'věž',q:'dáma',k:'král'};
+const englishNames={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
 export class StudyBoard{
   constructor(element,{onMove,onLineMove}={}){
     this.element=element;this.onMove=onMove;this.flipped=false;this.selected=null;this.interactive=true;
@@ -28,10 +30,11 @@ export class StudyBoard{
       window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',cancel);
     });
   }
-  set(fen,{lastMove=null,arrow=null,mark=null,flipped=this.flipped}={}){
-    this.chess=new Chess(fen);this.flipped=flipped;this.lastMove=lastMove;this.arrow=arrow;this.mark=mark;this.selected=null;this.paint();
+  set(fen,{lastMove=null,arrow=null,threatArrow=null,mark=null,flipped=this.flipped}={}){
+    this.chess=new Chess(fen);this.flipped=flipped;this.lastMove=lastMove;this.arrow=arrow;this.threatArrow=threatArrow;this.mark=mark;this.selected=null;this.paint();
   }
   paint(){
+    const en=language()==='en';this.element.setAttribute('aria-label',en?'Interactive chessboard':'Interaktivní analytická šachovnice');
     const legal=this.selected?this.chess.moves({square:this.selected,verbose:true}):[];
     const fragment=document.createDocumentFragment();
     for(let y=0;y<8;y++)for(let x=0;x<8;x++){
@@ -41,7 +44,7 @@ export class StudyBoard{
       if(this.lastMove&&(this.lastMove.from===square||this.lastMove.to===square))button.classList.add('last-move');
       if(this.selected===square)button.classList.add('selected');
       if(legal.some(m=>m.to===square))button.classList.add(piece?'legal-capture':'legal');
-      button.setAttribute('aria-label',`${square}${piece?' '+(piece.color==='w'?'bílý ':'černý ')+names[piece.type]:''}`);
+      button.setAttribute('aria-label',`${square}${piece?' '+(en?(piece.color==='w'?'white ':'black '):(piece.color==='w'?'bílý ':'černý '))+(en?englishNames:names)[piece.type]:''}`);
       if(piece){const image=document.createElement('img');image.src=`pieces/${piece.color}${piece.type.toUpperCase()}.svg`;image.alt='';image.draggable=false;button.append(image);const letter=document.createElement('span');letter.className='piece-letter '+(piece.color==='b'?'black':'white');letter.textContent=piece.type.toUpperCase();letter.setAttribute('aria-hidden','true');button.append(letter);}
       if(this.mark&&this.lastMove?.to===square){
         const badge=document.createElement('span');badge.className='board-mark '+this.mark.kind;
@@ -58,12 +61,20 @@ export class StudyBoard{
   }
   coords(square){let x='abcdefgh'.indexOf(square[0]),y=8-Number(square[1]);if(this.flipped){x=7-x;y=7-y;}return [x*100+50,y*100+50];}
   paintArrow(){
-    this.arrows.replaceChildren();if(!this.arrow||!this.arrow.match(/^[a-h][1-8][a-h][1-8]/))return;
-    const [x1,y1]=this.coords(this.arrow.slice(0,2)),[x2,y2]=this.coords(this.arrow.slice(2,4));
+    this.arrows.replaceChildren();
+    if(this.threatArrow&&this.threatArrow.match(/^[a-h][1-8][a-h][1-8]/)){
+      this.drawArrow(this.threatArrow,'#e53935');
+    }
+    if(this.arrow&&this.arrow.match(/^[a-h][1-8][a-h][1-8]/)){
+      this.drawArrow(this.arrow,'#c17b20');
+    }
+  }
+  drawArrow(arrow,stroke){
+    const [x1,y1]=this.coords(arrow.slice(0,2)),[x2,y2]=this.coords(arrow.slice(2,4));
     const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
     const line=document.createElementNS(this.arrows.namespaceURI,'path');
     line.setAttribute('d',`M${x1},${y1}L${x2-ux*20},${y2-uy*20}M${x2-ux*40-uy*20},${y2-uy*40+ux*20}L${x2},${y2}L${x2-ux*40+uy*20},${y2-uy*40-ux*20}`);
-    line.setAttribute('fill','none');line.setAttribute('stroke','#c17b20');line.setAttribute('stroke-width','16');line.setAttribute('stroke-linecap','round');line.setAttribute('stroke-linejoin','round');line.setAttribute('opacity','.84');this.arrows.append(line);
+    line.setAttribute('fill','none');line.setAttribute('stroke',stroke);line.setAttribute('stroke-width','16');line.setAttribute('stroke-linecap','round');line.setAttribute('stroke-linejoin','round');line.setAttribute('opacity','.84');this.arrows.append(line);
   }
   click(square){
     if(!this.interactive)return;

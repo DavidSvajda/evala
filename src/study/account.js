@@ -47,5 +47,6 @@ export async function logoutAccount() {
 }
 export async function saveAccountPreferences(preferences) {
   if (!account.user) return;
-  const { user } = await accountRequest('profile', { method: 'PATCH', body: { preferences } }); account.user = user;
+  const id=account.user.id;
+  const { user } = await accountRequest('profile', { method: 'PATCH', body: { preferences } }); if(account.user?.id===id)account.user = user;
 }
