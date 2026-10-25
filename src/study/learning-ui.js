@@ -41,7 +41,7 @@ export function initLearning(context){
     $('#share-pgn').onclick=()=>{const indices=[...$('#share-notes').querySelectorAll('input:checked')].map(x=>Number(x.value));download(annotatedPgn(game,{engine:false,plies:indices}),`evala-notes-${game.id}.pgn`);};
     $('#review-notes-file').onchange=async e=>{
       try{const file=e.target.files[0];if(!file)return;if(file.size>2000000)throw Error(t('Soubor je příliš velký.','File is too large.'));
-        const feedback=parsePgn(await file.text());if(feedback.id!==game.id)throw Error(t('Poznámky patří k jiné partii.','These notes belong to another game.'));
+        const feedback=parsePgn(await file.text());if(feedback.id!==game.id||feedback.initialFen!==game.initialFen||feedback.moves.map(m=>m.uci).join(' ')!==game.moves.map(m=>m.uci).join(' '))throw Error(t('Poznámky patří k jiné partii.','These notes belong to another game.'));
         for(const [index,n] of Object.entries(feedback.learning.notes)){const old=learning(game).notes[index]||{};game.learning.notes[index]={text:[old.text,n.text].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join('\n').slice(0,1200),plan:[old.plan,n.plan].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join('\n').slice(0,800),critical:old.critical||n.critical};}
         game.learning=cleanLearning(game.learning,game.moves);await context.save(game);noteKey='';refresh();$('#note-status').textContent=t('Poznámky přidány. Původní rozbor zůstal uložen.','Feedback added. Your analysis is preserved.');
       }catch(e){$('#note-status').textContent=e.message;}
@@ -120,7 +120,7 @@ export function initLearning(context){
     const chess=new Chess(d.chess.fen()),m=chess.move(uci(move));
     const before=d.baseline||await context.search(d.chess.fen(),signal),after=await context.search(chess.fen(),signal);
     if(signal.aborted||drill!==d)return;
-    if(!before.terminal&&!after.terminal&&Math.min(before.depth,after.depth)<14){status(t('Výpočet nedosáhl hloubky 14. Tah nehodnotíme, zkus jej znovu.','Search did not reach depth 14. No grade was recorded; try again.'));return;}
+    if((!before.terminal&&before.depth<14)||(!after.terminal&&after.depth<14)){status(t('Výpočet nedosáhl hloubky 14. Tah nehodnotíme, zkus jej znovu.','Search did not reach depth 14. No grade was recorded; try again.'));return;}
     const loss=Math.max(0,ownScore(before,d.color)-ownScore(after,d.color));d.loss+=loss;d.steps++;
     d.played.push(move);d.fens.push(chess.fen());
     const reply=after.lines?.[0]?.pv?.[0];
@@ -143,7 +143,8 @@ export function initLearning(context){
   }
   function paint(){if(!drill||!practiceBoard)return;practiceBoard.interactive=!busy&&!drill.finished;practiceBoard.set(drill.fens[drill.index],{flipped:drill.color==='b',lastMove:drill.index?uci(drill.played[drill.index-1]):null});$('#practice-line').textContent=lineToSan(drill.fen,drill.played.slice(0,drill.index),40);}
   document.addEventListener('evala:page',e=>{if(e.detail==='practice')renderWorkshop();else cancel();});
-  document.addEventListener('evala:identity',()=>{cancel();seen.clear();drill=null;noteKey='';comparison=false;});
+  document.addEventListener('evala:identity',()=>{cancel();seen.clear();drill=null;noteKey='';comparison=false;$('#practice-root').replaceChildren();});
+  document.addEventListener('evala:library',()=>{if(document.body.dataset.page==='practice')renderWorkshop();});
   document.addEventListener('evala:language',()=>{noteKey='';refresh();if(document.body.dataset.page==='practice')renderWorkshop();});
   window.addEventListener('pagehide',cancel);
   refresh();return {refresh};
