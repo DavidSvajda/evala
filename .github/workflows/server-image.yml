@@ -1,6 +1,14 @@
 name: Build Evala server
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: Validation scope (accuracy is for isolated accuracy changes)
+        type: choice
+        default: full
+        options:
+          - full
+          - accuracy
 permissions:
   contents: read
   packages: write
@@ -17,23 +25,36 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Verify application and account isolation
+      - name: Install and build application
         run: |
           npm ci
+          npm run build
+      - name: Verify application and account isolation
+        if: inputs.validation != 'accuracy'
+        run: |
           npm run lint
           npm run format:check
-          npm run build
           npm test
+      - name: Verify accuracy changes
+        if: inputs.validation == 'accuracy'
+        run: |
+          npx eslint src/core/game-accuracy.js src/study/review.js src/study/views/summary.js src/study/locale-en.js tests/accuracy.test.mjs tests/accuracy-smoke.mjs --max-warnings=0
+          npx prettier --check src/core/game-accuracy.js src/study/review.js src/study/views/summary.js src/study/locale-en.js tests/accuracy.test.mjs tests/accuracy-smoke.mjs
+          node --test tests/accuracy.test.mjs tests/performance.test.mjs
       - name: Use the runner's installed Chrome
         run: |
           chrome_path="$(command -v google-chrome)"
           "$chrome_path" --version
           echo "EVALA_BROWSER_EXECUTABLE=$chrome_path" >> "$GITHUB_ENV"
       - name: Verify core browser flow before publishing
+        if: inputs.validation != 'accuracy'
         run: |
           node tests/release-smoke.mjs
           node tests/learning-smoke.mjs
           node tests/storage-browser.mjs
+      - name: Verify game accuracy display
+        if: inputs.validation == 'accuracy'
+        run: node tests/accuracy-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR

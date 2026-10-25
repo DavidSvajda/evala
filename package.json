@@ -1,6 +1,6 @@
 {
   "name": "evala",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "private": true,
   "type": "module",
   "description": "Local Stockfish evaluation bar for Chess.com and Lichess",

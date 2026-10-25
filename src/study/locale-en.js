@@ -351,6 +351,14 @@ export const EN = {
   'Zobrazí se přesnost obou hráčů, přehled kvality tahů a podklady pro odhad výkonu.':
     'See each player’s accuracy, move classifications and performance estimate.',
   'Přesnost Evaly': 'Evala accuracy',
+  'Přesnost partie': 'Game accuracy',
+  'Předběžná přesnost': 'Provisional accuracy',
+  'Vážený a harmonický průměr podle veřejné metody Lichess':
+    'Weighted and harmonic means using the public Lichess method',
+  'Jak počítáme přesnost': 'How accuracy is calculated',
+  'Metodika Lichess': 'Lichess methodology',
+  'Veřejná metoda Lichess kombinuje vážený a harmonický průměr kvality tahů. Větší váhu mají pozice, kde se mění šance na výhru; zásadní chyby se hůře ztratí mezi snadnými tahy. Procento zobrazujeme až po dokončení celého rozboru. Při hloubce pod 12 je předběžné. Krátké a jednoznačně vyhrané partie mají menší vypovídací hodnotu. Hloubka a verze enginu ovlivňují výsledek; nejde o proprietární výpočet Chess.com CAPS2.':
+    'The public Lichess method combines volatility-weighted and harmonic means of move quality. Positions with changing winning chances carry more weight, and serious errors are harder to hide among easy moves. The percentage is shown only after the full review finishes. Below depth 12 it is provisional. Short games and clearly won positions are less informative. Engine depth and version affect the result; this is not the proprietary Chess.com CAPS2 calculation.',
   'Odhad Elo v partii': 'Estimated game Elo',
   Bílý: 'White',
   Černý: 'Black',

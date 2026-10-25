@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
+import { gameAccuracy } from '../core/game-accuracy.js';
 
 export const REVIEW_VERSION = 4;
 export const SACRIFICE_VERSION = 2;
@@ -284,6 +285,7 @@ export function estimateGamePerformance(game, color) {
 }
 export function summarize(game) {
   const list = game.analysis?.moves || [];
+  const accuracy = gameAccuracy(game);
   return Object.fromEntries(
     ['w', 'b'].map((color) => {
       const marks = list.filter((m, i) => m && game.moves[i].color === color);
@@ -292,7 +294,9 @@ export function summarize(game) {
       return [
         color,
         {
-          accuracy: marks.length ? marks.reduce((n, m) => n + m.accuracy, 0) / marks.length : null,
+          accuracy: accuracy[color],
+          accuracyMethod: accuracy.method,
+          accuracyProvisional: accuracy.provisional,
           count: marks.length,
           counts,
           performance: estimateGamePerformance(game, color),
