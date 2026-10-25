@@ -31,6 +31,7 @@ export function initLearning(context) {
   panel.dataset.i18nIgnore = '';
   $('.analysis-panel').prepend(panel);
   let noteKey = '',
+    noteGame = null,
     comparison = false,
     drill = null,
     controller = null,
@@ -68,8 +69,9 @@ export function initLearning(context) {
       ply = context.ply(),
       key = (game?.id || '') + ':' + ply + ':' + language();
     document.body.dataset.selfAnalysis = String(!!game?.learning?.selfAnalysis);
-    if (noteKey === key) return;
+    if (noteKey === key && noteGame === game) return;
     noteKey = key;
+    noteGame = game;
     const n = game?.learning?.notes?.[ply] || {},
       notesOpen = !!$('#position-notes-detail')?.open;
     panel.innerHTML = `<div class="section-title"><h2>${t('Moje poznámky', 'My notes')}</h2><button id="self-analysis" class="quiet-button" ${!game ? 'disabled' : ''}>${game?.learning?.selfAnalysis ? t('Ukázat engine', 'Reveal engine') : t('Nejdřív bez enginu', 'Analyse without engine')}</button></div><details id="position-notes-detail"><summary>${t('Poznámky, porovnání a sdílení', 'Notes, comparison and sharing')}</summary><p class="hint">${t('Označ důležitou pozici a zapiš, co jsi počítal. Poznámka patří k právě zobrazené pozici v partii.', 'Mark a critical position and record your calculation. The note belongs to the displayed game position.')}</p><label class="check-row"><span>${t('Důležitá pozice', 'Critical position')}</span><input id="critical-note" type="checkbox" ${n.critical ? 'checked' : ''} ${!game ? 'disabled' : ''}></label><label for="position-note">${t('Co jsem počítal', 'My calculation')}</label><textarea id="position-note" rows="2" maxlength="1200" ${!game ? 'disabled' : ''}>${esc(n.text || '')}</textarea><label for="position-plan">${t('Plán v této pozici', 'My plan in this position')}</label><textarea id="position-plan" rows="2" maxlength="800" ${!game ? 'disabled' : ''}>${esc(n.plan || '')}</textarea><div class="setup-actions"><button id="save-position-note" class="quiet-button" ${!game ? 'disabled' : ''}>${t('Uložit poznámku', 'Save note')}</button><button id="next-my-critical" class="text-button" ${!game ? 'disabled' : ''}>${t('Další označená', 'Next marked position')}</button><button id="compare-move" class="text-button" ${!game || !ply || game.learning?.selfAnalysis ? 'disabled' : ''}>${t('Proč ne můj tah?', 'Why not my move?')}</button></div><p id="note-status" class="inline-status" role="status"></p><div id="move-comparison"></div><details><summary>${t('Probrat partii s trenérem', 'Discuss with a coach')}</summary><p class="hint">${t('Vyber poznámky k odeslání. PGN obsahuje tahy a jména hráčů; soukromá poznámka k celé partii se nepřidá. Soubor odešleš sám.', 'Select the notes to share. The PGN contains moves and player names; your private game note is excluded. You send the file yourself.')}</p><div id="share-notes"></div><button id="share-pgn" class="quiet-button" ${!game ? 'disabled' : ''}>${t('Stáhnout vybrané poznámky', 'Download selected notes')}</button><label class="file-button" for="review-notes-file">${t('Přijmout poznámky z PGN', 'Import feedback PGN')}<input id="review-notes-file" type="file" accept=".pgn" ${!game ? 'disabled' : ''}></label></details></details>`;
@@ -112,12 +114,40 @@ export function initLearning(context) {
         plan: $('#position-plan').value,
         critical: $('#critical-note').checked,
       };
+      const written = { ...data.notes[ply] };
       game.learning = cleanLearning(data, game.moves);
       await context.save(game);
+      if (context.selected() !== game || context.ply() !== ply) return;
+      const draft = {
+        text: $('#position-note').value,
+        plan: $('#position-plan').value,
+        critical: $('#critical-note').checked,
+      };
+      const changed = Object.keys(written).some((key) => draft[key] !== written[key]);
+      const focused = document.activeElement;
+      const editing = ['position-note', 'position-plan', 'critical-note'].includes(focused?.id)
+        ? { id: focused.id, start: focused.selectionStart, end: focused.selectionEnd }
+        : null;
       noteKey = '';
       refresh();
       context.render();
-      $('#note-status').textContent = t('Poznámka uložena.', 'Note saved.');
+      if (changed) {
+        $('#position-note').value = draft.text;
+        $('#position-plan').value = draft.plan;
+        $('#critical-note').checked = draft.critical;
+      }
+      if (editing) {
+        const field = $('#' + editing.id);
+        field.focus({ preventScroll: true });
+        if (field.setSelectionRange && editing.start !== null)
+          field.setSelectionRange(editing.start, editing.end);
+      }
+      $('#note-status').textContent = changed
+        ? t(
+            'Uloženo. Nové úpravy ještě nejsou uložené.',
+            'Saved. New edits have not been saved yet.',
+          )
+        : t('Poznámka uložena.', 'Note saved.');
     };
     $('#next-my-critical').onclick = () => {
       const indices = Object.entries(learning(game).notes)
