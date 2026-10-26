@@ -8,6 +8,7 @@ import { handleTraining } from './account-training.mjs';
 import { finishAccountDeletion } from './account-deletion.mjs';
 import { json, readJsonBody, httpError, sendError } from './http.mjs';
 import { cookie, setCookie } from './security.mjs';
+import { mergeAccountPreferences } from '../src/core/account-preferences.js';
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (message, status = 400) => httpError(status, message);
 export function createAccounts({
@@ -34,9 +35,9 @@ export function createAccounts({
         });
       if (!account) throw fail('Účet nebyl nalezen.', 401);
       if (url.pathname === '/api/account/profile' && req.method === 'PATCH') {
-        const data = await body(req, 6000);
+        const data = await body(req, 24000);
         const updated = await mutateAccount((a) => {
-          a.preferences = { ...a.preferences, ...preferences(data.preferences) };
+          a.preferences = mergeAccountPreferences(a.preferences, preferences(data.preferences));
           if (data.startingRating !== undefined) {
             if (
               a.training.attempted ||

@@ -287,6 +287,9 @@ body[data-legal-moves='false'] .square.legal-capture::after {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #sync-status {
   max-width: 230px;
@@ -1199,21 +1202,43 @@ body[data-piece-style='letters'] .piece-letter {
   object-fit: contain;
 }
 .board-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-top: 12px;
 }
-.navigation {
-  display: flex;
-  gap: 5px;
+.board-toolbar .navigation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
 }
-.navigation .icon-button {
-  width: 31px;
-  height: 31px;
-  min-height: 31px;
-  padding: 6px;
+.move-steps,
+.move-jumps,
+.board-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.board-tools {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.board-toolbar .navigation .icon-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+.move-steps .icon-button {
+  background: #e5eadf;
+}
+.move-jumps .icon-button {
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
 }
 #position-label {
   font-size: 12px;

@@ -1,8 +1,52 @@
-import { account, accountRequest, googleButton, logoutAccount } from './account.js';
+import {
+  account,
+  accountRequest,
+  googleButton,
+  logoutAccount,
+  initializeAccount,
+  clearPendingAccountPreferences,
+} from './account.js';
 import { migrateGuestGames, lastSyncStatus, clearAccountCache } from './storage.js';
 import { icon } from '../ui/platform-icons.js';
 import { escapeHtml as esc } from '../ui/dom.js';
 const $ = (s) => document.querySelector(s);
+export function renderAccountIdentity() {
+  const pending = account.status === 'loading',
+    unavailable = account.status === 'unavailable';
+  $('#header-signin').setAttribute('aria-busy', String(pending));
+  if (account.user) $('#sidebar-user').setAttribute('data-i18n-ignore', '');
+  else $('#sidebar-user').removeAttribute('data-i18n-ignore');
+  $('#sync-status').textContent = pending
+    ? 'Ověřuji přihlášení…'
+    : unavailable
+      ? 'Účet je dočasně nedostupný.'
+      : account.user
+        ? lastSyncStatus.message || 'Účet připojen'
+        : 'Jen v prohlížeči';
+  $('#sync-status').classList.toggle(
+    'sync-error',
+    unavailable || (!!account.user && lastSyncStatus.error),
+  );
+  $('#sidebar-user').textContent =
+    account.user?.name || (pending ? 'Načítání…' : unavailable ? 'Ověřit účet' : 'Host');
+  $('#sidebar-storage').textContent = account.user ? 'Osobní účet' : 'Uloženo v prohlížeči';
+  $('#sidebar-avatar').removeAttribute('data-icon');
+  $('#sidebar-avatar').innerHTML = account.user
+    ? esc(account.user.name.slice(0, 1).toUpperCase())
+    : icon('user');
+  $('#header-signin').textContent = account.user
+    ? 'Můj účet'
+    : pending
+      ? 'Ověřuji přihlášení…'
+      : unavailable
+        ? 'Ověřit účet'
+        : 'Přihlásit se';
+  $('.storage-note').textContent = account.user
+    ? 'Partie jsou uložené u tvého účtu.'
+    : 'Uloženo v tomto prohlížeči.';
+  $('#sync-library').hidden = !account.user;
+}
+
 export function createAccountPanel({
   context,
   getTraining,
@@ -11,30 +55,23 @@ export function createAccountPanel({
   renderHome,
   toast,
 }) {
-  function renderIdentity() {
-    if (account.user) $('#sidebar-user').setAttribute('data-i18n-ignore', '');
-    else $('#sidebar-user').removeAttribute('data-i18n-ignore');
-    $('#sync-status').textContent = account.user
-      ? lastSyncStatus.message || 'Účet připojen'
-      : 'Jen v prohlížeči';
-    $('#sync-status').classList.toggle('sync-error', !!account.user && lastSyncStatus.error);
-    $('#sidebar-user').textContent = account.user?.name || 'Host';
-    $('#sidebar-storage').textContent = account.user ? 'Osobní účet' : 'Uloženo v prohlížeči';
-    $('#sidebar-avatar').removeAttribute('data-icon');
-    $('#sidebar-avatar').innerHTML = account.user
-      ? esc(account.user.name.slice(0, 1).toUpperCase())
-      : icon('user');
-    $('#header-signin').textContent = account.user ? 'Můj účet' : 'Přihlásit se';
-    $('.storage-note').textContent = account.user
-      ? 'Partie jsou uložené u tvého účtu.'
-      : 'Uloženo v tomto prohlížeči.';
-    $('#sync-library').hidden = !account.user;
-  }
+  const renderIdentity = renderAccountIdentity;
   async function renderAccount() {
     const root = $('#account-content');
     $('#account-error').textContent = '';
+    if (!account.user && account.status !== 'ready') {
+      root.innerHTML = `<p role="status">${account.status === 'loading' ? 'Ověřuji přihlášení…' : 'Účet je dočasně nedostupný.'}</p><button id="retry-account" class="quiet-button">Zkusit znovu</button>`;
+      $('#retry-account').disabled = account.status === 'loading';
+      $('#retry-account').onclick = async () => {
+        $('#retry-account').disabled = true;
+        await initializeAccount(true, renderIdentity);
+        document.dispatchEvent(new CustomEvent('evala:identity', { detail: account.user }));
+        renderAccount();
+      };
+      return;
+    }
     if (!account.user) {
-      root.innerHTML = `<div class="account-signin"><span class="account-symbol">${icon('user')}</span><h2>Přihlásit se</h2><p>Google potvrdí tvoji identitu. Evala nedostane tvoje heslo.</p><div id="google-signin"></div><p id="google-signin-status" class="inline-status" role="status"></p><hr><h3>Co se uloží k účtu</h3><ul><li>Importované partie, rozbory a poznámky</li><li>Výsledky úloh a plán opakování</li><li>Vzhled šachovnice a šachová přezdívka</li></ul><a href="#/games">Pokračovat bez přihlášení</a></div>`;
+      root.innerHTML = `<div class="account-signin"><span class="account-symbol">${icon('user')}</span><h2>Přihlásit se</h2><p>Google potvrdí tvoji identitu. Evala nedostane tvoje heslo.</p><div id="google-signin"></div><p id="google-signin-status" class="inline-status" role="status"></p><hr><h3>Co se uloží k účtu</h3><ul><li>Importované partie, rozbory a poznámky</li><li>Výsledky úloh a plán opakování</li><li>Vzhled šachovnice a šachová přezdívka</li><li>Nastavení rozboru a poslední otevřená pozice</li></ul><a href="#/games">Pokračovat bez přihlášení</a></div>`;
       if (account.config?.enabled && account.config.googleClientId)
         await googleButton(
           $('#google-signin'),
@@ -94,6 +131,7 @@ export function createAccountPanel({
         await clearAccountCache();
         localStorage.removeItem(prefKey());
         localStorage.removeItem(trainingKey());
+        clearPendingAccountPreferences();
         Object.assign(account, { user: null, csrf: '', training: null });
         document.dispatchEvent(new CustomEvent('evala:identity', { detail: null }));
       } catch (e) {

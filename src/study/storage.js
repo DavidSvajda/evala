@@ -1,5 +1,7 @@
 import { account, accountRequest } from './account.js';
 import { normalizeReview } from './review.js';
+import { queueAccountPreferences } from './account.js';
+import { portableStudySettings } from '../core/account-preferences.js';
 let opening;
 let owner = 'guest',
   generation = 'guest';
@@ -74,18 +76,27 @@ export async function loadLibrary() {
       const { games: remote } = await accountRequest('library');
       if (!current()) return [];
       const byId = new Map(local.map((g) => [g.id, g]));
-      for (const item of remote) {
+      const downloads = remote.filter((item) => {
         const saved = byId.get(item.id);
-        if (saved?._syncPending) continue;
-        if (!saved || saved._remoteVersion !== item.version) {
-          const { game } = await accountRequest('library/' + item.id);
-          if (!current()) return [];
-          game._storageOwner = active;
-          game._storageGeneration = activeGeneration;
-          await localSave(db, game);
-          byId.set(item.id, game);
-        }
-      }
+        return !saved?._syncPending && (!saved || saved._remoteVersion !== item.version);
+      });
+      let cursor = 0;
+      const results = await Promise.allSettled(
+        Array.from({ length: Math.min(4, downloads.length) }, async () => {
+          while (cursor < downloads.length && current()) {
+            const item = downloads[cursor++];
+            const { game } = await accountRequest('library/' + item.id);
+            if (!current()) return;
+            game._storageOwner = active;
+            game._storageGeneration = activeGeneration;
+            await localSave(db, game);
+            byId.set(item.id, game);
+          }
+        }),
+      );
+      const failed = results.find((result) => result.status === 'rejected');
+      if (failed) throw failed.reason;
+      if (!current()) return [];
       const remoteIds = new Set(remote.map((g) => g.id));
       for (const saved of local)
         if (!remoteIds.has(saved.id) && saved._remoteVersion && !saved._syncPending) {
@@ -111,7 +122,7 @@ export async function loadLibrary() {
     )
     .sort((a, b) => b.createdAt - a.createdAt);
 }
-export async function saveGame(game) {
+export async function saveGame(game, { syncPartial = false } = {}) {
   const active = owner,
     activeGeneration = generation;
   if (
@@ -124,7 +135,11 @@ export async function saveGame(game) {
   const db = await database();
   game._syncPending = active !== 'guest';
   await localSave(db, game);
-  if (!account.user || active !== account.user.id || (game.analysis && !game.analysis.complete))
+  if (
+    !account.user ||
+    active !== account.user.id ||
+    (game.analysis && !game.analysis.complete && !syncPartial)
+  )
     return;
   const key = active + ':' + game.id,
     previous = saves.get(key) || Promise.resolve();
@@ -223,12 +238,21 @@ export function getPreferences(defaults = {}) {
       ...STUDY_DEFAULTS,
       ...defaults,
       ...JSON.parse(localStorage.getItem(optionsKey()) || '{}'),
+      ...account.user?.preferences?.study,
     };
   } catch {
-    return { ...STUDY_DEFAULTS, ...defaults };
+    return { ...STUDY_DEFAULTS, ...defaults, ...account.user?.preferences?.study };
   }
 }
 export function savePreferences(settings) {
   const { token, ...safe } = settings;
   localStorage.setItem(optionsKey(), JSON.stringify(safe));
+  const study = portableStudySettings(safe),
+    previous = account.user?.preferences?.study || {};
+  const changed = Object.fromEntries(
+    Object.entries(study).filter(
+      ([key, value]) => JSON.stringify(value) !== JSON.stringify(previous[key]),
+    ),
+  );
+  if (Object.keys(changed).length) queueAccountPreferences({ study: changed });
 }

@@ -1,3 +1,4 @@
+import { playMoveSound, setMoveSoundEnabled } from './audio.js';
 import { gameRows } from './views/library.js';
 import { miniBoard } from '../ui/chess-preview.js';
 import { createAccountPanel } from './account-panel.js';
@@ -6,7 +7,12 @@ import { escapeHtml as esc } from '../ui/dom.js';
 import { Chess } from 'chess.js';
 import { StudyBoard } from './board.js';
 import { lineToSan } from './game.js';
-import { account, accountRequest, saveAccountPreferences } from './account.js';
+import {
+  account,
+  accountRequest,
+  queueAccountPreferences,
+  flushAccountPreferences,
+} from './account.js';
 import {
   THEMES,
   trainingState,
@@ -26,7 +32,8 @@ const PREFERENCES = {
   pieceStyle: 'classic',
   coordinates: true,
   legalMoves: true,
-  sound: false,
+  sound: true,
+  soundVersion: 1,
   autoNext: false,
   skill: 'club',
   difficulty: 'normal',
@@ -54,8 +61,7 @@ export async function initPlatform(context) {
     preferences,
     sessionSolved = 0,
     sessionAttempted = 0,
-    toastTimer,
-    preferenceTimer;
+    toastTimer;
   let current = null,
     busy = false,
     puzzleFlipped = false,
@@ -98,6 +104,16 @@ export async function initPlatform(context) {
       ...local,
       ...account.user?.preferences,
     };
+    if ((account.user?.preferences?.soundVersion ?? local.soundVersion) !== 1) {
+      preferences.sound = true;
+      preferences.soundVersion = 1;
+      try {
+        localStorage.setItem(prefKey(), JSON.stringify(preferences));
+      } catch {
+        /* Keep the in-memory setting. */
+      }
+      queueAccountPreferences({ sound: true, soundVersion: 1 });
+    }
     training = trainingState(account.training || localTraining);
     applyPreferences();
   }
@@ -112,6 +128,7 @@ export async function initPlatform(context) {
     renderTraining();
   }
   function applyPreferences() {
+    setMoveSoundEnabled(preferences.sound);
     document.body.dataset.sidebarCollapsed = String(preferences.sidebarCollapsed);
     $('#toggle-sidebar').setAttribute('aria-expanded', String(!preferences.sidebarCollapsed));
     $('#toggle-sidebar').title = preferences.sidebarCollapsed
@@ -162,30 +179,9 @@ export async function initPlatform(context) {
     } catch {
       toast('Nastavení se nepodařilo uložit.');
     }
-    clearTimeout(preferenceTimer);
-    preferenceTimer = setTimeout(
-      () => saveAccountPreferences(preferences).catch((e) => toast(e.message)),
-      450,
-    );
+    queueAccountPreferences(patch);
   }
-  function sound() {
-    if (!preferences.sound) return;
-    try {
-      const audio = new (window.AudioContext || window.webkitAudioContext)(),
-        oscillator = audio.createOscillator(),
-        gain = audio.createGain();
-      oscillator.frequency.value = 440;
-      gain.gain.setValueAtTime(0.055, audio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.07);
-      oscillator.connect(gain);
-      gain.connect(audio.destination);
-      oscillator.start();
-      oscillator.stop(audio.currentTime + 0.08);
-      oscillator.onended = () => audio.close();
-    } catch {
-      /* Audio is optional. */
-    }
-  }
+  const sound = playMoveSound;
   const puzzleBoard = new StudyBoard($('#puzzle-board'), {
     onMove: (move) => {
       if (busy || !current || current.state.complete) return;
@@ -818,6 +814,13 @@ export async function initPlatform(context) {
       event.target.disabled = false;
     }
   };
+  document.addEventListener('evala:account-update', () => {
+    context.applyAccountPreferences();
+    loadState();
+    renderIdentity();
+    renderHome();
+    if (page === 'account') renderAccount();
+  });
   document.addEventListener('evala:route', (event) => go(event.detail));
   document.addEventListener('evala:library', renderHome);
   document.addEventListener('evala:sync', (event) => {
@@ -827,11 +830,15 @@ export async function initPlatform(context) {
   document.addEventListener('evala:identity', async (event) => {
     ++generation;
     clearTimeout(autoTimer);
-    clearTimeout(preferenceTimer);
     current = null;
     sessionSolved = 0;
     sessionAttempted = 0;
+    const cycle = generation;
+    renderIdentity();
+    loadState();
     await context.onIdentity(event.detail);
+    if (cycle !== generation) return;
+    flushAccountPreferences().catch(() => {});
     loadState();
     renderIdentity();
     renderHome();
@@ -855,6 +862,7 @@ export async function initPlatform(context) {
   loadState();
   renderIdentity();
   renderHome();
+  flushAccountPreferences().catch(() => {});
   miniBoard($('#preview-board'), new Chess().fen());
   getBank()
     .then(() => {

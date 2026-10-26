@@ -1,6 +1,7 @@
 import { escapeHtml as esc } from '../ui/dom.js';
 import { Chess } from 'chess.js';
 import { StudyBoard } from './board.js';
+import { playMoveSound } from './audio.js';
 import { annotatedPgn, parsePgn, lineToSan } from './game.js';
 import { language } from './i18n.js';
 import {
@@ -497,6 +498,7 @@ export function initLearning(context) {
     d.loss += loss;
     d.steps++;
     d.played.push(move);
+    playMoveSound();
     d.fens.push(chess.fen());
     const reply = after.lines?.[0]?.pv?.[0];
     if (reply && !chess.isGameOver()) {

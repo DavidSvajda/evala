@@ -1,11 +1,57 @@
 import { language } from './i18n.js';
-export const account = { user: null, csrf: '', config: null, training: null };
+import { mergeAccountPreferences, remainingPreferencePatch } from '../core/account-preferences.js';
+export const account = { user: null, csrf: '', config: null, training: null, status: 'loading' };
 let googleLoading;
-export async function accountRequest(path, { method = 'GET', body, signal } = {}) {
+let identityRevision = 0,
+  refreshing,
+  preferenceTimer,
+  preferenceTail = Promise.resolve();
+const pendingKey = (user = account.user) =>
+  user ? `evala-preferences-pending:${user.id}:${user.generation}` : null;
+const pendingMemory = new Map();
+function pendingPreferences(key) {
+  if (!key) return {};
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : pendingMemory.get(key) || {};
+  } catch {
+    return pendingMemory.get(key) || {};
+  }
+}
+function writePending(key, patch) {
+  pendingMemory.set(key, patch);
+  try {
+    if (Object.keys(patch).length) localStorage.setItem(key, JSON.stringify(patch));
+    else localStorage.removeItem(key);
+    pendingMemory.delete(key);
+  } catch {
+    /* The current tab still retains the pending update. */
+  }
+}
+function applyState(state) {
+  ++identityRevision;
+  const user = state.user;
+  if (user)
+    user.preferences = mergeAccountPreferences(
+      user.preferences,
+      pendingPreferences(pendingKey(user)),
+    );
+  Object.assign(account, {
+    user,
+    csrf: state.csrf || '',
+    training: state.training,
+    status: 'ready',
+  });
+}
+export async function accountRequest(
+  path,
+  { method = 'GET', body, signal, keepalive = false } = {},
+) {
   const identity = account.user;
   const response = await fetch('/api/account/' + path, {
     method,
     credentials: 'same-origin',
+    keepalive,
     signal: signal || AbortSignal.timeout(20000),
     headers: {
       ...(identity
@@ -31,16 +77,48 @@ export async function accountRequest(path, { method = 'GET', body, signal } = {}
     });
   return data;
 }
-export async function initializeAccount(hosted) {
-  if (!hosted) return;
-  try {
-    account.config = await accountRequest('config');
-    if (!account.config.enabled) return;
-    const state = await accountRequest('me');
-    Object.assign(account, { user: state.user, csrf: state.csrf || '', training: state.training });
-  } catch {
-    /* Guest library stays available when the account service is offline. */
+export async function initializeAccount(hosted, onChange = () => {}) {
+  if (!hosted) {
+    account.status = 'ready';
+    onChange();
+    return;
   }
+  account.status = 'loading';
+  onChange();
+  const config = accountRequest('config').then((value) => {
+    account.config = value;
+  });
+  const identity = refreshAccount(false).finally(onChange);
+  await Promise.allSettled([config, identity]);
+  if (account.config?.enabled === false) account.status = 'ready';
+  onChange();
+}
+export function refreshAccount(notify = true) {
+  if (refreshing) return refreshing;
+  const revision = identityRevision,
+    prior = account.user;
+  refreshing = accountRequest('me')
+    .then((state) => {
+      if (revision !== identityRevision) return;
+      applyState(state);
+      if (notify)
+        document.dispatchEvent(
+          new CustomEvent(
+            prior?.id !== account.user?.id || prior?.generation !== account.user?.generation
+              ? 'evala:identity'
+              : 'evala:account-update',
+            { detail: account.user },
+          ),
+        );
+    })
+    .catch((error) => {
+      if (revision === identityRevision) account.status = 'unavailable';
+      throw error;
+    })
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
 }
 export async function googleButton(element, onError) {
   if (!account.config?.googleClientId) return false;
@@ -77,7 +155,7 @@ export async function googleButton(element, onError) {
           });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Přihlášení se nezdařilo.');
-          Object.assign(account, { user: data.user, csrf: data.csrf, training: data.training });
+          applyState(data);
           document.dispatchEvent(new CustomEvent('evala:identity', { detail: account.user }));
         } catch (error) {
           onError(error.message);
@@ -105,12 +183,63 @@ export async function logoutAccount() {
   } catch (e) {
     if (e.status !== 401) throw e;
   }
-  Object.assign(account, { user: null, csrf: '', training: null });
+  applyState({ user: null, csrf: '', training: null });
   document.dispatchEvent(new CustomEvent('evala:identity', { detail: null }));
 }
+export function queueAccountPreferences(patch) {
+  if (!account.user || !Object.keys(patch).length) return;
+  const key = pendingKey();
+  writePending(key, mergeAccountPreferences(pendingPreferences(key), patch));
+  account.user.preferences = mergeAccountPreferences(account.user.preferences, patch);
+  clearTimeout(preferenceTimer);
+  preferenceTimer = setTimeout(
+    () =>
+      flushAccountPreferences().catch(() => {
+        document.dispatchEvent(
+          new CustomEvent('evala:sync', {
+            detail: { message: 'Nastavení čeká na synchronizaci.', error: true },
+          }),
+        );
+      }),
+    450,
+  );
+}
+export function flushAccountPreferences({ keepalive = false } = {}) {
+  const identity = account.user,
+    key = pendingKey(identity);
+  if (!key) return Promise.resolve();
+  const current = () =>
+    account.user?.id === identity.id && account.user?.generation === identity.generation;
+  const task = preferenceTail
+    .catch(() => {})
+    .then(async () => {
+      if (!current()) return;
+      const sent = pendingPreferences(key);
+      if (!Object.keys(sent).length) return;
+      const { user } = await accountRequest('profile', {
+        method: 'PATCH',
+        body: { preferences: sent },
+        keepalive,
+      });
+      if (!current()) return;
+      const remaining = remainingPreferencePatch(pendingPreferences(key), sent);
+      writePending(key, remaining);
+      user.preferences = mergeAccountPreferences(user.preferences, remaining);
+      account.user = user;
+      document.dispatchEvent(
+        new CustomEvent('evala:sync', { detail: { message: 'Synchronizováno', error: false } }),
+      );
+    });
+  preferenceTail = task;
+  return task;
+}
 export async function saveAccountPreferences(preferences) {
-  if (!account.user) return;
-  const id = account.user.id;
-  const { user } = await accountRequest('profile', { method: 'PATCH', body: { preferences } });
-  if (account.user?.id === id) account.user = user;
+  queueAccountPreferences(preferences);
+  await flushAccountPreferences();
+}
+export function clearPendingAccountPreferences() {
+  const prefix = `evala-preferences-pending:${account.user?.id}:`;
+  for (const key of Object.keys(localStorage))
+    if (key.startsWith(prefix)) localStorage.removeItem(key);
+  for (const key of pendingMemory.keys()) if (key.startsWith(prefix)) pendingMemory.delete(key);
 }

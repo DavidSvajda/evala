@@ -1,8 +1,25 @@
 import { httpError } from './http.mjs';
+import { portableStudySettings } from '../src/core/account-preferences.js';
 export function preferences(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw httpError(400, 'Neplatné nastavení.');
   const p = {};
+  if (input.study && typeof input.study === 'object' && !Array.isArray(input.study))
+    p.study = portableStudySettings(input.study);
+  if (input.soundVersion === 1) p.soundVersion = 1;
+  if (
+    input.lastPosition &&
+    /^[A-Za-z0-9_-]{1,80}$/.test(input.lastPosition.gameId) &&
+    Number.isInteger(input.lastPosition.ply) &&
+    input.lastPosition.ply >= 0 &&
+    input.lastPosition.ply <= 600 &&
+    typeof input.lastPosition.flipped === 'boolean'
+  )
+    p.lastPosition = {
+      gameId: input.lastPosition.gameId,
+      ply: input.lastPosition.ply,
+      flipped: input.lastPosition.flipped,
+    };
   for (const [key, options] of Object.entries({
     boardTheme: ['sage', 'walnut', 'blue', 'slate'],
     pieceStyle: ['classic', 'letters'],

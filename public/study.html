@@ -89,7 +89,9 @@
           aria-expanded="false"
           aria-controls="study-settings"
           ><span data-icon="settings"></span></button
-        ><a href="#/account" class="header-signin" id="header-signin">Přihlásit se</a></header
+        ><a href="#/account" class="header-signin" id="header-signin" aria-busy="true"
+          >Můj účet</a
+        ></header
       >
       <div id="page-content" tabindex="-1">
         <main class="overview-page page" data-page="home"
@@ -278,17 +280,41 @@
               ><button data-promotion="r">Věž</button><button data-promotion="b">Střelce</button
               ><button data-promotion="n">Jezdce</button></div
             ><div class="board-toolbar"
-              ><div class="navigation"
-                ><button id="first-move" class="icon-button" aria-label="Začátek partie"></button
-                ><button id="previous-move" class="icon-button" aria-label="Předchozí tah"></button
-                ><button id="next-move" class="icon-button" aria-label="Další tah"></button
-                ><button id="last-move" class="icon-button" aria-label="Konec partie"></button></div
-              ><span id="position-label">Výchozí pozice</span
-              ><button id="return-game" class="quiet-button" hidden>Zpět do partie</button
-              ><button id="copy-fen" class="quiet-button" title="Zkopírovat FEN aktuální pozice"
-                >FEN</button
-              ><button id="analyze-position" class="quiet-button" title="Spočítat aktuální pozici"
-                >Prozkoumat</button
+              ><div class="navigation" role="group" aria-label="Procházet partii"
+                ><div class="move-steps"
+                  ><button
+                    id="previous-move"
+                    class="icon-button"
+                    aria-label="Předchozí tah"
+                    title="Předchozí tah"
+                  ></button
+                  ><button
+                    id="next-move"
+                    class="icon-button"
+                    aria-label="Další tah"
+                    title="Další tah"
+                  ></button></div
+                ><span id="position-label">Výchozí pozice</span
+                ><div class="move-jumps"
+                  ><button
+                    id="first-move"
+                    class="icon-button"
+                    aria-label="Začátek partie"
+                    title="Začátek partie"
+                  ></button
+                  ><button
+                    id="last-move"
+                    class="icon-button"
+                    aria-label="Konec partie"
+                    title="Konec partie"
+                  ></button></div></div
+              ><div class="board-tools"
+                ><button id="return-game" class="quiet-button" hidden>Zpět do partie</button
+                ><button id="copy-fen" class="quiet-button" title="Zkopírovat FEN aktuální pozice"
+                  >FEN</button
+                ><button id="analyze-position" class="quiet-button" title="Spočítat aktuální pozici"
+                  >Prozkoumat</button
+                ></div
               ></div
             ><div class="board-caption"
               ><div id="board-feedback" role="status" aria-live="polite"
@@ -729,7 +755,7 @@
                 ><span>Zvýraznit legální tahy</span
                 ><input id="show-legal" type="checkbox" checked /></label
               ><label class="setting-line"
-                ><span>Zvuk při tahu</span><input id="move-sound" type="checkbox" /></label
+                ><span>Zvuk při tahu</span><input id="move-sound" type="checkbox" checked /></label
               ><label class="setting-line"
                 ><span>Automaticky další úloha</span><input id="auto-next" type="checkbox"
               /></label>

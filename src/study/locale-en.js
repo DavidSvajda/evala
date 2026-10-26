@@ -1,4 +1,11 @@
 export const EN = {
+  'Nastavení rozboru a poslední otevřená pozice': 'Analysis settings and last open position',
+  'Ověřuji přihlášení…': 'Checking sign-in…',
+  'Načítání…': 'Loading…',
+  'Ověřit účet': 'Check account',
+  'Účet je dočasně nedostupný.': 'Account service is temporarily unavailable.',
+  'Nastavení čeká na synchronizaci.': 'Settings are waiting to sync.',
+  'Procházet partii': 'Browse game moves',
   'Přidat Evalu na plochu': 'Add Evala to your home screen',
   'iPhone nebo iPad (Safari)': 'iPhone or iPad (Safari)',
   'Otevři nabídku Sdílet.': 'Open the Share menu.',

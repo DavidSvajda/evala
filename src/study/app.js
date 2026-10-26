@@ -22,7 +22,15 @@ import {
   savePreferences,
   setStorageIdentity,
 } from './storage.js';
-import { account, initializeAccount } from './account.js';
+import {
+  account,
+  initializeAccount,
+  queueAccountPreferences,
+  flushAccountPreferences,
+  refreshAccount,
+} from './account.js';
+import { renderAccountIdentity } from './account-panel.js';
+import { playMoveSound } from './audio.js';
 import { initPlatform } from './platform.js';
 import { importUsername } from './import.js';
 import { StudyBoard } from './board.js';
@@ -64,7 +72,8 @@ let library = [],
   activeView = 'review';
 const hostedServer = !!document.querySelector('meta[name="evala-backend"][content="server"]');
 const publicServer = !!document.querySelector('meta[name="evala-public"][content="true"]');
-await initializeAccount(hostedServer);
+renderAccountIdentity();
+await initializeAccount(hostedServer, renderAccountIdentity);
 await setStorageIdentity(account.user);
 document.body.classList.toggle('public-server', publicServer);
 let options = getPreferences(hostedServer ? { backend: 'server', serverUrl: location.origin } : {}),
@@ -392,9 +401,9 @@ $('#toggle-library').addEventListener('click', () => {
   $('#username').focus();
 });
 
-async function store(game) {
+async function store(game, options) {
   try {
-    await saveGame(game);
+    await saveGame(game, options);
   } catch (e) {
     error(e.message);
   }
@@ -442,6 +451,7 @@ function selectGame(game) {
   promotionMove = null;
   $('#promotion').hidden = true;
   sessionStorage.setItem('evala-current-game', game.id);
+  rememberPosition();
   error();
   renderLibrary();
   renderAll();
@@ -889,7 +899,12 @@ function highlightMove(scroll = false) {
     else if (item.bottom > bounds.bottom) list.scrollTop += item.bottom - bounds.bottom;
   }
 }
+function rememberPosition() {
+  if (selected && !branch)
+    queueAccountPreferences({ lastPosition: { gameId: selected.id, ply, flipped } });
+}
 function navigate(index) {
+  const previous = activeFen();
   retryTarget = null;
   $('#retry-feedback').textContent = '';
   showThreat = false;
@@ -902,14 +917,18 @@ function navigate(index) {
   renderPosition();
   highlightMove(true);
   renderGraph();
+  if (activeFen() !== previous) playMoveSound();
+  rememberPosition();
 }
 function step(amount) {
   if (branch) {
+    const previous = branch.index;
     inspectController?.abort();
     inspectResult = null;
     branch.index = Math.max(0, Math.min(branch.moves.length, branch.index + amount));
     renderPosition();
     highlightMove();
+    if (branch.index !== previous) playMoveSound();
   } else navigate(ply + amount);
 }
 $('#previous-move').addEventListener('click', () => step(-1));
@@ -924,6 +943,7 @@ $('#return-game').addEventListener('click', () => navigate(ply));
 $('#flip-board').addEventListener('click', () => {
   flipped = !flipped;
   renderPosition();
+  rememberPosition();
 });
 $('#move-filter').addEventListener('change', () => {
   renderMoves();
@@ -1051,6 +1071,7 @@ function commitBoardMove(move, promotion) {
   promotionMove = null;
   renderPosition();
   renderMoves();
+  playMoveSound();
   inspectPosition();
 }
 $('#promotion').addEventListener('click', (event) => {
@@ -1111,7 +1132,7 @@ $('#export-pgn').addEventListener('click', () => {
 $('#game-note').addEventListener('change', async () => {
   if (selected) {
     selected.notes = $('#game-note').value;
-    await store(selected);
+    await store(selected, { syncPartial: true });
   }
 });
 $('#copy-fen').addEventListener('click', async () => {
@@ -1189,7 +1210,17 @@ playerReport = new PlayerReport({
     }
   },
 });
-$('#report-profile').addEventListener('change', () => playerReport.updateCount());
+$('#report-profile').addEventListener('change', (event) => {
+  options.reportProfile = event.target.value;
+  savePreferences(options);
+  playerReport.updateCount();
+});
+$('#report-count').addEventListener('change', (event) => {
+  options.reportCount = Number(event.target.value);
+  savePreferences(options);
+});
+$('#report-profile').value = options.reportProfile || 'quick';
+$('#report-count').value = String(options.reportCount || 20);
 $('#report-username').value = options.lastUsername || $('#username').value;
 $('#report-platform').value = options.lastPlatform || 'chesscom';
 syncSettings();
@@ -1202,10 +1233,16 @@ if (publicServer) {
 }
 try {
   library = await loadLibrary();
+  const resume = account.user?.preferences?.lastPosition;
   selected =
+    library.find((g) => g.id === resume?.gameId) ||
     library.find((g) => g.id === sessionStorage.getItem('evala-current-game')) ||
     library[0] ||
     null;
+  if (resume?.gameId === selected?.id) {
+    ply = Math.min(resume.ply, selected.moves.length);
+    flipped = resume.flipped;
+  }
 } catch (e) {
   error(e.message);
 }
@@ -1225,17 +1262,33 @@ document.addEventListener('evala:page', (event) => {
   }
 });
 let reloadSequence = 0;
-const reloadLibrary = async () => {
+const reloadLibrary = async ({ resume = false } = {}) => {
   const sequence = ++reloadSequence,
     owner = account.user?.id || 'guest',
+    generation = account.user?.generation,
     id = selected?.id,
+    previousPly = ply,
     next = await loadLibrary();
-  if (sequence !== reloadSequence || owner !== (account.user?.id || 'guest')) return;
+  if (
+    sequence !== reloadSequence ||
+    owner !== (account.user?.id || 'guest') ||
+    generation !== account.user?.generation
+  )
+    return;
   library = next;
-  selected = library.find((g) => g.id === id) || library[0] || null;
+  const position = resume ? account.user?.preferences?.lastPosition : null;
+  selected =
+    library.find((g) => g.id === position?.gameId) ||
+    library.find((g) => g.id === id) ||
+    library[0] ||
+    null;
   branch = null;
   retryTarget = null;
-  ply = 0;
+  ply = Math.min(
+    position?.gameId === selected?.id ? position.ply : selected?.id === id ? previousPly : 0,
+    selected?.moves.length || 0,
+  );
+  if (position?.gameId === selected?.id) flipped = position.flipped;
   renderLibrary();
   renderAll();
 };
@@ -1251,7 +1304,7 @@ learningUI = initLearning({
   },
   render: renderAll,
   navigate,
-  save: saveGame,
+  save: (game) => saveGame(game, { syncPartial: true }),
   playLine: (index, line) => {
     navigate(index);
     startBranch(line);
@@ -1279,9 +1332,21 @@ await initPlatform({
   },
   busy: () => !!job || !!playerReport?.running,
   reload: reloadLibrary,
+  applyAccountPreferences: () => {
+    options = getPreferences(hostedServer ? { backend: 'server', serverUrl: location.origin } : {});
+    $('#report-profile').value = options.reportProfile || 'quick';
+    $('#report-count').value = String(options.reportCount || 20);
+    syncSettings();
+    renderPosition();
+  },
   sync: async () => {
-    for (const game of library.filter((g) => g._syncPending)) await saveGame(game);
-    await reloadLibrary();
+    const active = account.user;
+    if (hostedServer) await refreshAccount();
+    if (active?.id !== account.user?.id || active?.generation !== account.user?.generation) return;
+    await flushAccountPreferences();
+    for (const game of library.filter((g) => g._syncPending))
+      await saveGame(game, { syncPartial: true });
+    await reloadLibrary({ resume: true });
   },
   setUsername: (name, platform) => {
     options.lastUsername = name;
@@ -1299,6 +1364,7 @@ await initPlatform({
     inspectController?.abort();
     importController?.abort();
     await setStorageIdentity(user);
+    if (user?.id !== account.user?.id || user?.generation !== account.user?.generation) return;
     options = getPreferences(hostedServer ? { backend: 'server', serverUrl: location.origin } : {});
     const prefs = user?.preferences;
     if (prefs?.chessUsername) {
@@ -1314,11 +1380,45 @@ await initPlatform({
     $('.player-setup').classList.remove('report-complete');
     $('#report-complete-bar').hidden = true;
     syncSettings();
-    await reloadLibrary();
+    $('#report-profile').value = options.reportProfile || 'quick';
+    $('#report-count').value = String(options.reportCount || 20);
+    await reloadLibrary({ resume: true });
     updateAnalytics();
   },
 });
+let lastAccountRefresh = Date.now();
+const resumeAccount = async (force = false) => {
+  if (
+    !hostedServer ||
+    document.hidden ||
+    job ||
+    playerReport?.running ||
+    (!force && Date.now() - lastAccountRefresh < 60000)
+  )
+    return;
+  lastAccountRefresh = Date.now();
+  try {
+    await flushAccountPreferences();
+  } catch {
+    /* Retry after verifying the session. */
+  }
+  try {
+    await refreshAccount();
+    await flushAccountPreferences();
+  } catch {
+    renderAccountIdentity();
+  }
+};
+window.addEventListener('online', () => resumeAccount(true));
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) resumeAccount(true);
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resumeAccount();
+  else flushAccountPreferences({ keepalive: true }).catch(() => {});
+});
 window.addEventListener('pagehide', () => {
+  flushAccountPreferences({ keepalive: true }).catch(() => {});
   playerReport.controller?.abort();
   job?.controller.abort();
   inspectController?.abort();

@@ -11,6 +11,7 @@ on:
           - accuracy
           - board
           - install
+          - account
 permissions:
   contents: read
   packages: write
@@ -32,7 +33,7 @@ jobs:
           npm ci
           npm run build
       - name: Verify application and account isolation
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install'
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
         run: |
           npm run lint
           npm run format:check
@@ -60,10 +61,18 @@ jobs:
           npx prettier --check scripts/build.mjs src/study/locale-en.js public/study.html public/app-manifest.json tests/install-smoke.mjs
           node tests/install-smoke.mjs
       - name: Verify core browser flow before publishing
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install'
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
         run: |
           node tests/release-smoke.mjs
           node tests/learning-smoke.mjs
+          node tests/storage-browser.mjs
+      - name: Verify account experience
+        if: inputs.validation == 'account'
+        run: |
+          npx eslint src/core/account-preferences.js server/account-preferences.mjs server/accounts.mjs src/study/account.js src/study/account-panel.js src/study/audio.js src/study/storage.js src/study/platform.js src/study/app.js src/study/learning-ui.js src/study/locale-en.js tests/account-preferences.test.mjs tests/account-experience-smoke.mjs --max-warnings=0
+          npx prettier --check src/core/account-preferences.js server/account-preferences.mjs server/accounts.mjs src/study/account.js src/study/account-panel.js src/study/audio.js src/study/storage.js src/study/platform.js src/study/app.js src/study/learning-ui.js src/study/locale-en.js public/study.html public/study.css tests/account-preferences.test.mjs tests/account-experience-smoke.mjs
+          node --test tests/account-preferences.test.mjs tests/accounts.test.mjs
+          node tests/account-experience-smoke.mjs
           node tests/storage-browser.mjs
       - name: Verify game accuracy display
         if: inputs.validation == 'accuracy'
