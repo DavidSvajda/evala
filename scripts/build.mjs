@@ -89,6 +89,13 @@ for (const size of [16, 32, 48, 128])
     .resize(size, size)
     .png()
     .toFile(resolve(out, `icons/${size}.png`));
+// Opaque square artwork: iOS and Android apply their own home-screen icon mask.
+const appIcon = `<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><rect width="128" height="128" fill="#f4f3ec"/><rect x="32" y="25" width="24" height="78" rx="6" fill="#243b2f"/><rect x="72" y="25" width="24" height="78" rx="6" fill="#b3bca8"/><path d="M72 65h24v32a6 6 0 0 1-6 6H78a6 6 0 0 1-6-6z" fill="#396449"/></svg>`;
+for (const size of [180, 192, 512])
+  await sharp(Buffer.from(appIcon))
+    .resize(size, size)
+    .png()
+    .toFile(resolve(out, `icons/app-${size}.png`));
 for (const color of ['w', 'b'])
   for (const type of ['K', 'Q', 'R', 'B', 'N', 'P'])
     await access(resolve(out, `pieces/${color}${type}.svg`));

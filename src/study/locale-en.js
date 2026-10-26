@@ -1,4 +1,16 @@
 export const EN = {
+  'Přidat Evalu na plochu': 'Add Evala to your home screen',
+  'iPhone nebo iPad (Safari)': 'iPhone or iPad (Safari)',
+  'Otevři nabídku Sdílet.': 'Open the Share menu.',
+  'Zvol Přidat na plochu.': 'Choose Add to Home Screen.',
+  'Nech zapnuté Otevřít jako webovou aplikaci a potvrď Přidat.':
+    'Keep Open as Web App enabled and tap Add.',
+  'Android (Chrome)': 'Android (Chrome)',
+  'V nabídce zvol Přidat na plochu nebo Nainstalovat aplikaci.':
+    'Choose Add to Home screen or Install app from the menu.',
+  'Synchronizace, import a serverový rozbor potřebují internet.':
+    'Sync, imports and server analysis need an internet connection.',
+  'Přihlas se stejným Google účtem.': 'Sign in with the same Google account.',
   'Procvičit chyby z partie': 'Practise this game’s mistakes',
   'Účet a aktivní data se smažou. Obnovovací kopie zůstanou nejvýše 7 dní. Pro potvrzení napiš SMAZAT.':
     'The account and live data will be deleted. Recovery copies remain for at most 7 days. Type SMAZAT to confirm.',

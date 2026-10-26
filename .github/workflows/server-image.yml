@@ -10,6 +10,7 @@ on:
           - full
           - accuracy
           - board
+          - install
 permissions:
   contents: read
   packages: write
@@ -31,7 +32,7 @@ jobs:
           npm ci
           npm run build
       - name: Verify application and account isolation
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board'
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install'
         run: |
           npm run lint
           npm run format:check
@@ -52,8 +53,14 @@ jobs:
           chrome_path="$(command -v google-chrome)"
           "$chrome_path" --version
           echo "EVALA_BROWSER_EXECUTABLE=$chrome_path" >> "$GITHUB_ENV"
+      - name: Verify home screen installation
+        if: inputs.validation == 'install'
+        run: |
+          npx eslint scripts/build.mjs src/study/locale-en.js tests/install-smoke.mjs --max-warnings=0
+          npx prettier --check scripts/build.mjs src/study/locale-en.js public/study.html public/app-manifest.json tests/install-smoke.mjs
+          node tests/install-smoke.mjs
       - name: Verify core browser flow before publishing
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board'
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install'
         run: |
           node tests/release-smoke.mjs
           node tests/learning-smoke.mjs
