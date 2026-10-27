@@ -34,6 +34,8 @@ export function sendError(res, error, fallback = 'Požadavek se nepodařilo doko
 }
 
 export async function readJsonBody(req, { limit = 65536, requireContentType = true } = {}) {
+  if (req.headers['content-encoding'] && req.headers['content-encoding'] !== 'identity')
+    throw httpError(415, 'Compressed request bodies are not supported.');
   if (
     requireContentType &&
     String(req.headers['content-type'] || '')

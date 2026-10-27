@@ -18,7 +18,7 @@ const types = {
   '.gz': 'application/gzip',
   '.zip': 'application/zip',
 };
-const policy =
+const localPolicy =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; frame-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'";
 const contained = (root, file) => {
   const name = relative(root, file);
@@ -26,6 +26,14 @@ const contained = (root, file) => {
 };
 
 export function createStaticFiles({ root, publicReports }) {
+  // Hosted public mode uses our backend and the two chess import providers.
+  // Custom remote engines remain available in the local/private deployment.
+  const policy = publicReports
+    ? localPolicy.replace(
+        "connect-src 'self' https: http://127.0.0.1:* http://localhost:*",
+        "connect-src 'self' https://api.chess.com https://lichess.org https://accounts.google.com",
+      )
+    : localPolicy;
   const absoluteRoot = resolve(root);
   let rootPath;
   return async (req, res, url) => {

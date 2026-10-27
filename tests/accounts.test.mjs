@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPair, SignJWT, jwtVerify } from 'jose';
@@ -438,6 +439,50 @@ test('deleting an account revokes sessions on every device even after signing in
       ).status,
       401,
     );
+  } finally {
+    await running.close();
+  }
+});
+
+test('sign out all devices revokes other sessions and stale sessions cannot delete an account', async () => {
+  const store = createDocumentStore({
+    directory: await mkdtemp(join(tmpdir(), 'evala-all-sessions-')),
+  });
+  const running = await serverFor('', { store });
+  try {
+    const first = await login(running.base, 'owner'),
+      second = await login(running.base, 'owner');
+    const key = 'session:' + createHash('sha256').update(first.cookie.split('=')[1]).digest('hex');
+    await store.transact(key, (s) => ({ ...s, createdAt: Date.now() - 16 * 60000 }));
+    assert.equal(
+      (
+        await fetch(running.base + '/api/account/delete', {
+          method: 'POST',
+          headers: first.headers,
+          body: '{}',
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await fetch(running.base + '/api/account/logout-all', {
+          method: 'POST',
+          headers: first.headers,
+          body: '{}',
+        })
+      ).status,
+      200,
+    );
+    for (const user of [first, second]) {
+      assert.equal(
+        (await fetch(running.base + '/api/account/library', { headers: user.headers })).status,
+        401,
+      );
+    }
+    const again = await login(running.base, 'owner');
+    assert.equal(again.response.status, 200);
+    assert.notEqual(again.user.generation, first.user.generation);
   } finally {
     await running.close();
   }

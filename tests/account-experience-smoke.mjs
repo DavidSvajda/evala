@@ -46,6 +46,8 @@ async function login(context) {
           sub: 'experience-user',
           email: 'fixture@example.test',
           email_verified: true,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 300,
           name: 'Fixture player',
           nonce: config.challenge,
         }),

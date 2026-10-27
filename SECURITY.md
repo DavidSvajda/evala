@@ -1,3 +1,13 @@
+# Security
+
+Report a suspected vulnerability through the repository's **Security â†’ Report a vulnerability** (private reporting). Do not include real credentials, personal games or account cookies in public issues.
+
+The supported production branch is `main`. Security updates require the Quality, CodeQL and secrets checks and a pull request. The image workflow scans the runtime image before publishing. A passing scan is not a guarantee that no vulnerabilities exist.
+
+Production credentials belong only in Azure secrets. Never paste them into an issue, test fixture, client bundle or Actions log. If a credential is exposed, revoke it first, replace it and investigate access; deleting a commit alone does not fix exposure.
+
+See [the security review](docs/security-review-2026-10.md) for scope, evidence and operational limitations. The application is intended for completed-game study. Only run active security tests against an isolated instance with test accounts; production checks should be bounded and read-only.
+
 # Security boundaries and operation
 
 This project has not received an independent penetration test or a commercial security certification. Automated checks and a timeboxed review reduce known risks; they do not establish that a service is invulnerable.
@@ -29,6 +39,6 @@ CI actions are pinned to immutable commits. Package installation uses the lockfi
 
 Protect Azure/GitHub administrators, deployment credentials and the user's device. A compromised browser/host, stolen current bearer cookie, malicious privileged operator or supply-chain compromise cannot be ruled out by application tests. The manual custom-server owner token remains an explicit privileged tool and must not be shared.
 
-Public anonymous compute can still be exhausted within its published quota. Internet-scale abuse protection belongs at the ingress/WAF or an authenticated product policy; adding a CAPTCHA or mandatory login would change the current product. Expired transient session/nonce storage needs operational retention/cleanup beyond lazy validity checks. Azure's seven-day soft delete is not an independent disaster-recovery backup; a full account restore exercise and an independent backup remain operational follow-ups.
+Public anonymous compute can still be exhausted within its published quota. Internet-scale abuse protection belongs at the ingress/WAF or an authenticated product policy; adding a CAPTCHA or mandatory login would change the current product. New session/nonce blobs carry lifecycle tags and expire automatically; legacy untagged records need separate migration/cleanup. Azure's seven-day soft delete is not an independent disaster-recovery backup; a full account restore exercise and an independent backup remain operational follow-ups.
 
 The repository and bundled Stockfish are GPL-3.0 licensed. Commercial distribution must retain the applicable license/source obligations; this refactor does not convert the project to proprietary licensing.

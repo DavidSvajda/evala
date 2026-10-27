@@ -8,6 +8,7 @@ import {
   constantTimeEqual as equal,
   loopbackHost,
   createRateLimiter,
+  clientAddress,
 } from './security.mjs';
 import { finishAccountDeletion } from './account-deletion.mjs';
 const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
@@ -31,10 +32,13 @@ export function createAccountIdentity({
         audience: googleClientId,
         issuer: ['https://accounts.google.com', 'accounts.google.com'],
         algorithms: ['RS256'],
+        requiredClaims: ['sub', 'email', 'email_verified', 'nonce', 'iat', 'exp'],
+        clockTolerance: 30,
       })
     ).payload,
 }) {
   const loginAllowed = createRateLimiter({ limit: 12, windowMs: 60000 });
+  const writesAllowed = createRateLimiter({ limit: 120, windowMs: 60000 });
   const enabled = (req) =>
     store.durable || (process.env.NODE_ENV !== 'production' && loopbackHost(req.headers.host));
   const body = (req, limit) => readJsonBody(req, { limit });
@@ -61,13 +65,15 @@ export function createAccountIdentity({
     if (!enabled(req))
       throw fail('Přihlášení zatím není dostupné. Můžeš pokračovat bez účtu.', 503);
     if (url.pathname === '/api/account/google' && req.method === 'POST') {
-      if (!loginAllowed(req.socket.remoteAddress))
+      if (!loginAllowed(clientAddress(req)))
         throw fail('Příliš mnoho přihlášení. Zkus to za minutu.', 429);
       if (!googleClientId) throw fail('Přihlášení přes Google ještě není dostupné.', 503);
       const challenge = cookie(req, 'evala_login');
       if (!/^[a-f0-9]{64}$/.test(challenge || '') || !equal(challenge, req.headers['x-csrf-token']))
         throw fail('Přihlašovací formulář vypršel. Obnov stránku.', 403);
       const data = await body(req, 12000);
+      if (typeof data.credential !== 'string' || data.credential.length > 10000)
+        throw fail('Neplatné potvrzení Google účtu.', 401);
       let claims;
       try {
         claims = await verifyGoogle(data.credential);
@@ -75,7 +81,13 @@ export function createAccountIdentity({
         throw fail('Google přihlášení se nepodařilo ověřit.', 401);
       }
       if (
-        !claims?.sub ||
+        typeof claims?.sub !== 'string' ||
+        !claims.sub ||
+        claims.sub.length > 255 ||
+        !Number.isFinite(claims.exp) ||
+        claims.exp * 1000 <= Date.now() ||
+        !Number.isFinite(claims.iat) ||
+        claims.iat * 1000 > Date.now() + 30000 ||
         typeof claims.email !== 'string' ||
         claims.email_verified !== true ||
         !equal(claims.nonce, challenge)
@@ -112,6 +124,7 @@ export function createAccountIdentity({
         epoch: account.authEpoch,
         csrf,
         expires: Date.now() + 30 * 86400000,
+        createdAt: Date.now(),
         cookieVersion: 1,
       });
       setCookie(req, res, 'evala_account', raw, 30 * 86400);
@@ -140,6 +153,18 @@ export function createAccountIdentity({
     if (!s) throw fail('Přihlas se ke svému účtu.', 401);
     if (!['GET', 'HEAD'].includes(req.method) && !equal(req.headers['x-csrf-token'], s.csrf))
       throw fail('Obnov stránku a zkus to znovu.', 403);
+    if (!['GET', 'HEAD'].includes(req.method) && !writesAllowed(s.userId))
+      throw fail('Příliš mnoho změn. Zkus to za minutu.', 429);
+    if (url.pathname === '/api/account/logout-all' && req.method === 'POST') {
+      await store.transact('account:' + s.userId, (a) => {
+        if (!a || a.authEpoch !== s.epoch) throw fail('Přihlas se znovu.', 401);
+        return { ...a, authEpoch: randomUUID() };
+      });
+      await store.remove('session:' + hash(cookie(req, 'evala_account')));
+      setCookie(req, res, 'evala_account', '', 0);
+      json(res, 200, { ok: true });
+      return true;
+    }
     if (url.pathname === '/api/account/logout' && req.method === 'POST') {
       await store.remove('session:' + hash(cookie(req, 'evala_account')));
       setCookie(req, res, 'evala_account', '', 0);

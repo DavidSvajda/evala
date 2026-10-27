@@ -53,6 +53,8 @@ export function createAccounts({
       }
       if (await handleLibrary(req, res, url, { store, s, account, mutateAccount })) return true;
       if (url.pathname === '/api/account/delete' && req.method === 'POST') {
+        if (!s.createdAt || Date.now() - s.createdAt > 15 * 60000)
+          throw fail('Pro smazání účtu se nejprve odhlas a znovu přihlas.', 403);
         const operation = randomUUID();
         await mutateAccount((a) => ({ ...a, deleting: operation, authEpoch: randomUUID() }));
         await finishAccountDeletion(store, s.userId, operation);

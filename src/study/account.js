@@ -177,9 +177,9 @@ export async function googleButton(element, onError) {
     return false;
   }
 }
-export async function logoutAccount() {
+export async function logoutAccount(allDevices = false) {
   try {
-    await accountRequest('logout', { method: 'POST', body: {} });
+    await accountRequest(allDevices ? 'logout-all' : 'logout', { method: 'POST', body: {} });
   } catch (e) {
     if (e.status !== 401) throw e;
   }
