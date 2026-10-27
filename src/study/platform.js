@@ -24,6 +24,7 @@ import {
   uciMove,
 } from '../training/logic.js';
 import { language, setLanguage, translate } from './i18n.js';
+import { theme, setTheme } from './theme.js';
 import { createLesson, nextLessonId, publicChesscomProfile } from '../training/lesson.js';
 
 const $ = (s) => document.querySelector(s);
@@ -100,6 +101,7 @@ export async function initPlatform(context) {
     preferences = {
       ...PREFERENCES,
       language: language(),
+      theme: theme(),
       chessUsername: context.username() || '',
       ...local,
       ...account.user?.preferences,
@@ -128,6 +130,7 @@ export async function initPlatform(context) {
     renderTraining();
   }
   function applyPreferences() {
+    setTheme(preferences.theme);
     setMoveSoundEnabled(preferences.sound);
     document.body.dataset.sidebarCollapsed = String(preferences.sidebarCollapsed);
     $('#toggle-sidebar').setAttribute('aria-expanded', String(!preferences.sidebarCollapsed));
@@ -637,6 +640,8 @@ export async function initPlatform(context) {
     updatePreferences({ sidebarCollapsed: !preferences.sidebarCollapsed });
   $('#toggle-language').onclick = () =>
     updatePreferences({ language: language() === 'en' ? 'cs' : 'en' });
+  $('#toggle-theme').onclick = () =>
+    updatePreferences({ theme: theme() === 'dark' ? 'light' : 'dark' });
   $('#language-choice').onchange = (event) => updatePreferences({ language: event.target.value });
   document.addEventListener('evala:language', () => {
     renderHome();

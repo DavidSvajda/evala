@@ -3,6 +3,7 @@ import { EN, patterns } from './locale-en.js';
 let selected = localStorage.getItem('evala-language') === 'en' ? 'en' : 'cs';
 const originals = new WeakMap(),
   attributes = new WeakMap();
+const canonicalSources = new Map();
 const ignored = (node) =>
   node.parentElement?.closest(
     '[data-i18n-ignore],script,style,code,textarea,.summary-name,.recent-players strong,.analytics-overview h2,.account-profile h2,.account-profile p,#game-title,.player-name,.line-san,.move-san,.notation-eval',
@@ -34,6 +35,10 @@ export function translate(value) {
           ),
       )
       .join(' · ');
+  if (result !== undefined && result !== source) {
+    if (canonicalSources.size > 3000) canonicalSources.clear();
+    canonicalSources.set(result, source);
+  }
   return result === undefined
     ? value
     : value.slice(0, value.indexOf(source)) +
@@ -44,7 +49,10 @@ function text(node) {
   if (ignored(node)) return;
   const previous = originals.get(node),
     current = node.nodeValue;
-  const source = previous && current === previous.rendered ? previous.source : current;
+  const source =
+    previous && current === previous.rendered
+      ? previous.source
+      : canonicalSources.get(current) || current;
   const rendered = translate(source);
   originals.set(node, { source, rendered });
   if (current !== rendered) node.nodeValue = rendered;
@@ -55,7 +63,10 @@ function attrs(element) {
   for (const key of ['title', 'placeholder', 'aria-label']) {
     const current = element.getAttribute(key);
     if (current === null) continue;
-    const source = saved[key]?.rendered === current ? saved[key].source : current,
+    const source =
+        saved[key]?.rendered === current
+          ? saved[key].source
+          : canonicalSources.get(current) || current,
       rendered = translate(source);
     saved[key] = { source, rendered };
     if (current !== rendered) element.setAttribute(key, rendered);

@@ -1,6 +1,7 @@
 import { assertAssetTree } from './release-safety.mjs';
 import { build } from 'esbuild';
-import { cp, mkdir, readFile, access, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile, access, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import sharp from 'sharp';
@@ -12,6 +13,23 @@ await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await assertAssetTree(resolve(root, 'public'), { html: true });
 await cp(resolve(root, 'public'), out, { recursive: true });
+const release = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+let revision = process.env.GITHUB_SHA || '';
+if (!/^[a-f0-9]{40}$/.test(revision)) {
+  try {
+    revision = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    revision = 'local';
+  }
+}
+await writeFile(
+  resolve(out, 'build.json'),
+  JSON.stringify({ version: release.version, commit: revision, builtAt: new Date().toISOString() }),
+);
 const common = {
   absWorkingDir: resolve(root),
   tsconfigRaw: {},

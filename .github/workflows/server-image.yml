@@ -12,6 +12,7 @@ on:
           - board
           - install
           - account
+          - theme
 permissions:
   contents: read
   packages: write
@@ -23,6 +24,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - name: Require the production branch
+        run: test "$GITHUB_REF" = refs/heads/main
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -33,7 +36,7 @@ jobs:
           npm ci
           npm run build
       - name: Verify application and account isolation
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
+        if: inputs.validation == 'full'
         run: |
           npm run lint
           npm run format:check
@@ -61,7 +64,7 @@ jobs:
           npx prettier --check scripts/build.mjs src/study/locale-en.js public/study.html public/app-manifest.json tests/install-smoke.mjs
           node tests/install-smoke.mjs
       - name: Verify core browser flow before publishing
-        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
+        if: inputs.validation == 'full'
         run: |
           node tests/release-smoke.mjs
           node tests/learning-smoke.mjs
@@ -74,6 +77,13 @@ jobs:
           node --test tests/account-preferences.test.mjs tests/accounts.test.mjs
           node tests/account-experience-smoke.mjs
           node tests/storage-browser.mjs
+      - name: Verify theme and language changes
+        if: inputs.validation == 'theme'
+        run: |
+          npm run lint
+          npm run format:check
+          node --test tests/release-version.test.mjs tests/account-preferences.test.mjs
+          node tests/theme-locale-smoke.mjs
       - name: Verify game accuracy display
         if: inputs.validation == 'accuracy'
         run: node tests/accuracy-smoke.mjs

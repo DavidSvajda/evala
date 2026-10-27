@@ -1,0 +1,438 @@
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --surface: #1b211d;
+  --raised: #293128;
+  --paper: #232a24;
+  --ink: #eee7d7;
+  --muted: #b7beab;
+  --accent: #bfd3a5;
+  --on-accent: #1b291b;
+  --line: #414b3d;
+  --focus: #d3c08d;
+  --positive: #b4d19a;
+  --negative: #efa68e;
+  --board-light: #d0cab2;
+  --board-dark: #839574;
+}
+
+html[data-theme='dark'] a:hover {
+  color: hsl(142 45% 77%);
+}
+
+html[data-theme='dark'] ::selection {
+  background: hsl(99 16% 14%);
+  color: hsl(143 41% 87%);
+}
+
+html[data-theme='dark'] .app-sidebar {
+  background: hsl(73 16% 14%);
+}
+
+html[data-theme='dark'] .main-navigation > a,
+html[data-theme='dark'] .main-navigation > button {
+  color: hsl(106 10% 77%);
+}
+
+html[data-theme='dark'] .main-navigation > a:hover,
+html[data-theme='dark'] .main-navigation > button:hover {
+  background: hsl(83 16% 14%);
+}
+
+html[data-theme='dark'] .main-navigation [aria-current='page'] {
+  background: hsl(93 16% 14%);
+  color: hsl(141 36% 77%);
+}
+
+html[data-theme='dark'] .avatar {
+  background: hsl(83 16% 14%);
+}
+
+html[data-theme='dark'] .primary-link,
+html[data-theme='dark'] .primary-button {
+  color: hsl(48 48% 72%);
+}
+
+html[data-theme='dark'] .primary-link:hover,
+html[data-theme='dark'] .primary-button:hover {
+  background: hsl(140 16% 20%);
+}
+
+html[data-theme='dark'] .quiet-button:hover,
+html[data-theme='dark'] .icon-button:hover {
+  background: hsl(78 16% 14%);
+  border-color: #414b3e;
+}
+
+html[data-theme='dark'] .secondary-button {
+  border: 1px solid #414b3e;
+  background: hsl(87 16% 14%);
+}
+
+html[data-theme='dark'] .secondary-button:hover {
+  background: hsl(93 16% 14%);
+}
+
+html[data-theme='dark'] input:not([type='checkbox']):not([type='range']),
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea {
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: hsl(94 6% 72%);
+}
+
+html[data-theme='dark'] progress {
+  background: hsl(85 16% 14%);
+}
+
+html[data-theme='dark'] progress::-webkit-progress-bar {
+  background: hsl(85 16% 14%);
+}
+
+html[data-theme='dark'] .toast {
+  background: hsl(139 16% 20%);
+  box-shadow: 0 8px 28px #26342c25;
+}
+
+html[data-theme='dark'] .account-invite {
+  background: hsl(82 16% 14%);
+}
+
+html[data-theme='dark'] .recent-game:hover,
+html[data-theme='dark'] .game-item:hover {
+  background: hsl(78 16% 14%);
+}
+
+html[data-theme='dark'] .empty-state {
+  background: hsl(67 16% 14%);
+}
+
+html[data-theme='dark'] .empty-symbol {
+  color: hsl(102 17% 72%);
+}
+
+html[data-theme='dark'] .library #import-panel {
+  background: hsl(67 16% 14%);
+}
+
+html[data-theme='dark'] .file-button {
+  border: 1px dashed #414b3e;
+}
+
+html[data-theme='dark'] .game-item[aria-current='true'] {
+  background: hsl(88 16% 14%);
+}
+
+html[data-theme='dark'] .study-eval {
+  background: hsl(136 9% 20%);
+}
+
+html[data-theme='dark'] .eval-midpoint {
+  border-top: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .eval-score {
+  background: hsl(139 14% 20%);
+}
+
+html[data-theme='dark'] .move-steps .icon-button {
+  background: hsl(87 16% 14%);
+}
+
+html[data-theme='dark'] .eval-graph {
+  background: hsl(67 16% 14%);
+}
+
+html[data-theme='dark'] .classification.blunder,
+html[data-theme='dark'] .classification.miss {
+  color: hsl(9 48% 72%);
+}
+
+html[data-theme='dark'] .classification.mistake {
+  color: hsl(28 48% 77%);
+}
+
+html[data-theme='dark'] .classification.inaccuracy {
+  color: hsl(45 48% 77%);
+}
+
+html[data-theme='dark'] .classification.brilliant {
+  color: hsl(182 48% 77%);
+}
+
+html[data-theme='dark'] .class-symbol {
+  background: hsl(83 16% 14%);
+}
+
+html[data-theme='dark'] .engine-line {
+  border-bottom: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .engine-line:hover {
+  background: hsl(78 16% 14%);
+}
+
+html[data-theme='dark'] .line-san {
+  color: hsl(114 11% 77%);
+}
+
+html[data-theme='dark'] .move-button:hover {
+  background: hsl(83 16% 14%);
+}
+
+html[data-theme='dark'] .move-button[aria-current='true'] {
+  background: hsl(90 16% 14%);
+  color: hsl(138 33% 77%);
+}
+
+html[data-theme='dark'] .blunder .move-symbol,
+html[data-theme='dark'] .miss .move-symbol {
+  color: hsl(9 48% 72%);
+}
+
+html[data-theme='dark'] .mistake .move-symbol {
+  color: hsl(28 48% 77%);
+}
+
+html[data-theme='dark'] .inaccuracy .move-symbol {
+  color: hsl(45 48% 77%);
+}
+
+html[data-theme='dark'] .promotion {
+  background: hsl(86 16% 14%);
+}
+
+html[data-theme='dark'] .promotion button {
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .study-settings {
+  box-shadow: -8px 0 35px #24392c1a;
+}
+
+html[data-theme='dark'] .player-setup {
+  background: hsl(82 16% 14%);
+}
+
+html[data-theme='dark'] .report-game {
+  border-bottom: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .result-bar {
+  background: hsl(76 16% 14%);
+}
+
+html[data-theme='dark'] .result-bar .win {
+  background: hsl(98 16% 18%);
+}
+
+html[data-theme='dark'] .result-bar .draw {
+  background: hsl(72 16% 15%);
+}
+
+html[data-theme='dark'] .result-bar .loss {
+  background: hsl(13 16% 17%);
+}
+
+html[data-theme='dark'] .result-labels i {
+  background: hsl(98 16% 18%);
+}
+
+html[data-theme='dark'] .result-labels i.draw {
+  background: hsl(72 16% 15%);
+}
+
+html[data-theme='dark'] .result-labels i.loss {
+  background: hsl(13 16% 17%);
+}
+
+html[data-theme='dark'] .training-list > button:hover {
+  background: hsl(83 16% 14%);
+}
+
+html[data-theme='dark'] .player-dot {
+  background: hsl(51 16% 13%);
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .player-dot.black {
+  background: hsl(132 8% 20%);
+  border-color: #414b3e;
+}
+
+html[data-theme='dark'] .feedback-icon {
+  background: hsl(86 16% 14%);
+}
+
+html[data-theme='dark'] .puzzle-feedback[data-state='success'] h2 {
+  color: hsl(139 28% 77%);
+}
+
+html[data-theme='dark'] .puzzle-feedback[data-state='incorrect'] h2 {
+  color: hsl(12 48% 72%);
+}
+
+html[data-theme='dark'] .puzzle-feedback[data-state='assisted'] h2 {
+  color: hsl(36 48% 77%);
+}
+
+html[data-theme='dark'] .theme-tags > span {
+  background: hsl(83 16% 14%);
+  color: hsl(105 21% 77%);
+}
+
+html[data-theme='dark'] .account-symbol {
+  background: hsl(84 16% 14%);
+}
+
+html[data-theme='dark'] .profile-avatar {
+  background: hsl(90 16% 14%);
+}
+
+html[data-theme='dark'] .move-summary-row > span {
+  color: hsl(126 12% 77%);
+}
+
+html[data-theme='dark'] .move-summary-row > button:not(:disabled):hover {
+  background: hsl(92 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem {
+  --move-color: hsl(128 22% 77%);
+  background: hsl(90 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.brilliant {
+  --move-color: hsl(184 48% 77%);
+  background: hsl(180 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.great {
+  --move-color: hsl(203 48% 77%);
+  background: hsl(201 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.best {
+  --move-color: hsl(100 33% 77%);
+  background: hsl(90 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.excellent,
+html[data-theme='dark'] .move-emblem.good {
+  --move-color: hsl(122 22% 77%);
+  background: hsl(97 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.inaccuracy {
+  --move-color: hsl(42 48% 77%);
+  background: hsl(46 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.mistake {
+  --move-color: hsl(22 48% 72%);
+  background: hsl(24 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.blunder {
+  --move-color: hsl(0 46% 72%);
+  background: hsl(110 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.miss {
+  --move-color: hsl(10 31% 72%);
+  background: hsl(16 16% 14%);
+}
+
+html[data-theme='dark'] .move-emblem.sacrifice {
+  --move-color: hsl(263 11% 72%);
+  background: hsl(265 16% 14%);
+}
+
+html[data-theme='dark'] .analysis-panel .move-pair:nth-child(even) {
+  background: hsl(75 16% 14%);
+}
+
+html[data-theme='dark'] .sharpness-chip.sharp {
+  background: hsl(110 16% 13%);
+  color: hsl(0 48% 72%);
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .sharpness-chip.calm {
+  background: hsl(125 16% 14%);
+  color: hsl(123 46% 77%);
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .sharpness-chip.dynamic {
+  background: hsl(46 16% 14%);
+  color: hsl(28 48% 72%);
+  border: 1px solid #414b3e;
+}
+
+html[data-theme='dark'] .threat-radar-card {
+  color: hsl(7 48% 72%);
+}
+
+html[data-theme='dark'] #retry-feedback[data-state='incorrect'] {
+  color: hsl(7 48% 72%);
+}
+
+html[data-theme='dark'] .primary-button,
+html[data-theme='dark'] .primary-button:hover,
+html[data-theme='dark'] .primary-link,
+html[data-theme='dark'] .primary-link:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+html[data-theme='dark'] .result-bar .win,
+html[data-theme='dark'] .result-labels .win {
+  background: #b1c990;
+}
+html[data-theme='dark'] .result-bar .draw,
+html[data-theme='dark'] .result-labels .draw {
+  background: #9b9e8b;
+}
+html[data-theme='dark'] .result-bar .loss,
+html[data-theme='dark'] .result-labels .loss {
+  background: #d28b76;
+}
+html[data-theme='dark'] .move-button[aria-current='true'] {
+  background: var(--raised);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+html[data-theme='dark'] .primary-button:disabled {
+  background: var(--raised);
+  color: var(--muted);
+}
+html[data-theme='dark'] .eval-score {
+  background: var(--paper);
+  color: var(--ink);
+}
+#toggle-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+}
+#toggle-theme svg {
+  width: 17px;
+  height: 17px;
+}
+#toggle-theme[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+@media (max-width: 600px) {
+  #toggle-theme {
+    width: 38px;
+    min-width: 38px;
+    padding: 8px;
+    justify-content: center;
+  }
+  #toggle-theme .theme-label {
+    display: none;
+  }
+}

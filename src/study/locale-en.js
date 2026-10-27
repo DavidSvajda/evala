@@ -1,4 +1,15 @@
 export const EN = {
+  'Hotové rozbory se použijí z knihovny.': 'Completed analyses will be reused from your library.',
+  'čeká ve frontě': 'queued',
+  'ověřuji kritické tahy': 'checking critical moves',
+  ukládám: 'saving',
+  bílými: 'as White',
+  černými: 'as Black',
+  zahájení: 'opening',
+  'střední hra': 'middlegame',
+  koncovka: 'endgame',
+  'Tmavý režim': 'Dark mode',
+  'Světlý režim': 'Light mode',
   'Nastavení rozboru a poslední otevřená pozice': 'Analysis settings and last open position',
   'Ověřuji přihlášení…': 'Checking sign-in…',
   'Načítání…': 'Loading…',
@@ -594,6 +605,39 @@ export const EN = {
 };
 
 export const patterns = [
+  [
+    /^V (\d+) chybách engine ukazuje materiální ztrátu nejméně 2 bodů v prvních dvou půltazích varianty\. Před tahem zkontroluj soupeřova braní a možnost dobrat zpět\.$/,
+    'In $1 mistakes, the engine line loses at least 2 material points within two plies. Before moving, check the opponent’s captures and your recaptures.',
+  ],
+  [
+    /^(\d+) tahů minulo nalezený mat\. V tréninkové pozici projdi všechny šachy a ověř každou obranu soupeře\.$/,
+    '$1 moves missed a forced mate. In the practice position, consider every check and verify each defence.',
+  ],
+  [
+    /^(.+): (\d+) výher, (\d+) remíz, (\d+) proher \(bílými\)\.$/,
+    '$1: $2 wins, $3 draws, $4 losses as White.',
+  ],
+  [
+    /^(.+): (\d+) výher, (\d+) remíz, (\d+) proher \(černými\)\.$/,
+    '$1: $2 wins, $3 draws, $4 losses as Black.',
+  ],
+  [
+    /^(\d+) chyb z (\d+) vyhodnocených tahů s nízkým časem po tahu \(10 % základního času, nejméně 10 a nejvýše 60 sekund\)\.$/,
+    '$1 mistakes in $2 evaluated moves with little time remaining after the move (10% of the initial time, bounded to 10–60 seconds).',
+  ],
+  [/^(\d+) chyby?$/, '$1 mistakes'],
+  [/^(\d+) chyb$/, '$1 mistakes'],
+  [/^(\d+) vybraných partií$/, '$1 selected games'],
+  [/^(\d+) \/ (\d+) vybráno$/, '$1 / $2 selected'],
+  [/^(\d+) hrubých chyb$/, '$1 blunders'],
+  [/^(\d+) hrubých$/, '$1 blunders'],
+  [/^(\d+) chyb · (.*)$/, '$1 mistakes · $2'],
+  [/^(\d+) brilantních\*?$/, '$1 brilliant'],
+  [/^Po přijetí oběti: (.*)$/, 'After accepting the sacrifice: $1'],
+  [
+    /^Rozbor uložen\. Níže najdeš priority a konkrétní pozice\.$/,
+    'Analysis saved. Your priorities and practice positions are below.',
+  ],
   [/^Elo úlohy: (.*)$/, 'Puzzle rating: $1'],
 
   [/^(\d+) partií$/, '$1 games'],
