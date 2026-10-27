@@ -1,6 +1,6 @@
 {
   "name": "evala",
-  "version": "2.0.0",
+  "version": "2.2.6",
   "private": true,
   "type": "module",
   "description": "Local Stockfish evaluation bar for Chess.com and Lichess",
@@ -13,10 +13,15 @@
     "test:extension": "node tests/extension.mjs",
     "test:study": "node tests/study-browser.mjs",
     "test:platform": "node tests/platform-browser.mjs",
+    "test:cloud-accounts": "node tests/cloud-accounts.mjs",
+    "test:production": "node tests/production-browser.mjs",
     "test:remote-bar": "node tests/remote-bar.mjs",
     "server": "node server/index.mjs",
     "serve": "node scripts/serve.mjs",
-    "package": "npm run build && node scripts/package.mjs"
+    "package": "npm run build && node scripts/package.mjs",
+    "lint": "eslint src server scripts tests --max-warnings=0",
+    "format": "prettier --write \"src/**/*.js\" \"server/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \"public/*.html\" \"public/*.css\" \"*.config.mjs\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"server/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \"public/*.html\" \"public/*.css\" \"*.config.mjs\""
   },
   "dependencies": {
     "@azure/storage-blob": "^12.34.0",
@@ -27,8 +32,11 @@
   "devDependencies": {
     "@fontsource-variable/manrope": "^5.2.8",
     "esbuild": "^0.25.12",
+    "eslint": "10.13.0",
     "fflate": "^0.8.2",
+    "globals": "17.13.0",
     "playwright": "^1.56.1",
+    "prettier": "3.9.10",
     "sharp": "^0.35.5"
   }
 }

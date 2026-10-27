@@ -7,6 +7,11 @@ dist-bar
 release
 test-results
 .env
+.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
 .local-data
 .azure-cli-venv
 *.log

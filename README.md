@@ -35,7 +35,7 @@ Serverový režim odesílá pozice na zadaný server a vyžaduje jeho případn�
 
 ## Instalace z počítače — zdarma
 
-1. Rozbal `release/evala-1.1.0.zip` do vlastní složky. Případně použij hotovou složku `dist` v tomto projektu. U již načtené instalace klikni na **Znovu načíst**.
+1. Rozbal ZIP příslušného vydání do vlastní složky. Případně použij hotovou složku `dist` v tomto projektu. U již načtené instalace klikni na **Znovu načíst**.
 2. V Chrome otevři `chrome://extensions`.
 3. Zapni **Režim pro vývojáře** vpravo nahoře.
 4. Zvol **Načíst rozbalené** a vyber složku, která přímo obsahuje `manifest.json`. ZIP se nevybírá přímo.

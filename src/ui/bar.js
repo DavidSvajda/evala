@@ -23,8 +23,15 @@ export class EvalBar {
     this.shadow.querySelector('.toggle').addEventListener('click', onToggle);
     this.gear.addEventListener('click', () => this.open(this.popover.hidden));
     this.shadow.querySelector('.close').addEventListener('click', () => this.open(false));
-    this.onOutside = event => { if (!event.composedPath().includes(this.host)) this.open(false, false); };
-    this.onKey = event => { if (event.key === 'Escape' && !this.popover.hidden) { event.stopPropagation(); this.open(false); } };
+    this.onOutside = (event) => {
+      if (!event.composedPath().includes(this.host)) this.open(false, false);
+    };
+    this.onKey = (event) => {
+      if (event.key === 'Escape' && !this.popover.hidden) {
+        event.stopPropagation();
+        this.open(false);
+      }
+    };
     document.addEventListener('pointerdown', this.onOutside);
     this.host.addEventListener('keydown', this.onKey);
     document.body.append(this.host);
@@ -34,8 +41,10 @@ export class EvalBar {
   open(visible, focus = true) {
     this.popover.hidden = !visible;
     this.gear.setAttribute('aria-expanded', String(visible));
-    if (visible) { this.placePopover(); if (focus) this.popover.querySelector('.close').focus(); }
-    else if (focus) this.gear.focus();
+    if (visible) {
+      this.placePopover();
+      if (focus) this.popover.querySelector('.close').focus();
+    } else if (focus) this.gear.focus();
   }
 
   updateSettings(settings) {
@@ -45,34 +54,59 @@ export class EvalBar {
     toggle.innerHTML = settings.enabled ? icons.pause : icons.play;
     toggle.setAttribute('aria-label', settings.enabled ? 'Pozastavit engine' : 'Spustit engine');
     this.shadow.querySelector('.depth').hidden = !settings.showDepth;
-    this.shadow.querySelector('.engine-name').textContent=settings.backend==='server'?'Stockfish 19 Full · vlastní server':'Stockfish 19 Lite · zdarma · lokální výpočet';
+    this.shadow.querySelector('.engine-name').textContent =
+      settings.backend === 'server'
+        ? 'Stockfish 19 Full · vlastní server'
+        : 'Stockfish 19 Lite · zdarma · lokální výpočet';
   }
 
   place(board, flipped) {
     const r = board.getBoundingClientRect();
     const width = this.settings.width;
-    let left = this.settings.side === 'left' ? r.left - width - this.settings.gap : r.right + this.settings.gap;
-    if (left < 3 && r.right + this.settings.gap + width < innerWidth) left = r.right + this.settings.gap;
+    let left =
+      this.settings.side === 'left'
+        ? r.left - width - this.settings.gap
+        : r.right + this.settings.gap;
+    if (left < 3 && r.right + this.settings.gap + width < innerWidth)
+      left = r.right + this.settings.gap;
     left = Math.max(3, Math.min(innerWidth - width - 3, left));
-    Object.assign(this.rail.style, { left: `${left}px`, top: `${r.top}px`, width: `${width}px`, height: `${r.height}px` });
+    Object.assign(this.rail.style, {
+      left: `${left}px`,
+      top: `${r.top}px`,
+      width: `${width}px`,
+      height: `${r.height}px`,
+    });
     this.rail.hidden = r.bottom < 0 || r.top > innerHeight;
     this.rail.classList.toggle('flipped', this.settings.autoFlip && flipped);
     this.shadow.querySelector('.top').textContent = this.settings.autoFlip && flipped ? '+' : '−';
-    this.shadow.querySelector('.bottom').textContent = this.settings.autoFlip && flipped ? '−' : '+';
+    this.shadow.querySelector('.bottom').textContent =
+      this.settings.autoFlip && flipped ? '−' : '+';
     if (!this.popover.hidden) this.placePopover();
   }
 
   placePopover() {
     const rect = this.rail.getBoundingClientRect();
     const width = Math.min(320, innerWidth - 24);
-    const left = rect.left + rect.width + 12 + width < innerWidth ? rect.right + 12 : rect.left - width - 12;
-    Object.assign(this.popover.style, { left: `${Math.max(12, Math.min(innerWidth - width - 12, left))}px`, top: `${Math.max(16, Math.min(rect.top, innerHeight - this.popover.offsetHeight - 16))}px` });
+    const left =
+      rect.left + rect.width + 12 + width < innerWidth ? rect.right + 12 : rect.left - width - 12;
+    Object.assign(this.popover.style, {
+      left: `${Math.max(12, Math.min(innerWidth - width - 12, left))}px`,
+      top: `${Math.max(16, Math.min(rect.top, innerHeight - this.popover.offsetHeight - 16))}px`,
+    });
   }
 
   setState(state, message) {
     this.rail.dataset.state = state;
-    const labels = { waiting: 'Čekám na úplnou pozici', loading: 'Načítám engine…', searching: 'Počítám pozici…', done: 'Rozbor dokončen', paused: 'Výpočet pozastaven', error: 'Výpočet není dostupný' };
-    this.shadow.querySelector('.status-text strong').textContent = message || labels[state] || state;
+    const labels = {
+      waiting: 'Čekám na úplnou pozici',
+      loading: 'Načítám engine…',
+      searching: 'Počítám pozici…',
+      done: 'Rozbor dokončen',
+      paused: 'Výpočet pozastaven',
+      error: 'Výpočet není dostupný',
+    };
+    this.shadow.querySelector('.status-text strong').textContent =
+      message || labels[state] || state;
     this.rail.title = message || labels[state] || state;
   }
 
@@ -83,16 +117,37 @@ export class EvalBar {
     this.shadow.querySelector('.white').style.height = `${percent}%`;
     const text = scoreText(score);
     this.shadow.querySelector('.value').textContent = text;
-    this.shadow.querySelector('.value').style.fontSize = `${Math.min(11,(this.settings.width-4)/(Math.max(1,text.length)*.67))}px`;
+    this.shadow.querySelector('.value').style.fontSize =
+      `${Math.min(11, (this.settings.width - 4) / (Math.max(1, text.length) * 0.67))}px`;
     this.shadow.querySelector('.depth').textContent = score?.depth ? `d${score.depth}` : '';
     const meter = this.shadow.querySelector('.track');
-    meter.setAttribute('aria-valuenow', String(score?.kind === 'mate' ? Math.sign(score.value) * 10 : Math.max(-10, Math.min(10, (score?.value || 0) / 100))));
+    meter.setAttribute(
+      'aria-valuenow',
+      String(
+        score?.kind === 'mate'
+          ? Math.sign(score.value) * 10
+          : Math.max(-10, Math.min(10, (score?.value || 0) / 100)),
+      ),
+    );
     meter.setAttribute('aria-valuetext', `${evaluationLabel(score)} ${scoreText(score)}`);
-    if (score) this.shadow.querySelector('.stats').textContent = `Hloubka ${score.depth} · ${new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(score.nps)} uzlů/s · ${(score.time / 1000).toFixed(1)} s`;
-    else this.shadow.querySelector('.stats').textContent = this.settings.backend==='server'?'Stockfish 19 Full · server':'Stockfish 19 Lite · lokálně';
+    if (score)
+      this.shadow.querySelector('.stats').textContent =
+        `Hloubka ${score.depth} · ${new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(score.nps)} uzlů/s · ${(score.time / 1000).toFixed(1)} s`;
+    else
+      this.shadow.querySelector('.stats').textContent =
+        this.settings.backend === 'server'
+          ? 'Stockfish 19 Full · server'
+          : 'Stockfish 19 Lite · lokálně';
   }
 
-  hide() { this.rail.hidden = true; this.open(false, false); }
+  hide() {
+    this.rail.hidden = true;
+    this.open(false, false);
+  }
 
-  dispose() { document.removeEventListener('pointerdown', this.onOutside); this.host.removeEventListener('keydown', this.onKey); this.host.remove(); }
+  dispose() {
+    document.removeEventListener('pointerdown', this.onOutside);
+    this.host.removeEventListener('keydown', this.onKey);
+    this.host.remove();
+  }
 }

@@ -27,3 +27,5 @@ Jednotlivé partie lze exportovat do PGN a smazat v knihovně. V části Můj ú
 Plné rozšíření může po povolení uživatelem využít vlastní server. API token zůstává v sessionStorage karty, případně v dočasném chrome.storage.session rozšíření do restartu prohlížeče. Nepředává se herní stránce. Host přístup se vyžádá až při ověření spojení.
 
 Evala neobsahuje reklamní sledování ani analytické měřicí skripty. Provozní záznamy poskytovatele hostingu a požadavky Google/Chess.com/Lichess se řídí také pravidly příslušné služby. Úlohy Lichess jsou otevřená data CC0; odkazy na původní partie se zobrazují po vyřešení.
+
+Obnovovací kopie Azure Blob Storage se uchovávají nejvýše sedm dní po přepsání nebo odstranění dat; přístup má správce za účelem obnovy. Smazání účtu ihned zneplatní sessions.

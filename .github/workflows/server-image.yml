@@ -1,6 +1,17 @@
 name: Build Evala server
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: Validation scope for isolated changes (default full)
+        type: choice
+        default: full
+        options:
+          - full
+          - accuracy
+          - board
+          - install
+          - account
 permissions:
   contents: read
   packages: write
@@ -9,16 +20,66 @@ concurrency:
   cancel-in-progress: false
 jobs:
   image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
+      - name: Install and build application
+        run: |
+          npm ci
+          npm run build
       - name: Verify application and account isolation
-        run: npm ci && npm run build && npm test
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
+        run: |
+          npm run lint
+          npm run format:check
+          npm test
+      - name: Verify accuracy changes
+        if: inputs.validation == 'accuracy'
+        run: |
+          npx eslint src/core/game-accuracy.js src/study/review.js src/study/views/summary.js src/study/locale-en.js tests/accuracy.test.mjs tests/accuracy-smoke.mjs --max-warnings=0
+          npx prettier --check src/core/game-accuracy.js src/study/review.js src/study/views/summary.js src/study/locale-en.js tests/accuracy.test.mjs tests/accuracy-smoke.mjs
+          node --test tests/accuracy.test.mjs tests/performance.test.mjs
+      - name: Verify board gesture changes
+        if: inputs.validation == 'board'
+        run: |
+          npx eslint src/study/board.js tests/board-gestures-smoke.mjs --max-warnings=0
+          npx prettier --check src/study/board.js public/study.css tests/board-gestures-smoke.mjs
+      - name: Use the runner's installed Chrome
+        run: |
+          chrome_path="$(command -v google-chrome)"
+          "$chrome_path" --version
+          echo "EVALA_BROWSER_EXECUTABLE=$chrome_path" >> "$GITHUB_ENV"
+      - name: Verify home screen installation
+        if: inputs.validation == 'install'
+        run: |
+          npx eslint scripts/build.mjs src/study/locale-en.js tests/install-smoke.mjs --max-warnings=0
+          npx prettier --check scripts/build.mjs src/study/locale-en.js public/study.html public/app-manifest.json tests/install-smoke.mjs
+          node tests/install-smoke.mjs
+      - name: Verify core browser flow before publishing
+        if: inputs.validation != 'accuracy' && inputs.validation != 'board' && inputs.validation != 'install' && inputs.validation != 'account'
+        run: |
+          node tests/release-smoke.mjs
+          node tests/learning-smoke.mjs
+          node tests/storage-browser.mjs
+      - name: Verify account experience
+        if: inputs.validation == 'account'
+        run: |
+          npx eslint src/core/account-preferences.js server/account-preferences.mjs server/accounts.mjs src/study/account.js src/study/account-panel.js src/study/audio.js src/study/storage.js src/study/platform.js src/study/app.js src/study/learning-ui.js src/study/locale-en.js tests/account-preferences.test.mjs tests/account-experience-smoke.mjs --max-warnings=0
+          npx prettier --check src/core/account-preferences.js server/account-preferences.mjs server/accounts.mjs src/study/account.js src/study/account-panel.js src/study/audio.js src/study/storage.js src/study/platform.js src/study/app.js src/study/learning-ui.js src/study/locale-en.js public/study.html public/study.css tests/account-preferences.test.mjs tests/account-experience-smoke.mjs
+          node --test tests/account-preferences.test.mjs tests/accounts.test.mjs
+          node tests/account-experience-smoke.mjs
+          node tests/storage-browser.mjs
+      - name: Verify game accuracy display
+        if: inputs.validation == 'accuracy'
+        run: node tests/accuracy-smoke.mjs
+      - name: Verify board gestures
+        if: inputs.validation == 'board'
+        run: node tests/board-gestures-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR

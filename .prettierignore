@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-bar
+release
+.local-data
+.azure-cli-venv
+vendor-source
+public/data
+.impeccable

@@ -1,0 +1,192 @@
+.learning-notes {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.learning-notes .section-title {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.learning-notes label:not(.check-row) {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 600;
+}
+.learning-notes textarea,
+.practice-page textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 64px;
+  padding: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.learning-notes .setup-actions {
+  flex-wrap: wrap;
+}
+.learning-notes details {
+  margin-top: 12px;
+}
+.learning-notes summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.compare-line,
+.repertoire-row {
+  display: grid;
+  text-align: left;
+  width: 100%;
+  gap: 6px;
+  padding: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.compare-line:hover,
+.repertoire-row:hover {
+  border-color: var(--accent);
+}
+.compare-line small,
+.repertoire-row small {
+  color: var(--muted);
+}
+.practice-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.practice-controls select {
+  min-height: 40px;
+  max-width: 100%;
+}
+#practice-status {
+  margin: 16px 0;
+  font-size: 14px;
+  max-width: 75ch;
+}
+.practice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 640px) minmax(260px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+#practice-board:empty {
+  min-height: 160px;
+  background: var(--raised);
+}
+.practice-layout aside {
+  min-width: 0;
+}
+.practice-layout h2 {
+  font-size: 19px;
+  margin-bottom: 12px;
+}
+.practice-layout p {
+  font-size: 14px;
+  margin: 12px 0;
+  line-height: 1.6;
+}
+.practice-layout details {
+  margin-top: 24px;
+}
+#practice-families {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+}
+#practice-families button {
+  margin: 4px;
+}
+#practice-result {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+  margin-top: 16px;
+}
+#practice-result:empty {
+  display: none;
+}
+#practice-line {
+  overflow-wrap: anywhere;
+}
+#weakness-evidence {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  margin-top: 32px;
+}
+#weakness-evidence h2 {
+  font-size: 19px;
+}
+#weakness-evidence h3 {
+  margin: 24px 0 12px;
+  font-size: 15px;
+}
+.evidence-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.evidence-row small {
+  color: var(--muted);
+}
+.practice-page button:focus-visible,
+.learning-notes button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.practice-page button:disabled,
+.learning-notes button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+body[data-self-analysis='true'] .study-eval,
+body[data-self-analysis='true'] #eval-graph,
+body[data-self-analysis='true'] .graph-heading,
+body[data-self-analysis='true'] .move-feedback,
+body[data-self-analysis='true'] #summary,
+body[data-self-analysis='true'] #engine-lines,
+body[data-self-analysis='true'] #lines-state,
+body[data-self-analysis='true'] .classification-note,
+body[data-self-analysis='true'] #next-critical,
+body[data-self-analysis='true'] #move-filter,
+body[data-self-analysis='true'] .performance-method,
+body[data-self-analysis='true'] #review-summary-empty,
+body[data-self-analysis='true'] #inspect-status {
+  display: none !important;
+}
+@media (max-width: 900px) {
+  .practice-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .practice-controls {
+    align-items: stretch;
+  }
+  .practice-controls label {
+    width: 100%;
+  }
+  .learning-notes .section-title h2 {
+    font-size: 15px;
+  }
+  .practice-page {
+    min-width: 0;
+  }
+  .practice-layout > div {
+    min-width: 0;
+  }
+}
+
+.move-button.user-critical .move-san::after {
+  content: ' •';
+  color: var(--accent);
+}
