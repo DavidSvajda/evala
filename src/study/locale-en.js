@@ -625,7 +625,7 @@ export const patterns = [
     /^(\d+) chyb z (\d+) vyhodnocených tahů s nízkým časem po tahu \(10 % základního času, nejméně 10 a nejvýše 60 sekund\)\.$/,
     '$1 mistakes in $2 evaluated moves with little time remaining after the move (10% of the initial time, bounded to 10–60 seconds).',
   ],
-  [/^(\d+) chyby?$/, '$1 mistakes'],
+  [/^(\d+) chyb(?:a|y)?$/, '$1 mistakes'],
   [/^(\d+) chyb$/, '$1 mistakes'],
   [/^(\d+) vybraných partií$/, '$1 selected games'],
   [/^(\d+) \/ (\d+) vybráno$/, '$1 / $2 selected'],
