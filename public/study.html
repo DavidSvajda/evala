@@ -1,9 +1,8 @@
 <!doctype html>
 <html lang="cs"
   ><head
-    ><meta charset="UTF-8" /><meta
-      name="viewport"
-      content="width=device-width,initial-scale=1" /><meta
+    ><meta charset="UTF-8" /><script src="theme-init.js"></script
+    ><meta name="viewport" content="width=device-width,initial-scale=1" /><meta
       name="theme-color"
       content="#f4f3ec" /><title>Evala</title
     ><link rel="icon" href="icons/32.png" /><link rel="manifest" href="app-manifest.json" /><link
@@ -21,7 +20,9 @@
       src="study.js"
       type="module"
     ></script
-    ><link rel="stylesheet" href="learning.css" /></head
+    ><link rel="stylesheet" href="learning.css" /><link
+      rel="stylesheet"
+      href="color-modes.css" /></head
   ><body>
     <a class="skip-link" href="#page-content">Přejít na obsah</a>
     <aside class="app-sidebar"
@@ -78,6 +79,20 @@
           >
             <path d="M3 4h18v16H3zM9 4v16m8-12-4 4 4 4" /></svg></button
         ><span id="page-label">Přehled</span><span class="header-spacer"></span
+        ><button
+          id="toggle-theme"
+          class="quiet-button"
+          aria-pressed="false"
+          aria-label="Tmavý režim"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            aria-hidden="true"
+          >
+            <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" /></svg
+          ><span class="theme-label">Tmavý režim</span></button
         ><button id="toggle-language" class="quiet-button" aria-label="Jazyk aplikace">EN</button
         ><span id="sync-status" role="status"></span
         ><button id="toggle-library" class="quiet-button"

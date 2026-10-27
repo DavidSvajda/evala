@@ -874,7 +874,7 @@ function renderGraph() {
     path += (path ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
   }
   $('#eval-graph').innerHTML =
-    `<span class="graph-label graph-label-white">Bílý +</span><span class="graph-label graph-label-black">Černý −</span><svg viewBox="0 0 600 126" preserveAspectRatio="none" role="img" aria-label="Graf hodnocení. Kliknutím přejdeš na tah."><path d="M0 63H600" stroke="#aab49e" stroke-width="1"/><path d="M0 20H600M0 106H600" stroke="#d7ddcc" stroke-width="1"/><path d="${path}" fill="none" stroke="#386446" stroke-width="2" vector-effect="non-scaling-stroke"/><path class="graph-cursor" d="M${(ply / max) * 600} 0V126"/></svg>`;
+    `<span class="graph-label graph-label-white">Bílý +</span><span class="graph-label graph-label-black">Černý −</span><svg viewBox="0 0 600 126" preserveAspectRatio="none" role="img" aria-label="Graf hodnocení. Kliknutím přejdeš na tah."><path d="M0 63H600" stroke="var(--muted)" stroke-width="1"/><path d="M0 20H600M0 106H600" stroke="var(--line)" stroke-width="1"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/><path class="graph-cursor" d="M${(ply / max) * 600} 0V126"/></svg>`;
   $('#eval-graph svg').addEventListener('click', (event) => {
     const r = event.currentTarget.getBoundingClientRect();
     navigate(Math.max(0, Math.min(max, Math.round(((event.clientX - r.left) / r.width) * max))));

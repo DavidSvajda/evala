@@ -26,6 +26,7 @@ export function preferences(input = {}) {
     skill: ['beginner', 'club', 'advanced'],
     difficulty: ['easy', 'normal', 'hard'],
     language: ['cs', 'en'],
+    theme: ['light', 'dark'],
   }))
     if (options.includes(input[key])) p[key] = input[key];
   for (const key of [
