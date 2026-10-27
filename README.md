@@ -1,4 +1,6 @@
-# Evala 1.3
+# Evala
+
+Produkční zdroj je chráněná větev `main`. Přesnou nasazenou verzi a commit vrací [build.json](https://evala.bravestone-92178a1e.germanywestcentral.azurecontainerapps.io/build.json). Vydání se sestavují pouze z `main`; změny procházejí PR a kontrolou Quality.
 
 ## Samotné malé rozšíření s evaluation barem
 
