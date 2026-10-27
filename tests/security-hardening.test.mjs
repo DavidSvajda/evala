@@ -102,7 +102,18 @@ test('public API rejects simple-content CSRF, compression and foreign origins be
       );
     const html = await fetch(base + '/study.html');
     const csp = html.headers.get('content-security-policy');
-    assert.ok(csp.includes('https://api.chess.com'));
+    const directives = new Map(
+      csp.split(';').map((s) => {
+        const [key, ...values] = s.trim().split(/\s+/);
+        return [key, values];
+      }),
+    );
+    assert.deepEqual(directives.get('connect-src'), [
+      "'self'",
+      'https://api.chess.com',
+      'https://lichess.org',
+      'https://accounts.google.com',
+    ]);
     assert.ok(!csp.includes("connect-src 'self' https:" + ' '));
     assert.ok(!csp.includes('http://localhost:'));
     assert.ok(!csp.includes("script-src 'self' 'unsafe-inline'"));

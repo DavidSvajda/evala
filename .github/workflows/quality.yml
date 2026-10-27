@@ -23,5 +23,5 @@ jobs:
       - run: npm run build
       - run: npm run lint
       - run: npm run format:check
-      - run: node --test tests/release-version.test.mjs tests/account-preferences.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs
+      - run: node --test tests/release-version.test.mjs tests/account-preferences.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/security-gates.test.mjs tests/accounts.test.mjs
       - run: npm audit --audit-level=moderate

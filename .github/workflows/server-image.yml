@@ -136,7 +136,8 @@ jobs:
           version: v0.76.1
       - name: Block vulnerable images and embedded secrets
         run: |
-          trivy image --scanners vuln,secret --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --format json --output trivy-report.json "$IMAGE:$GITHUB_SHA"
+          trivy image --scanners vuln,secret --severity HIGH,CRITICAL --format json --output trivy-report.json "$IMAGE:$GITHUB_SHA"
+          node scripts/check-trivy.mjs trivy-report.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
