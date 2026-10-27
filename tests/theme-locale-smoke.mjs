@@ -25,6 +25,7 @@ const messages = [
   '5 výher z 8 partií, ve kterých jsi měl alespoň +2,0. Vyhodnocené pozice z 10 partií; částečný rozbor může výhodu přehlédnout.',
   'Sicilian Defense: 1 výher, 0 remíz, 4 proher (černými).',
   '3 chyb z 17 vyhodnocených tahů s nízkým časem po tahu (10 % základního času, nejméně 10 a nejvýše 60 sekund).',
+  '1 chyba',
 ];
 try {
   await page.addInitScript(() =>
