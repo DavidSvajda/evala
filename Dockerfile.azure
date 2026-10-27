@@ -14,7 +14,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY . .
-RUN npm run build
+ARG GITHUB_SHA
+RUN GITHUB_SHA="$GITHUB_SHA" npm run build
 
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080 ENGINE_CONCURRENCY=1 ENGINE_THREADS=2 \

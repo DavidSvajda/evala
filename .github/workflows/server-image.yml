@@ -97,7 +97,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
       - name: Build and verify native engine
-        run: docker build --platform linux/amd64 --file Dockerfile.azure --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
+        run: docker build --platform linux/amd64 --file Dockerfile.azure --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Smoke test the container
         shell: bash
         run: |
@@ -111,6 +111,8 @@ jobs:
             sleep 1
           done
           curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health
+          curl --fail --silent http://127.0.0.1:8080/build.json > build.json
+          node --input-type=module -e 'import fs from "node:fs";const build=JSON.parse(fs.readFileSync("build.json","utf8"));if(build.commit!==process.env.GITHUB_SHA)throw Error("Container build metadata does not match the release commit");'
           curl --fail --silent --no-buffer --header "Authorization: Bearer $token" --header 'Content-Type: application/json' \
             --data '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","settings":{"depth":10,"time":300,"multipv":2}}' \
             http://127.0.0.1:8080/api/analyze > result.ndjson
