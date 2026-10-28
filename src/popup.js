@@ -55,7 +55,7 @@ async function refresh() {
   document.querySelector('#connection-text').textContent = !settings.enabled
     ? 'Výpočet pozastaven'
     : hasBoard
-      ? `Připojeno · ${status.site.includes('chess.com') ? 'Chess.com' : status.site.includes('lichess') ? 'Lichess' : 'zkušební deska'}`
+      ? `Připojeno · ${['chess.com', 'www.chess.com'].includes(status.site) ? 'Chess.com' : status.site === 'lichess.org' ? 'Lichess' : 'zkušební deska'}`
       : 'Čekám na šachovnici';
   document.querySelector('.summary-score').textContent = scoreText(status?.score);
   document.querySelector('.summary-label').textContent = status?.score

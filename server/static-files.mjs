@@ -1,5 +1,5 @@
-import { createReadStream } from 'node:fs';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, realpath } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep, extname, basename } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { httpError } from './http.mjs';
@@ -25,7 +25,7 @@ const contained = (root, file) => {
   return name !== '..' && !name.startsWith('..' + sep) && !isAbsolute(name);
 };
 
-export function createStaticFiles({ root, publicReports }) {
+export function createStaticFiles({ root, publicReports, backend = true }) {
   // Hosted public mode uses our backend and the two chess import providers.
   // Custom remote engines remain available in the local/private deployment.
   const policy = publicReports
@@ -48,53 +48,59 @@ export function createStaticFiles({ root, publicReports }) {
       throw httpError(404, 'Not found');
     const candidate = resolve(absoluteRoot, '.' + name);
     if (!contained(absoluteRoot, candidate)) throw httpError(404, 'Not found');
-    let file, info;
+    let file, handle;
     try {
       rootPath ||= realpath(absoluteRoot);
       file = await realpath(candidate);
       if (!contained(await rootPath, file)) throw httpError(404, 'Not found');
-      info = await stat(file);
+      handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
     } catch (e) {
       if (e instanceof Error && e.status === 404) throw e;
       throw httpError(404, 'Not found');
     }
-    const type =
-      types[extname(file)] || (basename(file) === 'LICENSE' ? 'text/plain; charset=utf-8' : null);
-    if (!info.isFile() || !type) throw httpError(404, 'Not found');
-    const etag = `W/"${info.size}-${info.mtimeMs}-${publicReports ? 1 : 0}"`;
-    res.setHeader('Content-Type', type);
-    res.setHeader('Content-Security-Policy', policy);
-    res.setHeader('ETag', etag);
-    res.setHeader('Cache-Control', file.endsWith('.wasm') ? 'public, max-age=86400' : 'no-cache');
-    if (
-      req.headers['if-none-match']
-        ?.split(',')
-        .map((s) => s.trim())
-        .includes(etag)
-    ) {
-      res.writeHead(304);
-      res.end();
-      return;
-    }
-    if (file.endsWith(sep + 'study.html')) {
-      const data = Buffer.from(
-        (await readFile(file, 'utf8')).replace(
-          /<\/head\s*>/i,
-          `<meta name="evala-backend" content="server">${publicReports ? '<meta name="evala-public" content="true">' : ''}</head>`,
-        ),
-      );
-      res.setHeader('Content-Length', data.length);
+    try {
+      // Inspect and serve the same descriptor; never reopen by name after checking.
+      const info = await handle.stat();
+      const type =
+        types[extname(file)] || (basename(file) === 'LICENSE' ? 'text/plain; charset=utf-8' : null);
+      if (!info.isFile() || !type) throw httpError(404, 'Not found');
+      const etag = `W/"${info.size}-${info.mtimeMs}-${publicReports ? 1 : 0}"`;
+      res.setHeader('Content-Type', type);
+      res.setHeader('Content-Security-Policy', policy);
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', file.endsWith('.wasm') ? 'public, max-age=86400' : 'no-cache');
+      if (
+        req.headers['if-none-match']
+          ?.split(',')
+          .map((s) => s.trim())
+          .includes(etag)
+      ) {
+        res.writeHead(304);
+        res.end();
+        return;
+      }
+      if (backend && file.endsWith(sep + 'study.html')) {
+        const data = Buffer.from(
+          (await handle.readFile('utf8')).replace(
+            /<\/head\s*>/i,
+            `<meta name="evala-backend" content="server">${publicReports ? '<meta name="evala-public" content="true">' : ''}</head>`,
+          ),
+        );
+        res.setHeader('Content-Length', data.length);
+        res.writeHead(200);
+        res.end(req.method === 'HEAD' ? undefined : data);
+        return;
+      }
+      res.setHeader('Content-Length', info.size);
       res.writeHead(200);
-      res.end(req.method === 'HEAD' ? undefined : data);
-      return;
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      // WASM and GPL source archives may be large: never buffer them per request.
+      await pipeline(handle.createReadStream({ autoClose: false }), res);
+    } finally {
+      await handle.close();
     }
-    res.setHeader('Content-Length', info.size);
-    res.writeHead(200);
-    if (req.method === 'HEAD') {
-      res.end();
-      return;
-    }
-    // WASM and GPL source archives may be large: never buffer them per request.
-    await pipeline(createReadStream(file), res);
   };
 }
