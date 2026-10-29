@@ -9,7 +9,11 @@ function analysed(accuracy = 85) {
   game.headers.BlackElo = '1200';
   game.analysis = {
     complete: true,
-    positions: game.fens.map(() => ({ kind: 'cp', value: 0, depth: 18 })),
+    positions: game.fens.map((_, i) => ({
+      kind: 'cp',
+      value: i % 2 ? -(100 - accuracy) * 6 : 0,
+      depth: 18,
+    })),
     moves: game.moves.map(() => ({ kind: 'best', accuracy, loss: 0 })),
   };
   return game;
@@ -35,6 +39,25 @@ test('performance requires a completed, sufficiently deep and informative game w
   const repeated = analysed();
   repeated.moves.forEach((m) => (m.fenBefore = repeated.initialFen));
   assert.equal(estimateGamePerformance(repeated, 'w').value, null);
+});
+test('performance uses current engine evidence and requires both sides of each decision', () => {
+  const game = analysed(95);
+  const first = estimateGamePerformance(game, 'w').value;
+  game.analysis.positions.forEach((p, i) => {
+    p.value = i % 2 ? -400 : 0;
+  });
+  assert.ok(estimateGamePerformance(game, 'w').value < first);
+  game.analysis.moves.forEach((m) => {
+    m.accuracy = 100;
+  });
+  assert.ok(
+    estimateGamePerformance(game, 'w').value < first,
+    'saved marks cannot inflate performance',
+  );
+  game.analysis.positions.forEach((p, i) => {
+    if (i % 2) delete p.depth;
+  });
+  assert.equal(estimateGamePerformance(game, 'w').value, null);
 });
 test('performance is an explicitly uncalibrated relative estimate and move counts preserve both colours', () => {
   const low = estimateGamePerformance(analysed(55), 'w'),

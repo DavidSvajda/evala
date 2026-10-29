@@ -1,5 +1,6 @@
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
+import { reviewMoments, legalContinuation, judgeRetry } from './coach-review.js';
 import { escapeHtml as esc } from '../ui/dom.js';
 import { initLearning } from './learning-ui.js';
 import {
@@ -61,7 +62,7 @@ $('#last-move').innerHTML = stroke('<path d="M17 5v14M7 6l7 6-7 6"/>');
 let showThreat = false,
   retryTarget = null,
   learningUI;
-const blind = () => !!selected?.learning?.selfAnalysis;
+const blind = () => !!retryTarget || !!selected?.learning?.selfAnalysis;
 const threatCache = new Map();
 let library = [],
   selected = null,
@@ -735,6 +736,7 @@ function renderPosition() {
         ? 'Tento tah zatím nemá hodnocení. Spusť rozbor partie.'
         : 'Vyber tah nebo spusť rozbor celé partie.';
   renderCoach(fen, result, last, mark);
+  renderCoachJourney();
   renderLines(result, fen);
 }
 function coachThreat(fen) {
@@ -763,6 +765,8 @@ function renderCoach(fen, result, last, mark) {
     !best ||
     best === last.uci ||
     !['inaccuracy', 'mistake', 'blunder', 'miss'].includes(mark.kind);
+  $('#coach-best').disabled = !legalContinuation(last.fenBefore, before?.lines?.[0]?.pv).length;
+  $('#coach-reply').disabled = !legalContinuation(fen, result?.lines?.[0]?.pv).length;
   $('#gm-voice-btn').disabled = !globalThis.speechSynthesis;
   const sharpness = assessSharpness(result?.lines, { lang: language() });
   $('#position-sharpness').hidden = sharpness.type === 'normal';
@@ -785,6 +789,59 @@ function renderCoach(fen, result, last, mark) {
   }
   $('#imbalances-list').replaceChildren(fragment);
 }
+function renderCoachJourney() {
+  const en = language() === 'en',
+    moments = blind() ? [] : reviewMoments(selected, $('#coach-color').value);
+  const index = moments.findIndex((m) => m.ply === ply);
+  $('#coach-progress').textContent = blind()
+    ? en
+      ? 'Find your move on the board. Engine hints are hidden.'
+      : 'Najdi vlastní tah na šachovnici. Nápověda enginu je skrytá.'
+    : !selected?.analysis?.complete
+      ? en
+        ? 'Finish the game review to explore its key decisions.'
+        : 'Dokonči rozbor partie a projdi její důležitá rozhodnutí.'
+      : !moments.length
+        ? en
+          ? 'No key mistakes or exceptional moves found. You can still explore every move in Notation.'
+          : 'Nenalezeny klíčové chyby ani výjimečné tahy. Všechny tahy můžeš projít v záložce Tahy.'
+        : branch
+          ? en
+            ? 'Exploring a variation. Use the board arrows, then return to the game.'
+            : 'Procházíš variantu. Použij šipky u šachovnice a pak se vrať do partie.'
+          : index < 0
+            ? en
+              ? `${moments.length} key decisions to explore.`
+              : `${moments.length} důležitých rozhodnutí k rozboru.`
+            : en
+              ? `Decision ${index + 1} of ${moments.length}`
+              : `Rozhodnutí ${index + 1} z ${moments.length}`;
+  $('#coach-previous').disabled = !moments.length || !!retryTarget;
+  $('#coach-next').disabled = !moments.length || !!retryTarget;
+  $('#retry-cancel').hidden = !retryTarget;
+}
+function coachStep(direction) {
+  const moments = reviewMoments(selected, $('#coach-color').value);
+  const next =
+    direction > 0
+      ? moments.find((m) => m.ply > ply) || moments[0]
+      : [...moments].reverse().find((m) => m.ply < ply) || moments.at(-1);
+  if (next) navigate(next.ply);
+}
+$('#coach-color').addEventListener('change', renderCoachJourney);
+$('#coach-next').addEventListener('click', () => coachStep(1));
+$('#coach-previous').addEventListener('click', () => coachStep(-1));
+$('#coach-best').addEventListener('click', () => {
+  const pv = selected?.analysis?.positions?.[ply - 1]?.lines?.[0]?.pv;
+  if (!pv || branch || !ply) return;
+  navigate(ply - 1);
+  startBranch(pv);
+});
+$('#coach-reply').addEventListener('click', () => {
+  const pv = currentResult()?.lines?.[0]?.pv;
+  if (pv) startBranch(pv);
+});
+$('#retry-cancel').addEventListener('click', () => navigate(retryTarget?.returnPly ?? ply));
 function renderLines(result, fen) {
   const lines = result?.lines || [];
   $('#lines-state').textContent = result?.depth
@@ -829,6 +886,11 @@ function renderSummary() {
   const summary = summarize(selected);
   $('#summary').hidden = false;
   $('#summary').innerHTML = summaryMarkup(selected, summary);
+  $('#start-guided-review')?.addEventListener('click', () => {
+    setAnalysisTab('coach');
+    navigate(0);
+    coachStep(1);
+  });
   $('#summary')
     .querySelectorAll('[data-jump-kind]')
     .forEach(
@@ -962,8 +1024,13 @@ $('#gm-retry-btn').addEventListener('click', () => {
     bestUci = selected.analysis?.positions?.[index]?.lines?.[0]?.pv?.[0];
   if (!bestUci) return;
   navigate(index);
-  retryTarget = { fen: activeFen(), bestUci };
-  setAnalysisTab('moves');
+  retryTarget = {
+    fen: activeFen(),
+    bestUci,
+    position: selected.analysis.positions[index],
+    returnPly: index + 1,
+  };
+  setAnalysisTab('coach');
   renderPosition();
   $('#retry-feedback').textContent = translate('Zahraj lepší tah na šachovnici.');
   $('#retry-feedback').dataset.state = '';
@@ -1044,15 +1111,22 @@ function commitBoardMove(move, promotion) {
   }
   if (retryTarget && retryTarget.fen === activeFen()) {
     const playedUci = m.from + m.to + (m.promotion || '');
-    if (playedUci !== retryTarget.bestUci) {
+    const judgement = judgeRetry(activeFen(), playedUci, retryTarget.position);
+    if (!['best', 'sound'].includes(judgement)) {
       $('#retry-feedback').textContent = translate(
-        'Tento tah není doporučené pokračování. Zkus jiný.',
+        judgement === 'unknown'
+          ? 'Tento tah není mezi ověřenými variantami. Zkus jiný, nebo se vrať a prozkoumej ho enginem.'
+          : 'Tato varianta ztrácí více hodnocení. Zkus jiný tah.',
       );
-      $('#retry-feedback').dataset.state = 'incorrect';
+      $('#retry-feedback').dataset.state = judgement === 'unknown' ? '' : 'incorrect';
       queueRender();
       return;
     }
-    $('#retry-feedback').textContent = translate('Správně. Našel jsi doporučený tah.');
+    $('#retry-feedback').textContent = translate(
+      judgement === 'sound'
+        ? 'Dobré řešení. Ověřená alternativa zachovává hodnocení pozice.'
+        : 'Správně. Našel jsi doporučený tah.',
+    );
     $('#retry-feedback').dataset.state = 'success';
     retryTarget = null;
   }

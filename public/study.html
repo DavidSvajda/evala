@@ -441,6 +441,12 @@
                 aria-selected="false"
                 >Tahy</button
               ><button
+                id="analysis-coach-tab"
+                role="tab"
+                data-analysis-tab="coach"
+                aria-selected="false"
+                >Trenér</button
+              ><button
                 id="analysis-lines-tab"
                 role="tab"
                 data-analysis-tab="lines"
@@ -454,12 +460,27 @@
                 výkonu.</p
               ></section
             ><section id="summary" class="summary" data-panel-section="summary" hidden></section>
-            <section class="move-feedback" data-panel-section="moves"
+            <section class="coach-journey" data-panel-section="coach">
+              <div class="section-title"
+                ><h2>Rozbor s trenérem</h2
+                ><select id="coach-color" aria-label="Strana rozboru"
+                  ><option value="all">Oba hráči</option
+                  ><option value="w">Bílý</option
+                  ><option value="b">Černý</option></select
+                ></div
+              >
+              <p id="coach-progress" data-i18n-ignore role="status"></p>
+              <div class="coach-navigation"
+                ><button id="coach-previous" class="quiet-button">Předchozí moment</button
+                ><button id="coach-next" class="primary-button">Další moment</button></div
+              >
+            </section>
+            <section class="move-feedback" data-panel-section="coach"
               ><div id="move-classification"></div
               ><p id="move-explanation">Vyber tah nebo spusť rozbor.</p
               ><div id="gm-coach-card" class="gm-coach-card" hidden
                 ><div class="gm-coach-header"
-                  ><span class="gm-coach-title">Poznámka k tahu</span
+                  ><span class="gm-coach-title">Co se změnilo</span
                   ><div class="gm-coach-actions"
                     ><button
                       id="gm-voice-btn"
@@ -490,9 +511,21 @@
                     aria-pressed="false"
                     >Ukázat hrozbu</button
                   ></div
-                ><div id="imbalances-list" class="imbalances-list" data-i18n-ignore></div></div
+                ><div class="coach-navigation"
+                  ><button id="coach-best" class="quiet-button">Přehrát lepší variantu</button
+                  ><button id="coach-reply" class="quiet-button">Ukázat odpověď</button></div
+                >
+                <details
+                  ><summary>Podrobnosti pozice</summary
+                  ><div
+                    id="imbalances-list"
+                    class="imbalances-list"
+                    data-i18n-ignore
+                  ></div></details></div
               ><p id="retry-feedback" class="inline-status" role="status"></p
-            ></section>
+              ><button id="retry-cancel" class="text-button" hidden>Zpět k rozboru</button
+              ><a class="text-link" href="#/practice">Procvičovat vlastní pozice</a></section
+            >
             <section class="lines-section" data-panel-section="lines"
               ><div class="section-title"><h2>Varianty</h2><span id="lines-state">—</span></div
               ><div id="engine-lines"
