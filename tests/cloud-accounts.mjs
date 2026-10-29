@@ -9,9 +9,9 @@ import { createDocumentStore } from '../server/document-store.mjs';
 import { createAnalysisServer } from '../server/index.mjs';
 import { parsePgn } from '../src/study/game.js';
 
-const connectionString = (
-  await readFile('.local-data/deployment/account-storage-connection.txt', 'utf8')
-).trim();
+const connectionString =
+  process.env.ACCOUNT_STORAGE_CONNECTION_STRING ||
+  (await readFile('.local-data/deployment/account-storage-connection.txt', 'utf8')).trim();
 const container = 'evala-qa-' + randomUUID(),
   client = 'azure-qa.apps.googleusercontent.com',
   keys = await generateKeyPair('RS256');
@@ -93,6 +93,11 @@ async function api(headers, path, method = 'GET', body) {
 }
 try {
   await store.put('transaction-fixture', { value: 0 });
+  const recovery = service.getContainerClient(container).getBlockBlobClient('restore-fixture.txt');
+  await recovery.upload('disposable restore fixture', 26);
+  await recovery.delete();
+  await recovery.undelete();
+  assert.equal((await recovery.downloadToBuffer()).toString(), 'disposable restore fixture');
   const secondStore = createDocumentStore(options);
   await Promise.all([
     store.transact('transaction-fixture', (a) => ({ value: a.value + 1 })),
@@ -139,6 +144,7 @@ try {
     passed: true,
     checks: [
       'real Azure Blob read/write',
+      'real soft-delete restore of a disposable blob',
       'optimistic concurrency across clients',
       'account isolation',
       'library and notes',
@@ -149,9 +155,9 @@ try {
     ],
     realGoogleLogin: false,
   };
-  await mkdir('.local-data/audit-2026-10-25', { recursive: true });
+  await mkdir('.local-data/audit-2026-10-27', { recursive: true });
   await writeFile(
-    '.local-data/audit-2026-10-25/cloud-accounts.json',
+    '.local-data/audit-2026-10-27/cloud-accounts.json',
     JSON.stringify(result, null, 2),
   );
   console.log(JSON.stringify(result));

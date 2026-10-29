@@ -101,6 +101,10 @@ export const EN = {
   'Přihlásit se': 'Sign in',
   'Přihlásit se přes Google': 'Sign in with Google',
   'Odhlásit se': 'Sign out',
+  'Odhlásit všechna zařízení': 'Sign out all devices',
+  'Pro smazání účtu se nejprve odhlas a znovu přihlas.':
+    'Sign out and sign in again before deleting your account.',
+  'Příliš mnoho změn. Zkus to za minutu.': 'Too many changes. Try again in a minute.',
   'Osobní účet': 'Personal account',
   'Účet Google': 'Google account',
   'Jen v prohlížeči': 'Only in this browser',

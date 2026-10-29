@@ -1,7 +1,8 @@
 import { json, readJsonBody, httpError, sendError } from './http.mjs';
-import { cookie, setCookie, createRateLimiter } from './security.mjs';
+import { cookie, setCookie, createRateLimiter, clientAddress } from './security.mjs';
 import { randomBytes } from 'node:crypto';
-import { parsePgn } from '../src/study/game.js';
+import { parseServerPgn } from './pgn-parser.mjs';
+import { createEngineBudget } from './engine-budget.mjs';
 import { reviewGame } from '../src/study/review.js';
 import { reviewProgressEncoder } from '../src/study/review-stream.js';
 
@@ -14,43 +15,34 @@ export function createPublicReviews({
   enabled = false,
   isOwner = () => false,
   budgetSeconds = 1800,
+  store,
 } = {}) {
   const sessions = new Map(),
     queue = [];
   const sessionAllowed = createRateLimiter({ limit: 40, windowMs: 3600000 });
   const ownerScope = {};
   const cacheScope = (req) => (isOwner(req) ? ownerScope : session(req));
-  let day = '',
-    used = 0;
-  const budget = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (today !== day) {
-      day = today;
-      used = 0;
-    }
-    return Math.max(0, budgetSeconds - used);
-  };
+  const budget = createEngineBudget({ store, limit: budgetSeconds });
+  const reviewAllowed = createRateLimiter({ limit: 20, windowMs: 60000 });
   const session = (req) => {
     const s = sessions.get(cookie(req, 'evala_session'));
     return s && s.expires > Date.now() ? s : null;
   };
   const error = (message, status = 429) => httpError(status, message);
-  function reserve(req, seconds, game = false) {
+  async function reserve(req, seconds, game = false) {
     if (isOwner(req)) return;
     const s = session(req);
     if (!enabled || !s) throw error('Obnov stránku a připoj se znovu.', 401);
-    budget();
+    const day = new Date().toISOString().slice(0, 10);
     if (s.day !== day) {
       s.day = day;
       s.games = 0;
       s.seconds = 0;
     }
     if (game && s.games >= 100) throw error('Dnešní limit je 100 partií pro jedno připojení.');
-    if (used + seconds > budgetSeconds)
-      throw error('Dnešní výpočetní kapacita je vyčerpaná. Zkus to zítra.');
-    used += seconds;
-    s.seconds += seconds;
     if (game) s.games++;
+    await budget.reserve(seconds);
+    s.seconds += seconds;
   }
   function pump() {
     for (const slot of slots) {
@@ -102,7 +94,7 @@ export function createPublicReviews({
       }
       if (!session(req)) {
         const now = Date.now();
-        if (!sessionAllowed(req.socket.remoteAddress)) {
+        if (!sessionAllowed(clientAddress(req))) {
           json(res, 429, { error: 'Příliš mnoho nových připojení. Zkus to později.' });
           return true;
         }
@@ -112,14 +104,14 @@ export function createPublicReviews({
           return true;
         }
         const id = randomBytes(24).toString('hex');
-        sessions.set(id, { expires: now + 8 * 3600000, games: 0, seconds: 0, day });
+        sessions.set(id, { expires: now + 8 * 3600000, games: 0, seconds: 0, day: '' });
         setCookie(req, res, 'evala_session', id, 28800, 'Strict');
       }
       json(res, 200, {
         ok: true,
         publicReports: true,
         maxGames: 100,
-        remainingSeconds: Math.floor(budget()),
+        remainingSeconds: Math.floor(await budget.remaining()),
         profiles: Object.keys(REPORT_PROFILES),
       });
       return true;
@@ -133,6 +125,7 @@ export function createPublicReviews({
       json(res, 405, { error: 'Use POST' });
       return true;
     }
+    if (!reviewAllowed(clientAddress(req))) throw error('Příliš mnoho rozborů. Zkus to za minutu.');
     const controller = new AbortController();
     let lease,
       sent = false;
@@ -141,17 +134,17 @@ export function createPublicReviews({
       if (!res.writableFinished) controller.abort();
     });
     const send = (value) => {
+      if (res.writableLength > 2_000_000) {
+        controller.abort();
+        res.destroy();
+        return;
+      }
       if (!res.destroyed && !res.writableEnded) res.write(JSON.stringify(value) + '\n');
     };
     let heartbeat;
     try {
-      const request = await readJsonBody(req, { limit: 300000, requireContentType: false });
-      let game;
-      try {
-        game = parsePgn(request.pgn);
-      } catch {
-        throw error('Neplatná partie PGN.', 400);
-      }
+      const request = await readJsonBody(req, { limit: 300000 });
+      const game = await parseServerPgn(request.pgn, { signal: controller.signal });
       if (!['1-0', '0-1', '1/2-1/2'].includes(game.headers.Result))
         throw error('Rozbor přijímá dokončené partie.', 400);
       const options = {
@@ -164,8 +157,8 @@ export function createPublicReviews({
       const estimate =
         (game.fens.length * options.time) / 1000 +
         (options.refineLimit * 4 * options.time) / 1000 +
-        (options.verifySacrifices ? 15 : 0);
-      reserve(req, estimate, true);
+        (options.verifySacrifices ? (18 * Math.max(1200, options.time * 2)) / 1000 : 0);
+      await reserve(req, estimate, true);
       res.writeHead(200, {
         'Content-Type': 'application/x-ndjson; charset=utf-8',
         'Cache-Control': 'no-store, no-transform',

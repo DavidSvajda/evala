@@ -55,13 +55,13 @@ test('shared web has no token prompt; anonymous computation requires an expiring
     );
     const invalid = await fetch(base + '/api/review-game', {
       method: 'POST',
-      headers: { Cookie: cookie },
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
       body: JSON.stringify({ pgn: 'not pgn' }),
     });
     assert.equal(invalid.status, 400);
     const huge = await fetch(base + '/api/review-game', {
       method: 'POST',
-      headers: { Cookie: cookie },
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
       body: 'x'.repeat(310000),
     });
     assert.equal(huge.status, 413);
@@ -86,7 +86,7 @@ test('public budget cannot be bypassed with a new session', async () => {
       const cookie = response.headers.get('set-cookie').split(';')[0];
       const result = await fetch(base + '/api/review-game', {
         method: 'POST',
-        headers: { Cookie: cookie },
+        headers: { Cookie: cookie, 'Content-Type': 'application/json' },
         body: JSON.stringify({ pgn, profile: 'balanced' }),
       });
       assert.equal(result.status, 429);

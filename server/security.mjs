@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 import { httpError } from './http.mjs';
 
 export function constantTimeEqual(a, b) {
@@ -11,6 +12,7 @@ export function constantTimeEqual(a, b) {
 export const loopbackHost = (host) =>
   /^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host || '');
 export const secureRequest = (req) =>
+  process.env.NODE_ENV === 'production' ||
   !!req.socket.encrypted ||
   !loopbackHost(req.headers.host) ||
   String(req.headers['x-forwarded-proto']).split(',')[0].trim() === 'https';
@@ -37,7 +39,66 @@ export function securityHeaders(req, res) {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+  );
   if (secureRequest(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+}
+
+// ACA appends the verified address on the RIGHT. Never trust a client's leftmost XFF.
+// Enable only inside ACA (its injected environment variable), or explicitly in tests.
+export function clientAddress(req, trustAzureIngress = !!process.env.CONTAINER_APP_NAME) {
+  if (trustAzureIngress) {
+    const last = String(req.headers['x-forwarded-for'] || '')
+      .split(',')
+      .at(-1)
+      .trim();
+    if (isIP(last)) return last;
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
+export function createRequestGuard({
+  perMinute = 600,
+  globalPerMinute = 6000,
+  activeLimit = 64,
+} = {}) {
+  const clientAllowed = createRateLimiter({ limit: perMinute, windowMs: 60000 });
+  const globalAllowed = createRateLimiter({ limit: globalPerMinute, windowMs: 60000, maxKeys: 1 });
+  const active = new Map();
+  let total = 0;
+  return (req, res, url) => {
+    if (!url.pathname.startsWith('/api/')) return;
+    const site = req.headers['sec-fetch-site'];
+    // CORS still handles explicit allowed origins, including authenticated extensions.
+    if ((site === 'cross-site' || site === 'same-site') && !req.headers.origin)
+      throw httpError(403, 'Cross-origin API request rejected.');
+    const key = clientAddress(req);
+    if (
+      !clientAllowed(key) ||
+      !globalAllowed('all') ||
+      total >= activeLimit ||
+      (active.get(key) || 0) >= 12
+    ) {
+      res.setHeader('Retry-After', '60');
+      throw httpError(429, 'Příliš mnoho požadavků. Zkus to za minutu.');
+    }
+    total++;
+    active.set(key, (active.get(key) || 0) + 1);
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      total--;
+      const left = active.get(key) - 1;
+      if (left) active.set(key, left);
+      else active.delete(key);
+    };
+    res.once('finish', release);
+    res.once('close', release);
+  };
 }
 
 export function allowOrigin(req, res, { origins, allowExtensionOrigins, token }) {

@@ -7,7 +7,13 @@ import { createPublicReviews } from './public-reviews.mjs';
 import { createAccounts } from './accounts.mjs';
 import { createAnalysisApi } from './analysis-api.mjs';
 import { createStaticFiles } from './static-files.mjs';
-import { allowOrigin, constantTimeEqual, securityHeaders } from './security.mjs';
+import {
+  allowOrigin,
+  constantTimeEqual,
+  securityHeaders,
+  createRequestGuard,
+} from './security.mjs';
+import { createDocumentStore } from './document-store.mjs';
 import { httpError, sendError } from './http.mjs';
 
 export function createAnalysisServer({
@@ -27,13 +33,20 @@ export function createAnalysisServer({
   }));
   const authorized = (req) =>
     !token || constantTimeEqual(req.headers.authorization || '', 'Bearer ' + token);
+  const store = accounts.store || createDocumentStore();
+  const guard = createRequestGuard();
   const reports = createPublicReviews({
+    store,
     slots,
     enabled: publicReports,
     isOwner: authorized,
     budgetSeconds: Math.max(1, Math.min(7200, publicBudgetSeconds || 1800)),
   });
-  const identity = createAccounts({ puzzlePath: resolve(root, 'data/puzzles.json'), ...accounts });
+  const identity = createAccounts({
+    puzzlePath: resolve(root, 'data/puzzles.json'),
+    ...accounts,
+    store,
+  });
   const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
   const staticFiles = createStaticFiles({ root, publicReports });
   const originsSet = new Set(origins);
@@ -56,6 +69,7 @@ export function createAnalysisServer({
     } catch {
       throw httpError(400, 'Bad URL');
     }
+    guard(req, res, url);
     if (await identity.handle(req, res, url)) return;
     if (await reports.handle(req, res, url)) return;
     if (await analyze(req, res, url)) return;
@@ -63,11 +77,18 @@ export function createAnalysisServer({
     await staticFiles(req, res, url);
   }
   // Node's HTTP callback does not consume rejected async functions.
-  const server = http.createServer((req, res) => {
-    handle(req, res).catch((error) => sendError(res, error));
-  });
+  const server = http.createServer(
+    { maxHeaderSize: 16384, connectionsCheckingInterval: 1000 },
+    (req, res) => {
+      handle(req, res).catch((error) => sendError(res, error));
+    },
+  );
   server.requestTimeout = 35000;
   server.headersTimeout = 10000;
+  server.timeout = 200000;
+  server.keepAliveTimeout = 5000;
+  server.maxRequestsPerSocket = 100;
+  server.maxConnections = 256;
   server.on('close', () => slots.forEach((s) => s.engine.dispose()));
   return server;
 }

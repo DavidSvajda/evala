@@ -11,8 +11,17 @@ const data = JSON.parse(await readFile(input, 'utf8')),
   rows = [],
   seen = new Set();
 for (const game of data.games || []) {
-  const source = JSON.stringify([game.headers?.Site, game.headers?.Link]).toLowerCase();
-  if (!source.includes(pool === 'chesscom' ? 'chess.com' : 'lichess.org')) continue;
+  const hosts = pool === 'chesscom' ? ['chess.com', 'www.chess.com'] : ['lichess.org'];
+  const matches = [game.headers?.Site, game.headers?.Link].some((value) => {
+    if (typeof value !== 'string') return false;
+    if (hosts.includes(value.trim().toLowerCase())) return true;
+    try {
+      return hosts.includes(new URL(value).hostname);
+    } catch {
+      return false;
+    }
+  });
+  if (!matches) continue;
   const clock = String(game.headers.TimeControl || '').match(/^(\d+)\+(\d+)$/);
   if (!clock) continue;
   const seconds = Number(clock[1]) + 40 * Number(clock[2]),

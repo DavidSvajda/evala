@@ -39,6 +39,8 @@ export function nodeWorker({ enginePath = process.env.STOCKFISH_PATH } = {}) {
     }
   });
   child.on('error', (error) => worker.onerror?.({ message: error.message }));
+  // Drain stderr so an engine warning cannot fill a pipe and deadlock the worker.
+  child.stderr.resume();
   child.on('exit', (code) => {
     if (!stopped) worker.onerror?.({ message: `Proces enginu skončil (${code}).` });
   });

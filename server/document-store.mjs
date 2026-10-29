@@ -63,6 +63,13 @@ export function createDocumentStore({
     if (blobs) {
       return blobs.getBlockBlobClient(filename(key)).upload(data, Buffer.byteLength(data), {
         blobHTTPHeaders: { blobContentType: 'application/json' },
+        tags: {
+          kind: key.startsWith('session:')
+            ? 'session'
+            : key.startsWith('login:')
+              ? 'login'
+              : 'data',
+        },
         conditions: etag ? { ifMatch: etag } : etag === null ? { ifNoneMatch: '*' } : undefined,
       });
     }

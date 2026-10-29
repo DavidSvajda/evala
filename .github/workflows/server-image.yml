@@ -13,6 +13,7 @@ on:
           - install
           - account
           - theme
+          - security
 permissions:
   contents: read
   packages: write
@@ -33,7 +34,7 @@ jobs:
           cache: npm
       - name: Install and build application
         run: |
-          npm ci
+          npm ci --ignore-scripts
           npm run build
       - name: Verify application and account isolation
         if: inputs.validation == 'full'
@@ -87,6 +88,14 @@ jobs:
       - name: Verify game accuracy display
         if: inputs.validation == 'accuracy'
         run: node tests/accuracy-smoke.mjs
+      - name: Verify security boundaries
+        if: inputs.validation == 'security'
+        run: |
+          npm run lint
+          npm run format:check
+          npm audit --audit-level=moderate
+          node --test tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/account-preferences.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
+          node tests/theme-locale-smoke.mjs
       - name: Verify board gestures
         if: inputs.validation == 'board'
         run: node tests/board-gestures-smoke.mjs
@@ -122,6 +131,19 @@ jobs:
             --data '{"pgn":"[Event \"Smoke\"]\n[White \"Guest\"]\n[Black \"Opponent\"]\n[Result \"0-1\"]\n\n1. f3 e5 2. g4 Qh4# 0-1","profile":"quick"}' \
             http://127.0.0.1:8080/api/review-game > review.ndjson
           node --input-type=module -e 'import fs from "node:fs";const game=fs.readFileSync("review.ndjson","utf8").trim().split("\n").map(JSON.parse).find(x=>x.type==="game");if(!game?.game.analysis.complete)throw Error("Public game review failed");console.log("Public session + complete native game review passed");'
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567
+        with:
+          version: v0.76.1
+      - name: Block vulnerable images and embedded secrets
+        run: |
+          trivy image --scanners vuln,secret --severity HIGH,CRITICAL --format json --output trivy-report.json "$IMAGE:$GITHUB_SHA"
+          node scripts/check-trivy.mjs trivy-report.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: container-security
+          path: trivy-report.json
+          retention-days: 14
       - name: Publish tested image
         run: |
           docker push "$IMAGE:$GITHUB_SHA"

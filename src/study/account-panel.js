@@ -82,11 +82,19 @@ export function createAccountPanel({
           'Přihlášení přes Google na tomto serveru zatím není dostupné. Knihovnu i trénink můžeš používat bez účtu.';
       return;
     }
-    root.innerHTML = `<section class="account-profile"><span class="profile-avatar">${esc(account.user.name.slice(0, 1))}</span><div><h2>${esc(account.user.name)}</h2><p>${esc(account.user.email)}</p><span class="provider-label">Účet Google</span></div><button id="logout-account" class="quiet-button">Odhlásit se</button></section><section class="account-library"><h2>Knihovna účtu</h2><p>${context.library().length} uložených partií. Rozbory a nastavení se načtou po přihlášení i na jiném zařízení.</p><div class="account-actions"><button id="import-guest-games" class="quiet-button">Převzít místní partie</button><button id="export-account" class="quiet-button">Exportovat moje data</button></div><p class="hint">Místní partie patří k režimu hosta v tomto prohlížeči. Do účtu se přenesou až tímto tlačítkem.</p></section><details class="danger-zone"><summary>Smazat účet a jeho data</summary><p>Účet a aktivní data se smažou. Obnovovací kopie zůstanou nejvýše 7 dní. Pro potvrzení napiš SMAZAT.</p><form id="delete-account-form"><input aria-label="Potvrzení smazání účtu" pattern="SMAZAT" required autocomplete="off"><button type="submit" class="quiet-button">Smazat účet</button></form></details>`;
+    root.innerHTML = `<section class="account-profile"><span class="profile-avatar">${esc(account.user.name.slice(0, 1))}</span><div><h2>${esc(account.user.name)}</h2><p>${esc(account.user.email)}</p><span class="provider-label">Účet Google</span></div><button id="logout-account" class="quiet-button">Odhlásit se</button></section><section class="account-library"><h2>Knihovna účtu</h2><p>${context.library().length} uložených partií. Rozbory a nastavení se načtou po přihlášení i na jiném zařízení.</p><div class="account-actions"><button id="import-guest-games" class="quiet-button">Převzít místní partie</button><button id="export-account" class="quiet-button">Exportovat moje data</button></div><p class="hint">Místní partie patří k režimu hosta v tomto prohlížeči. Do účtu se přenesou až tímto tlačítkem.</p></section><button id="logout-all-devices" class="quiet-button">Odhlásit všechna zařízení</button><details class="danger-zone"><summary>Smazat účet a jeho data</summary><p>Účet a aktivní data se smažou. Obnovovací kopie zůstanou nejvýše 7 dní. Pro potvrzení napiš SMAZAT.</p><form id="delete-account-form"><input aria-label="Potvrzení smazání účtu" pattern="SMAZAT" required autocomplete="off"><button type="submit" class="quiet-button">Smazat účet</button></form></details>`;
     $('#logout-account').onclick = async () => {
       try {
         if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.');
         await logoutAccount();
+      } catch (e) {
+        $('#account-error').textContent = e.message;
+      }
+    };
+    $('#logout-all-devices').onclick = async () => {
+      try {
+        if (context.busy()) throw new Error('Nejprve pozastav probíhající rozbor.');
+        await logoutAccount(true);
       } catch (e) {
         $('#account-error').textContent = e.message;
       }

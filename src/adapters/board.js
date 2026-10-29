@@ -9,7 +9,7 @@ import { Chess } from 'chess.js';
 const names = { pawn: 'p', knight: 'n', bishop: 'b', rook: 'r', queen: 'q', king: 'k' };
 
 export function findBoard(root = document) {
-  const selector = location.hostname.includes('chess.com')
+  const selector = ['chess.com', 'www.chess.com'].includes(location.hostname)
     ? 'wc-chess-board, chess-board, .board-layout-chessboard .board'
     : 'cg-board';
   return (
@@ -98,7 +98,7 @@ export function readSan(element) {
 }
 
 export function readMoves(root = document) {
-  const selectors = location.hostname.includes('chess.com')
+  const selectors = ['chess.com', 'www.chess.com'].includes(location.hostname)
     ? ['.vertical-move-list .node', '.move-list .node', '[data-ply].move-node', '.node[data-ply]']
     : ['.tview2 move', '.analyse__moves move', '.round__app .moves move', 'l4x kwdb'];
   for (const selector of selectors) {

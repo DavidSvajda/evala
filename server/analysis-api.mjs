@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 import { searchSettings } from '../src/study/uci.js';
 import { validPosition } from '../src/core/position.js';
 import { httpError, json, readJsonBody, sendError } from './http.mjs';
-import { createRateLimiter } from './security.mjs';
+import { createRateLimiter, clientAddress } from './security.mjs';
 
 function analysisRequest(input, owner) {
   if (!validPosition(input.fen)) throw httpError(400, 'Invalid FEN');
@@ -60,12 +60,17 @@ export function createAnalysisApi({ slots, authorized, reports, publicReports })
     const owner = authorized(req);
     if (!owner && (!publicReports || !reports.session(req)))
       throw httpError(401, 'Invalid token or session');
-    if (!allowed(req.socket.remoteAddress)) throw httpError(429, 'Too many requests');
+    if (!allowed(clientAddress(req))) throw httpError(429, 'Too many requests');
     const controller = new AbortController();
     let slot,
       sent = false;
     const timeout = setTimeout(() => controller.abort(), 30000);
     const send = (value) => {
+      if (res.writableLength > 2_000_000) {
+        controller.abort();
+        res.destroy();
+        return;
+      }
       if (!res.destroyed && !res.writableEnded) res.write(JSON.stringify(value) + '\n');
     };
     res.on('close', () => {
@@ -79,8 +84,8 @@ export function createAnalysisApi({ slots, authorized, reports, publicReports })
         res.setHeader('Retry-After', '2');
         throw httpError(429, 'Engine is busy. Retry shortly.');
       }
-      if (!owner) reports.reserve(req, request.settings.time / 1000);
       slot.busy = true;
+      if (!owner) await reports.reserve(req, request.settings.time / 1000);
       res.writeHead(200, {
         'Content-Type': 'application/x-ndjson; charset=utf-8',
         'Cache-Control': 'no-store, no-transform',
