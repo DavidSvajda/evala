@@ -24,7 +24,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Dependency installation is complete at build time. The runtime only executes
+# node; do not ship npm/corepack/yarn and their unused vulnerable dependencies.
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=native /engine /opt/stockfish
 # Preserve the complete official distribution, including corresponding source.
 COPY --from=native /download/stockfish.tar.gz /app/dist/engine/stockfish-19-native-distribution.tar.gz
