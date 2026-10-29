@@ -1,4 +1,24 @@
 export const EN = {
+  Trenér: 'Coach',
+  'Rozbor s trenérem': 'Guided review',
+  'Strana rozboru': 'Review side',
+  'Oba hráči': 'Both players',
+  'Předchozí moment': 'Previous moment',
+  'Další moment': 'Next moment',
+  'Co se změnilo': 'What changed',
+  'Přehrát lepší variantu': 'Play the better line',
+  'Ukázat odpověď': 'Show the reply',
+  'Podrobnosti pozice': 'Position details',
+  'Zpět k rozboru': 'Return to review',
+  'Procvičovat vlastní pozice': 'Practice your positions',
+  'Tento tah není mezi ověřenými variantami. Zkus jiný, nebo se vrať a prozkoumej ho enginem.':
+    'This move is not among the verified lines. Try another, or return and explore it with the engine.',
+  'Tato varianta ztrácí více hodnocení. Zkus jiný tah.':
+    'This line loses more evaluation. Try another move.',
+  'Dobré řešení. Ověřená alternativa zachovává hodnocení pozice.':
+    'Good solution. This verified alternative preserves the position’s evaluation.',
+  'Orientační výkon': 'Estimated performance',
+  'Experimentální odhad': 'Experimental estimate',
   'Hotové rozbory se použijí z knihovny.': 'Completed analyses will be reused from your library.',
   'čeká ve frontě': 'queued',
   'ověřuji kritické tahy': 'checking critical moves',

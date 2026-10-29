@@ -19,9 +19,59 @@
   color: var(--accent);
 }
 .analysis-panel[data-tab='summary'] [data-panel-section]:not([data-panel-section='summary']),
+.analysis-panel[data-tab='coach'] [data-panel-section]:not([data-panel-section='coach']),
 .analysis-panel[data-tab='moves'] [data-panel-section]:not([data-panel-section='moves']),
 .analysis-panel[data-tab='lines'] [data-panel-section]:not([data-panel-section='lines']) {
   display: none !important;
+}
+.coach-journey {
+  padding-top: 20px;
+}
+.coach-journey h2 {
+  font-size: 15px;
+}
+.coach-journey select {
+  max-width: 130px;
+}
+.coach-journey p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.coach-navigation {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.coach-navigation button {
+  flex: 1 1 110px;
+  min-height: 40px;
+}
+.analysis-tabs {
+  gap: 16px;
+}
+.gm-coach-card details {
+  font-size: 13px;
+}
+.analysis-panel[data-tab='coach'] {
+  display: flex;
+  flex-direction: column;
+}
+.analysis-panel[data-tab='coach'] .analysis-tabs {
+  order: -3;
+  margin-top: 0;
+}
+.analysis-panel[data-tab='coach'] .coach-journey {
+  order: -2;
+}
+.analysis-panel[data-tab='coach'] .move-feedback {
+  order: -1;
+}
+.analysis-panel[data-tab='coach'] .learning-notes {
+  margin-top: 20px;
+}
+.analysis-panel[data-tab='coach'] #move-explanation {
+  display: none;
 }
 #review-summary-empty {
   padding: 26px 0;

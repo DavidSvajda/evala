@@ -4,11 +4,14 @@ import { language } from '../i18n.js';
 export function summaryMarkup(selected, summary) {
   const number = (value) =>
     new Intl.NumberFormat(language() === 'en' ? 'en-GB' : 'cs-CZ').format(value);
-  return `<div class="summary-players">${['w', 'b']
+  return `<p><button id="start-guided-review" class="primary-button">${language() === 'en' ? 'Review with the coach' : 'Projít partii s trenérem'}</button></p><div class="summary-players">${[
+    'w',
+    'b',
+  ]
     .map((color) => {
       const s = summary[color],
         p = s.performance;
-      return `<section class="summary-player"><span class="summary-side"><i class="player-dot ${color === 'b' ? 'black' : ''}"></i>${color === 'w' ? 'Bílý' : 'Černý'}</span><strong class="summary-name">${esc(selected.headers[color === 'w' ? 'White' : 'Black'] || (color === 'w' ? 'Bílý' : 'Černý'))}</strong><span class="accuracy-value" title="Vážený a harmonický průměr podle veřejné metody Lichess">${s.accuracy === null ? '—' : s.accuracy.toFixed(1) + ' %'}</span><span class="summary-caption">${s.accuracyProvisional ? 'Předběžná přesnost' : 'Přesnost partie'}</span><div class="performance-estimate"><span>Odhad Elo v partii</span><strong>${p.value ? '≈ ' + number(p.value) : '—'}</strong><small>${p.value ? number(p.low) + '–' + number(p.high) : esc(p.reason)}</small></div></section>`;
+      return `<section class="summary-player"><span class="summary-side"><i class="player-dot ${color === 'b' ? 'black' : ''}"></i>${color === 'w' ? 'Bílý' : 'Černý'}</span><strong class="summary-name">${esc(selected.headers[color === 'w' ? 'White' : 'Black'] || (color === 'w' ? 'Bílý' : 'Černý'))}</strong><span class="accuracy-value" title="Vážený a harmonický průměr podle veřejné metody Lichess">${s.accuracy === null ? '—' : s.accuracy.toFixed(1) + ' %'}</span><span class="summary-caption">${s.accuracyProvisional ? 'Předběžná přesnost' : 'Přesnost partie'}</span><div class="performance-estimate"><span>Orientační výkon</span><strong>${p.value ? '≈ ' + number(p.value) : '—'}</strong><small>${p.value ? number(p.low) + '–' + number(p.high) : esc(p.reason)}</small><small>Experimentální odhad</small></div></section>`;
     })
     .join(
       '',

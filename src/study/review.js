@@ -223,11 +223,8 @@ export function normalizeReview(game) {
   return game;
 }
 
-const performanceCache = new WeakMap();
 export function estimateGamePerformance(game, color) {
   if (!game.analysis?.complete) return { value: null, reason: 'Nejprve dokonči rozbor.' };
-  const cached = performanceCache.get(game.analysis);
-  if (cached?.[color]) return cached[color];
   const rating = Number(game.headers[color === 'w' ? 'WhiteElo' : 'BlackElo']);
   if (!Number.isFinite(rating) || rating < 100 || rating > 3500)
     return { value: null, reason: 'V PGN chybí Elo hráče.' };
@@ -235,22 +232,33 @@ export function estimateGamePerformance(game, color) {
     seen = new Set();
   for (let i = 8; i < game.moves.length; i++) {
     const move = game.moves[i],
-      mark = game.analysis.moves[i],
-      before = game.analysis.positions[i];
+      before = game.analysis.positions?.[i],
+      after = game.analysis.positions?.[i + 1];
     if (
       move.color !== color ||
-      !mark ||
-      !Number.isFinite(mark.accuracy) ||
-      !before ||
-      before.depth < 12
+      ![before, after].every(
+        (p) =>
+          p &&
+          ['cp', 'mate'].includes(p.kind) &&
+          Number.isFinite(p.value) &&
+          (p.terminal || (Number.isFinite(p.depth) && p.depth >= 12)),
+      )
     )
       continue;
     const expected = expectedPercent(before);
-    if (expected < 2 || expected > 98 || new Chess(move.fenBefore).moves().length <= 1) continue;
+    let choices;
+    try {
+      choices = new Chess(move.fenBefore).moves().length;
+    } catch {
+      continue;
+    }
+    if (expected < 2 || expected > 98 || choices <= 1) continue;
     const position = move.fenBefore.split(' ').slice(0, 4).join(' ');
     if (seen.has(position)) continue;
     seen.add(position);
-    informative.push(mark);
+    // Recompute from the actual scores: old saved classification versions and
+    // refined positions must not silently change the meaning of the estimate.
+    informative.push(classifyMove(move, before, after));
   }
   let result;
   if (informative.length < 12)
@@ -276,11 +284,10 @@ export function estimateGamePerformance(game, color) {
       sample: informative.length,
       baseline: rating,
       quality,
-      method: 'evala-game-strength-v1',
+      method: 'evala-game-strength-v2',
       calibrated: false,
     };
   }
-  performanceCache.set(game.analysis, { ...cached, [color]: result });
   return result;
 }
 export function summarize(game) {
