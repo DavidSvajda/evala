@@ -1,6 +1,7 @@
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
 import { reviewMoments, legalContinuation, judgeRetry } from './coach-review.js';
+import { cleanLearning } from '../training/practice.js';
 import { escapeHtml as esc } from '../ui/dom.js';
 import { initLearning } from './learning-ui.js';
 import {
@@ -704,6 +705,7 @@ function renderPosition() {
       ? `${Math.ceil(ply / 2)}${ply % 2 ? '.' : '…'} ${selected.moves[ply - 1].san}`
       : 'Výchozí pozice';
   $('#return-game').hidden = !branch;
+  $('#save-variation').hidden = !branch;
   $('#first-move').disabled = branch ? branch.index === 0 : ply === 0;
   $('#previous-move').disabled = $('#first-move').disabled;
   $('#last-move').disabled = branch
@@ -1002,6 +1004,34 @@ $('#last-move').addEventListener('click', () =>
   branch ? step(branch.moves.length) : navigate(selected?.moves.length || 0),
 );
 $('#return-game').addEventListener('click', () => navigate(ply));
+$('#save-variation').addEventListener('click', async () => {
+  if (!selected || !branch) return;
+  const game = selected,
+    moves = branch.moves.map((m) => m.uci);
+  const data = cleanLearning(game.learning, game.moves);
+  if (!data.variations.some((v) => v.ply === ply && v.moves.join(' ') === moves.join(' '))) {
+    if (data.variations.length >= 20) {
+      error(
+        language() === 'en'
+          ? 'This game already has 20 saved variations. Delete one in My notes.'
+          : 'Partie již má 20 uložených variant. Některou smaž v poznámkách.',
+      );
+      return;
+    }
+    data.variations.push({ ply, moves });
+  }
+  game.learning = cleanLearning(data, game.moves);
+  try {
+    await saveGame(game, { syncPartial: true });
+    if (selected === game) {
+      learningUI?.invalidate();
+      $('#save-variation').textContent =
+        language() === 'en' ? 'Variation saved' : 'Varianta uložena';
+    }
+  } catch (e) {
+    error(e.message);
+  }
+});
 $('#flip-board').addEventListener('click', () => {
   flipped = !flipped;
   renderPosition();

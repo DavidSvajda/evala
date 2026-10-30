@@ -1,4 +1,6 @@
 export const EN = {
+  'Uložit variantu': 'Save variation',
+  'Varianta uložena': 'Variation saved',
   Trenér: 'Coach',
   'Rozbor s trenérem': 'Guided review',
   'Strana rozboru': 'Review side',
