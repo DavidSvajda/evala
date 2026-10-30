@@ -80,12 +80,28 @@ try {
   await page.locator('#coach-next').click();
   assert.match(await page.locator('#gm-coach-text').innerText(), /f3/);
   await page.locator('#coach-best').click();
+  await page.locator('#save-variation').click();
+  await page.waitForFunction(() =>
+    document.querySelector('#save-variation').textContent.includes('uložena'),
+  );
   assert.equal(await page.locator('#return-game').isVisible(), true);
   const scroll = await page.evaluate(() => window.scrollY);
   await page.keyboard.press('ArrowRight');
   assert.equal(await page.evaluate(() => window.scrollY), scroll);
   assert.match(await page.locator('#position-label').innerText(), /2\/3/);
   await page.locator('#return-game').click();
+  await page.locator('#position-notes-detail').evaluate((el) => {
+    el.open = true;
+  });
+  await page.locator('#mistake-cause').selectOption('calculation');
+  await page.locator('#save-position-note').click();
+  await page.waitForFunction(() =>
+    document.querySelector('#note-status').textContent.includes('uložena'),
+  );
+  await page.reload();
+  await page.locator('#analysis-coach-tab').click();
+  assert.equal(await page.locator('#mistake-cause').inputValue(), 'calculation');
+  assert.match(await page.locator('.learning-notes').innerText(), /Uložené varianty/);
   await page.locator('#coach-next').click();
   await page.locator('#gm-retry-btn').click();
   assert.equal(await page.locator('#gm-coach-card').isVisible(), false);

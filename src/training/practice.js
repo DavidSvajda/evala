@@ -20,6 +20,7 @@ export function cleanLearning(value, moves) {
       text: typeof n.text === 'string' ? n.text.slice(0, 1200) : '',
       critical: n.critical === true,
       plan: typeof n.plan === 'string' ? n.plan.slice(0, 800) : '',
+      cause: ['unseen', 'calculation', 'time', 'plan'].includes(n.cause) ? n.cause : '',
     };
   }
   const attempts = (Array.isArray(value?.attempts) ? value.attempts : [])
@@ -42,7 +43,83 @@ export function cleanLearning(value, moves) {
       steps: Math.min(40, Math.max(1, Number(a.steps) || 1)),
       result: a.result === 'success' ? 'success' : 'practice',
     }));
-  return { notes, attempts, selfAnalysis: value?.selfAnalysis === true };
+  const variations = [];
+  for (const v of (Array.isArray(value?.variations) ? value.variations : []).slice(0, 20)) {
+    if (!Number.isInteger(v?.ply) || v.ply < 0 || v.ply >= moves.length || !Array.isArray(v.moves))
+      continue;
+    try {
+      const chess = new Chess(moves[v.ply].fenBefore),
+        line = [];
+      for (const uci of v.moves.slice(0, 40)) {
+        if (typeof uci !== 'string' || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) break;
+        try {
+          chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+        } catch {
+          break;
+        }
+        line.push(uci);
+      }
+      if (line.length) variations.push({ ply: v.ply, moves: line });
+    } catch {
+      /* Invalid imported position cannot become a saved variation. */
+    }
+  }
+  return { notes, attempts, variations, selfAnalysis: value?.selfAnalysis === true };
+}
+
+// Exact repeated positions only. We do not infer causality or motif transfer.
+export function practiceFollowThrough(games, username) {
+  const date = (game) => {
+    const raw = game.headers.UTCDate || game.headers.Date || '';
+    if (!/^\d{4}\.\d{2}\.\d{2}$/.test(raw)) return null;
+    const stamp = Date.parse(raw.replaceAll('.', '-') + 'T00:00:00Z');
+    return Number.isFinite(stamp) ? stamp : null;
+  };
+  const rows = [];
+  const occurrences = new Map();
+  for (const game of games) {
+    const played = date(game),
+      own = ownColor(game, username),
+      seen = new Set();
+    if (!played || !own || !game.analysis?.complete) continue;
+    for (const [index, move] of game.moves.entries()) {
+      const mark = game.analysis.moves?.[index];
+      if (move.color !== own || !Number.isFinite(mark?.loss) || !(mark.depth >= 12)) continue;
+      const key = timeClass(game.headers.TimeControl) + ':' + positionKey(move.fenBefore);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const list = occurrences.get(key) || [];
+      list.push({ game, ply: index + 1, loss: mark.loss, played });
+      occurrences.set(key, list);
+    }
+  }
+  for (const source of games) {
+    const color = ownColor(source, username);
+    if (!color) continue;
+    const attempts = new Map();
+    for (const a of source.learning?.attempts || []) {
+      if (!Number.isFinite(a.at) || !source.moves[a.ply] || source.moves[a.ply].color !== color)
+        continue;
+      const old = attempts.get(a.ply);
+      if (!old || a.at < old.at) attempts.set(a.ply, a);
+    }
+    for (const a of attempts.values()) {
+      const key =
+        timeClass(source.headers.TimeControl) + ':' + positionKey(source.moves[a.ply].fenBefore);
+      // Exclude the same day: PGNs without exact timestamps cannot prove order.
+      const examples = (occurrences.get(key) || []).filter(
+        (e) => e.game.id !== source.id && e.played > a.at,
+      );
+      rows.push({
+        source,
+        ply: a.ply,
+        at: a.at,
+        examples,
+        errors: examples.filter((e) => e.loss >= 10).length,
+      });
+    }
+  }
+  return rows.sort((a, b) => b.at - a.at).slice(0, 12);
 }
 export function practicePositions(games, username, mode = 'mixed') {
   const pool = [],

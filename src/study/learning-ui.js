@@ -9,6 +9,7 @@ import {
   practicePositions,
   openingRepertoire,
   weaknessEvidence,
+  practiceFollowThrough,
   ownScore,
 } from '../training/practice.js';
 import { scoreText } from '../core/evaluation.js';
@@ -77,6 +78,68 @@ export function initLearning(context) {
       notesOpen = !!$('#position-notes-detail')?.open;
     panel.innerHTML = `<div class="section-title"><h2>${t('Moje poznámky', 'My notes')}</h2><button id="self-analysis" class="quiet-button" ${!game ? 'disabled' : ''}>${game?.learning?.selfAnalysis ? t('Ukázat engine', 'Reveal engine') : t('Nejdřív bez enginu', 'Analyse without engine')}</button></div><details id="position-notes-detail"><summary>${t('Poznámky, porovnání a sdílení', 'Notes, comparison and sharing')}</summary><p class="hint">${t('Označ důležitou pozici a zapiš, co jsi počítal. Poznámka patří k právě zobrazené pozici v partii.', 'Mark a critical position and record your calculation. The note belongs to the displayed game position.')}</p><label class="check-row"><span>${t('Důležitá pozice', 'Critical position')}</span><input id="critical-note" type="checkbox" ${n.critical ? 'checked' : ''} ${!game ? 'disabled' : ''}></label><label for="position-note">${t('Co jsem počítal', 'My calculation')}</label><textarea id="position-note" rows="2" maxlength="1200" ${!game ? 'disabled' : ''}>${esc(n.text || '')}</textarea><label for="position-plan">${t('Plán v této pozici', 'My plan in this position')}</label><textarea id="position-plan" rows="2" maxlength="800" ${!game ? 'disabled' : ''}>${esc(n.plan || '')}</textarea><div class="setup-actions"><button id="save-position-note" class="quiet-button" ${!game ? 'disabled' : ''}>${t('Uložit poznámku', 'Save note')}</button><button id="next-my-critical" class="text-button" ${!game ? 'disabled' : ''}>${t('Další označená', 'Next marked position')}</button><button id="compare-move" class="text-button" ${!game || !ply || game.learning?.selfAnalysis ? 'disabled' : ''}>${t('Proč ne můj tah?', 'Why not my move?')}</button></div><p id="note-status" class="inline-status" role="status"></p><div id="move-comparison"></div><details><summary>${t('Probrat partii s trenérem', 'Discuss with a coach')}</summary><p class="hint">${t('Vyber poznámky k odeslání. PGN obsahuje tahy a jména hráčů; soukromá poznámka k celé partii se nepřidá. Soubor odešleš sám.', 'Select the notes to share. The PGN contains moves and player names; your private game note is excluded. You send the file yourself.')}</p><div id="share-notes"></div><button id="share-pgn" class="quiet-button" ${!game ? 'disabled' : ''}>${t('Stáhnout vybrané poznámky', 'Download selected notes')}</button><label class="file-button" for="review-notes-file">${t('Přijmout poznámky z PGN', 'Import feedback PGN')}<input id="review-notes-file" type="file" accept=".pgn" ${!game ? 'disabled' : ''}></label></details></details>`;
     $('#position-notes-detail').open = notesOpen;
+    const reflection = document.createElement('label');
+    reflection.textContent = t(
+      'Proč jsem chyboval? Moje hodnocení',
+      'Why did I miss it? My assessment',
+    );
+    const causes = document.createElement('select');
+    causes.id = 'mistake-cause';
+    causes.disabled = !game;
+    for (const [value, cs, en] of [
+      ['', 'Nevybráno', 'Not selected'],
+      ['unseen', 'Nevšiml jsem si hrozby', 'Missed the threat'],
+      ['calculation', 'Chyba ve výpočtu', 'Calculation error'],
+      ['time', 'Časová tíseň', 'Time pressure'],
+      ['plan', 'Nevěděl jsem, jaký zvolit plán', 'Unsure of a plan'],
+    ]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = t(cs, en);
+      causes.append(option);
+    }
+    causes.value = n.cause || '';
+    reflection.append(causes);
+    $('#position-note').before(reflection);
+    const saved = document.createElement('details');
+    saved.innerHTML = `<summary>${t('Uložené varianty', 'Saved variations')}</summary>`;
+    const lines = game?.learning?.variations || [];
+    if (!lines.length) {
+      const p = document.createElement('p');
+      p.textContent = t(
+        'Zahraj vlastní variantu na šachovnici a zvol Uložit variantu.',
+        'Play a variation on the board and choose Save variation.',
+      );
+      saved.append(p);
+    }
+    lines.forEach((v, index) => {
+      const row = document.createElement('div');
+      row.className = 'setup-actions';
+      const play = document.createElement('button');
+      play.className = 'text-button';
+      play.textContent = `${Math.floor(v.ply / 2) + 1}${v.ply % 2 ? '…' : '.'} ${lineToSan(game.moves[v.ply].fenBefore, v.moves, 40)}`;
+      play.onclick = () => context.playLine(v.ply, v.moves);
+      const remove = document.createElement('button');
+      remove.className = 'quiet-button';
+      remove.textContent = t('Smazat', 'Delete');
+      remove.onclick = async () => {
+        const previous = [...game.learning.variations];
+        remove.disabled = true;
+        try {
+          game.learning.variations.splice(index, 1);
+          await context.save(game);
+          noteKey = '';
+          refresh();
+        } catch (e) {
+          game.learning.variations = previous;
+          remove.disabled = false;
+          $('#note-status').textContent = e.message;
+        }
+      };
+      row.append(play, remove);
+      saved.append(row);
+    });
+    panel.append(saved);
     if (game)
       for (const [index, note] of Object.entries(game.learning?.notes || {})) {
         if (!note.text && !note.plan && !note.critical) continue;
@@ -96,6 +159,7 @@ export function initLearning(context) {
         return;
       }
       learning(game).notes[ply] = {
+        cause: $('#mistake-cause').value,
         text: $('#position-note').value,
         plan: $('#position-plan').value,
         critical: $('#critical-note').checked,
@@ -111,6 +175,7 @@ export function initLearning(context) {
     $('#save-position-note').onclick = async () => {
       const data = learning(game);
       data.notes[ply] = {
+        cause: $('#mistake-cause').value,
         text: $('#position-note').value,
         plan: $('#position-plan').value,
         critical: $('#critical-note').checked,
@@ -120,6 +185,7 @@ export function initLearning(context) {
       await context.save(game);
       if (context.selected() !== game || context.ply() !== ply) return;
       const draft = {
+        cause: $('#mistake-cause').value,
         text: $('#position-note').value,
         plan: $('#position-plan').value,
         critical: $('#critical-note').checked,
@@ -133,6 +199,7 @@ export function initLearning(context) {
       refresh();
       context.render();
       if (changed) {
+        $('#mistake-cause').value = draft.cause;
         $('#position-note').value = draft.text;
         $('#position-plan').value = draft.plan;
         $('#critical-note').checked = draft.critical;
@@ -391,6 +458,40 @@ export function initLearning(context) {
       }
       root.append(section);
     }
+    const follow = document.createElement('section');
+    follow.innerHTML = `<h3>${t('Po tréninku v dalších partiích', 'After practice, in later games')}</h3><p class="hint">${t('Pouze stejné pozice ve stejném tempu, v rozebraných partiích z pozdějších dnů. Nejde o důkaz účinku tréninku.', 'Exact positions in the same time-control category, in analysed games from later days. This does not prove a training effect.')}</p>`;
+    const rows = practiceFollowThrough(context.library(), context.username());
+    if (!rows.length)
+      follow.append(
+        document.createTextNode(
+          t(
+            'Nejprve dokonči trénink vlastní pozice.',
+            'Complete a personal-position exercise first.',
+          ),
+        ),
+      );
+    for (const row of rows) {
+      const item = document.createElement('div');
+      item.className = 'evidence-row';
+      const source = document.createElement('button');
+      source.className = 'text-button';
+      source.textContent = `${t('Procvičená pozice', 'Practised position')} · ${Math.floor(row.ply / 2) + 1}`;
+      source.onclick = () => context.openGame(row.source, row.ply);
+      const result = document.createElement('span');
+      result.textContent = row.examples.length
+        ? `${row.errors}/${row.examples.length} ${t('opakování s chybou', 'recurrences with an error')}`
+        : t('Zatím bez dalšího výskytu', 'No later occurrence yet');
+      item.append(source, result);
+      for (const ex of row.examples.slice(0, 3)) {
+        const button = document.createElement('button');
+        button.className = 'text-button';
+        button.textContent = `${ex.game.headers.UTCDate || ex.game.headers.Date} · ${ex.game.moves[ex.ply - 1].san}`;
+        button.onclick = () => context.openGame(ex.game, ex.ply);
+        item.append(button);
+      }
+      follow.append(item);
+    }
+    root.append(follow);
   }
   let practiceBoard;
   async function startDrill() {
@@ -619,5 +720,11 @@ export function initLearning(context) {
   });
   window.addEventListener('pagehide', cancel);
   refresh();
-  return { refresh };
+  return {
+    refresh,
+    invalidate: () => {
+      noteKey = '';
+      refresh();
+    },
+  };
 }
