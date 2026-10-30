@@ -7,6 +7,34 @@ import { json, readJsonBody, httpError } from './http.mjs';
 const fail = (message, status = 400) => httpError(status, message);
 const body = (req, limit = 2_500_000) => readJsonBody(req, { limit });
 export async function handleLibrary(req, res, url, { store, s, account, mutateAccount }) {
+  if (url.pathname === '/api/account/library/delete' && req.method === 'POST') {
+    const { ids } = await body(req, 20000);
+    if (
+      !Array.isArray(ids) ||
+      !ids.length ||
+      ids.length > 200 ||
+      ids.some((id) => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(id))
+    )
+      throw fail('Neplatný výběr partií.');
+    const unique = [...new Set(ids)],
+      keys = [];
+    await mutateAccount((a) => {
+      keys.length = 0;
+      for (const id of unique) {
+        if (a.games[id]) keys.push(`game:${s.userId}:${id}:${a.games[id].version}`);
+        delete a.games[id];
+      }
+      return a;
+    });
+    // Index removal is atomic. An unavailable blob cleanup must not resurrect games.
+    const cleanup = await Promise.allSettled(keys.map((key) => store.remove(key)));
+    json(res, 200, {
+      ok: true,
+      deleted: unique,
+      cleanupPending: cleanup.some((r) => r.status === 'rejected'),
+    });
+    return true;
+  }
   if (url.pathname === '/api/account/library' && req.method === 'GET') {
     json(res, 200, { games: Object.values(account.games) });
     return true;

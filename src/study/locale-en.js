@@ -1,4 +1,13 @@
 export const EN = {
+  'Řazení partií': 'Sort games',
+  Nejnovější: 'Newest first',
+  Nejstarší: 'Oldest first',
+  Nejdelší: 'Longest first',
+  Nejkratší: 'Shortest first',
+  'Označit zobrazené': 'Select shown',
+  'Zrušit výběr': 'Clear selection',
+  'Smazat vybrané': 'Delete selected',
+  'Smazat celou knihovnu': 'Delete entire library',
   'Uložit variantu': 'Save variation',
   'Varianta uložena': 'Variation saved',
   Trenér: 'Coach',

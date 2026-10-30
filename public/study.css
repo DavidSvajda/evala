@@ -814,14 +814,43 @@ progress::-webkit-progress-value {
   grid-column: 1;
   margin-bottom: 18px;
 }
+.library-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.library-select-row > input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--accent);
+}
+.library-select-row .game-item {
+  flex: 1;
+  min-width: 0;
+}
+.library-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.library-actions #library-delete-all {
+  color: var(--negative, #a94739);
+}
 .library-filters {
+  flex-wrap: wrap;
   grid-column: 1;
   display: flex;
   gap: 12px;
   margin-bottom: 14px;
 }
 .library-filters input {
-  flex: 1;
+  flex: 1 1 220px;
+  min-width: 0;
 }
 .library-filters select {
   max-width: 170px;

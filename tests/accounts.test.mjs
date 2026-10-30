@@ -15,6 +15,51 @@ const keys = await generateKeyPair('RS256');
 const pgn =
   '[Event "Account test"]\n[White "Friend"]\n[Black "Opponent"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1';
 const bank = JSON.parse(await readFile('public/data/puzzles.json', 'utf8')).puzzles;
+test('bulk deletion is authenticated, bounded and isolated to the current account', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'evala-bulk-')),
+    running = await serverFor(directory);
+  try {
+    const alice = await login(running.base, 'bulk-alice'),
+      bob = await login(running.base, 'bulk-bob');
+    const id = parsePgn(pgn).id,
+      url = running.base + '/api/account/library';
+    for (const user of [alice, bob])
+      assert.equal(
+        (
+          await fetch(url + '/' + id, {
+            method: 'PUT',
+            headers: user.headers,
+            body: JSON.stringify({ pgn }),
+          })
+        ).status,
+        200,
+      );
+    assert.equal(
+      (
+        await fetch(url + '/delete', {
+          method: 'POST',
+          headers: alice.headers,
+          body: JSON.stringify({ ids: Array(201).fill(id) }),
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await fetch(url + '/delete', {
+          method: 'POST',
+          headers: alice.headers,
+          body: JSON.stringify({ ids: [id] }),
+        })
+      ).status,
+      200,
+    );
+    assert.equal((await (await fetch(url, { headers: alice.headers })).json()).games.length, 0);
+    assert.equal((await (await fetch(url, { headers: bob.headers })).json()).games.length, 1);
+  } finally {
+    await running.close();
+  }
+});
 async function serverFor(directory, { store = createDocumentStore({ directory }) } = {}) {
   const server = createAnalysisServer({
     token: 'owner-test',
