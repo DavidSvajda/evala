@@ -1579,6 +1579,28 @@ body[data-piece-style='letters'] .piece-letter {
   background: var(--paper);
   border-radius: 4px;
 }
+dialog.promotion:not([open]) {
+  display: none;
+}
+dialog.promotion[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
+  border: 1px solid var(--line);
+  padding: 20px;
+  color: var(--ink);
+}
+dialog.promotion::backdrop {
+  background: #0008;
+}
+dialog.promotion button {
+  min-height: 44px;
+  min-width: 44px;
+}
 .study-settings {
   position: fixed;
   top: 64px;

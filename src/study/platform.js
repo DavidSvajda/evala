@@ -191,6 +191,7 @@ export async function initPlatform(context) {
       if (move.promotions.length) {
         current.promotion = move;
         $('#puzzle-promotion').hidden = false;
+        $('#puzzle-promotion').showModal();
         return;
       }
       submitMove(move.from + move.to);
@@ -353,6 +354,7 @@ export async function initPlatform(context) {
     $('#next-puzzle').hidden = true;
     $('#puzzle-error').textContent = '';
     $('#rating-change').textContent = '';
+    $('#puzzle-promotion').close();
     $('#puzzle-promotion').hidden = true;
     $('#puzzle-time').textContent = '';
     $('#puzzle-number').textContent = '';
@@ -628,14 +630,23 @@ export async function initPlatform(context) {
     }
   }
   $('#puzzle-promotion').onclick = (event) => {
-    const piece = event.target.dataset.piece;
+    if (event.target.closest('[data-cancel-promotion]')) {
+      $('#puzzle-promotion').close();
+      return;
+    }
+    const piece = event.target.closest('[data-piece]')?.dataset.piece;
     if (piece && current?.promotion) {
       const move = current.promotion;
       current.promotion = null;
+      $('#puzzle-promotion').close();
       $('#puzzle-promotion').hidden = true;
       submitMove(move.from + move.to + piece);
     }
   };
+  $('#puzzle-promotion').addEventListener('close', () => {
+    if (current) current.promotion = null;
+    $('#puzzle-promotion').hidden = true;
+  });
   $('#toggle-sidebar').onclick = () =>
     updatePreferences({ sidebarCollapsed: !preferences.sidebarCollapsed });
   $('#toggle-language').onclick = () =>
