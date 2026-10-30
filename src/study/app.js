@@ -20,6 +20,7 @@ import {
   loadLibrary,
   saveGame,
   removeGame,
+  removeGames,
   getPreferences,
   savePreferences,
   setStorageIdentity,
@@ -410,18 +411,43 @@ async function store(game, options) {
     error(e.message);
   }
 }
-function renderLibrary() {
-  $('#library-count').textContent = library.length;
-  const fragment = document.createDocumentFragment();
+const librarySelection = new Set();
+let bulkDeleting = false;
+function visibleLibrary() {
   const query = $('#library-search').value.trim().toLowerCase(),
     filter = $('#library-filter').value;
-  const visible = library.filter(
+  const result = library.filter(
     (game) =>
-      (!query || [...Object.values(game.headers)].join(' ').toLowerCase().includes(query)) &&
+      (!query || Object.values(game.headers).join(' ').toLowerCase().includes(query)) &&
       (filter === 'all' ||
         (filter === 'analyzed' && game.analysis?.complete) ||
         (filter === 'pending' && !game.analysis?.complete)),
   );
+  const sort = $('#library-sort').value;
+  const stamp = (g) =>
+    [g.headers.UTCDate, g.headers.Date]
+      .map((v) =>
+        /^\d{4}\.\d{2}\.\d{2}$/.test(v || '') ? Date.parse(v.replaceAll('.', '-')) : NaN,
+      )
+      .find(Number.isFinite) ||
+    g.createdAt ||
+    0;
+  return result.sort((a, b) =>
+    sort === 'longest'
+      ? b.moves.length - a.moves.length
+      : sort === 'shortest'
+        ? a.moves.length - b.moves.length
+        : sort === 'oldest'
+          ? stamp(a) - stamp(b)
+          : stamp(b) - stamp(a),
+  );
+}
+function renderLibrary() {
+  $('#library-count').textContent = library.length;
+  const fragment = document.createDocumentFragment();
+  for (const id of librarySelection)
+    if (!library.some((g) => g.id === id)) librarySelection.delete(id);
+  const visible = visibleLibrary();
   for (const game of visible) {
     const button = document.createElement('button');
     button.className = 'game-item';
@@ -431,7 +457,23 @@ function renderLibrary() {
       setView('review');
       selectGame(game);
     });
-    fragment.append(button);
+    const row = document.createElement('div');
+    row.className = 'library-select-row';
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = librarySelection.has(game.id);
+    check.disabled = bulkDeleting;
+    check.setAttribute(
+      'aria-label',
+      `${language() === 'en' ? 'Select' : 'Vybrat'} ${game.headers.White} – ${game.headers.Black}`,
+    );
+    check.onchange = () => {
+      if (check.checked) librarySelection.add(game.id);
+      else librarySelection.delete(game.id);
+      renderLibrarySelection();
+    };
+    row.append(check, button);
+    fragment.append(row);
   }
   if (!visible.length) {
     const empty = document.createElement('div');
@@ -440,10 +482,78 @@ function renderLibrary() {
     fragment.append(empty);
   }
   $('#game-list').replaceChildren(fragment);
+  renderLibrarySelection();
   document.dispatchEvent(new CustomEvent('evala:library'));
 }
 $('#library-search').addEventListener('input', renderLibrary);
 $('#library-filter').addEventListener('change', renderLibrary);
+$('#library-sort').addEventListener('change', renderLibrary);
+function renderLibrarySelection() {
+  $('#library-delete-selected').disabled = !librarySelection.size || bulkDeleting;
+  $('#library-delete-all').disabled = !library.length || bulkDeleting;
+  $('#library-selection-status').textContent =
+    language() === 'en'
+      ? `${librarySelection.size} selected · ${visibleLibrary().length} shown`
+      : `${librarySelection.size} vybráno · ${visibleLibrary().length} zobrazeno`;
+}
+$('#library-select-visible').onclick = () => {
+  visibleLibrary().forEach((g) => librarySelection.add(g.id));
+  renderLibrary();
+};
+$('#library-clear-selection').onclick = () => {
+  librarySelection.clear();
+  renderLibrary();
+};
+async function bulkDelete(all) {
+  if (bulkDeleting) return;
+  if (job || playerReport?.running) {
+    error(
+      language() === 'en'
+        ? 'Pause the analysis before deleting games.'
+        : 'Před mazáním pozastav rozbor.',
+    );
+    return;
+  }
+  const ids = all ? library.map((g) => g.id) : [...librarySelection];
+  if (!ids.length) return;
+  const en = language() === 'en';
+  if (
+    !window.confirm(
+      en
+        ? `Delete ${ids.length} games${all ? ' — your entire library' : ''}, including their analyses and notes?${account.user ? ' They will also be removed from your account.' : ''} This cannot be undone.`
+        : `Smazat ${ids.length} partií${all ? ' — celou knihovnu' : ''} včetně rozborů a poznámek?${account.user ? ' Smažou se i z tvého účtu.' : ''} Tuto akci nelze vrátit.`,
+    )
+  )
+    return;
+  const identity = account.user?.id || 'guest';
+  bulkDeleting = true;
+  $('.library').inert = true;
+  try {
+    await removeGames(ids);
+    if ((account.user?.id || 'guest') !== identity) return;
+    inspectController?.abort();
+    inspectResult = null;
+    library = library.filter((g) => !ids.includes(g.id));
+    librarySelection.clear();
+    if (selected && ids.includes(selected.id)) {
+      selected = library[0] || null;
+      branch = null;
+      retryTarget = null;
+      ply = 0;
+    }
+    renderLibrary();
+    renderAll();
+  } catch (e) {
+    error(e.message);
+  } finally {
+    bulkDeleting = false;
+    $('.library').inert = false;
+    renderLibrary();
+  }
+}
+$('#library-delete-selected').onclick = () => bulkDelete(false);
+$('#library-delete-all').onclick = () => bulkDelete(true);
+document.addEventListener('evala:language', renderLibrary);
 function selectGame(game) {
   inspectController?.abort();
   inspectResult = null;

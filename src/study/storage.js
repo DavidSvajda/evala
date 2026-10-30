@@ -176,6 +176,24 @@ export async function removeGame(id) {
     tx.onerror = () => reject(tx.error);
   });
 }
+export async function removeGames(ids) {
+  const active = owner,
+    activeGeneration = generation,
+    db = await database();
+  const unique = [...new Set(ids)];
+  if (!unique.length || unique.length > 200) throw new Error('Invalid game selection.');
+  await Promise.allSettled([...saves.values()]);
+  if (owner !== active || generation !== activeGeneration) throw new Error('Account changed.');
+  if (account.user)
+    await accountRequest('library/delete', { method: 'POST', body: { ids: unique } });
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('games', 'readwrite');
+    for (const id of unique) tx.objectStore('games').delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
 export async function clearAccountCache() {
   if (owner === 'guest') return;
   const db = await database();

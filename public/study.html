@@ -227,7 +227,19 @@
                 ><option value="all">Všechny partie</option
                 ><option value="analyzed">Rozebrané</option
                 ><option value="pending">Bez rozboru</option></select
+              ><select id="library-sort" aria-label="Řazení partií"
+                ><option value="newest">Nejnovější</option
+                ><option value="oldest">Nejstarší</option
+                ><option value="longest">Nejdelší</option
+                ><option value="shortest">Nejkratší</option></select
               ></div
+            ><div class="library-actions"
+              ><button id="library-select-visible" class="quiet-button">Označit zobrazené</button
+              ><button id="library-clear-selection" class="text-button">Zrušit výběr</button
+              ><button id="library-delete-selected" class="quiet-button" disabled
+                >Smazat vybrané</button
+              ><button id="library-delete-all" class="text-button">Smazat celou knihovnu</button
+              ><span id="library-selection-status" role="status" data-i18n-ignore></span></div
             ><details id="import-panel" open
               ><summary>Importovat partie</summary
               ><form id="username-form"
