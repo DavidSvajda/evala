@@ -76,7 +76,7 @@ jobs:
           for i in {1..20}; do curl --fail --silent http://127.0.0.1:8080/api/health && break; sleep 1; done
           docker run --rm --network host -v "$PWD/zap-report:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238 zap-baseline.py -t http://127.0.0.1:8080/study.html -m 1 -T 4 -I -J report.json -r report.html -z '-config spider.maxDepth=2 -config spider.maxChildren=10'
           node scripts/check-zap.mjs zap-report/report.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: zap-baseline
