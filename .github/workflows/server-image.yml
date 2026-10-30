@@ -107,6 +107,7 @@ jobs:
           npm run format:check
           npm audit --audit-level=moderate
           node --test tests/training-follow-through.test.mjs tests/learning.test.mjs tests/coach-review.test.mjs tests/gm-coach.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
+          node tests/promotion-smoke.mjs
           node tests/bulk-library-smoke.mjs
           node tests/coach-review-smoke.mjs
           node tests/theme-locale-smoke.mjs

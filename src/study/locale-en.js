@@ -1,4 +1,5 @@
 export const EN = {
+  Zrušit: 'Cancel',
   'Řazení partií': 'Sort games',
   Nejnovější: 'Newest first',
   Nejstarší: 'Oldest first',

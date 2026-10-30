@@ -710,10 +710,15 @@
               ><div class="puzzle-board-footer"
                 ><span id="puzzle-number"></span><strong id="puzzle-level"></strong
                 ><span id="puzzle-time">0:00</span></div
-              ><div id="puzzle-promotion" class="promotion" hidden
+              ><dialog
+                id="puzzle-promotion"
+                class="promotion"
+                aria-label="Proměnit pěšce na:"
+                hidden
                 ><span>Proměnit na</span><button data-piece="q">Dámu</button
                 ><button data-piece="r">Věž</button><button data-piece="b">Střelce</button
-                ><button data-piece="n">Jezdce</button></div
+                ><button data-piece="n">Jezdce</button
+                ><button data-cancel-promotion>Zrušit</button></dialog
               ></section
             >
             <aside class="puzzle-panel"
