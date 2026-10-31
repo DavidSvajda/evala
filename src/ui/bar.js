@@ -23,6 +23,15 @@ export class EvalBar {
     this.shadow.querySelector('.toggle').addEventListener('click', onToggle);
     this.gear.addEventListener('click', () => this.open(this.popover.hidden));
     this.shadow.querySelector('.close').addEventListener('click', () => this.open(false));
+    this.arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    this.arrow.setAttribute('viewBox', '0 0 800 800');
+    this.arrow.setAttribute('aria-hidden', 'true');
+    this.arrow.classList.add('human-arrow');
+    this.arrow.innerHTML =
+      '<defs><marker id="tip" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3" markerHeight="3" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#e8af3d"/></marker></defs><line stroke="#e8af3d" stroke-width="18" stroke-linecap="round" marker-end="url(#tip)"/>';
+    this.arrow.hidden = true;
+    this.arrow.setAttribute('hidden', '');
+    this.shadow.append(this.arrow);
     this.onOutside = (event) => {
       if (!event.composedPath().includes(this.host)) this.open(false, false);
     };
@@ -62,6 +71,9 @@ export class EvalBar {
 
   place(board, flipped) {
     const r = board.getBoundingClientRect();
+    this.boardRect = r;
+    this.boardFlipped = flipped;
+    this.renderArrow(this.arrowMove);
     const width = this.settings.width;
     let left =
       this.settings.side === 'left'
@@ -96,6 +108,7 @@ export class EvalBar {
   }
 
   setState(state, message) {
+    if (['paused', 'error', 'waiting'].includes(state)) this.renderArrow(null);
     this.rail.dataset.state = state;
     const labels = {
       waiting: 'Čekám na úplnou pozici',
@@ -111,6 +124,7 @@ export class EvalBar {
   }
 
   renderScore(score) {
+    if (!score) this.renderArrow(null);
     this.score = score;
     const percent = whitePercent(score);
     this.rail.dataset.empty = String(!score);
@@ -141,14 +155,47 @@ export class EvalBar {
   }
 
   hide() {
+    this.renderArrow(null);
     this.rail.hidden = true;
     this.open(false, false);
   }
 
   renderHuman(data) {
+    this.renderArrow(data.move);
     this.shadow.querySelector('.stats').textContent =
       `Maia ${data.elo}: ${data.move}${data.sacrifice ? ' · nabídka materiálu' : ''} · lokálně`;
     this.rail.title = `Lidský návrh: ${data.move} · hodnocení baru: Stockfish Lite`;
+  }
+
+  renderArrow(move) {
+    this.arrowMove = move;
+    const r = this.boardRect;
+    this.arrow.hidden =
+      !r ||
+      !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move || '') ||
+      r.bottom < 0 ||
+      r.top > innerHeight;
+    this.arrow.toggleAttribute('hidden', this.arrow.hidden);
+    if (this.arrow.hidden) return;
+    Object.assign(this.arrow.style, {
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
+      height: `${r.height}px`,
+    });
+    const point = (square) => {
+      let x = square.charCodeAt(0) - 97,
+        y = 8 - Number(square[1]);
+      if (this.boardFlipped) {
+        x = 7 - x;
+        y = 7 - y;
+      }
+      return [x * 100 + 50, y * 100 + 50];
+    };
+    const [x1, y1] = point(move.slice(0, 2)),
+      [x2, y2] = point(move.slice(2, 4));
+    const line = this.arrow.querySelector('line');
+    for (const [key, value] of Object.entries({ x1, y1, x2, y2 })) line.setAttribute(key, value);
   }
 
   dispose() {

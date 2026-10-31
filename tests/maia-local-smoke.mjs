@@ -63,6 +63,7 @@ try {
     { timeout: 45000 },
   );
   assert.equal(remote.length, 0);
+  assert.equal(await page.locator('evala-bar .human-arrow').isVisible(), true);
   console.log(
     'PASS real MV3 Maia inference, legal Black move, local-only requests, attacking bar integration',
   );
