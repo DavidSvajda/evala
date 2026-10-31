@@ -79,6 +79,11 @@ try {
     await page.locator('#toggle-sidebar').click();
     await page.waitForTimeout(250);
     console.log(route, JSON.stringify(sizes));
+    assert.equal(
+      await page.locator('#app-error').textContent(),
+      '',
+      'empty library must not show a restoration error',
+    );
     if (route === 'analysis')
       await page.screenshot({ path: 'test-results/board-larger-analysis.png' });
   }
