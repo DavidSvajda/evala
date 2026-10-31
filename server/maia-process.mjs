@@ -19,7 +19,12 @@ export class MaiaProcess {
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
-          ...process.env,
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT,
+          TEMP: process.env.TEMP,
+          TMP: process.env.TMP,
+          PYTHONNOUSERSITE: '1',
+          PYTHONUTF8: '1',
           MAIA_MODEL: this.model,
           OMP_NUM_THREADS: '1',
           MKL_NUM_THREADS: '1',
