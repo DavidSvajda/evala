@@ -145,6 +145,12 @@ export class EvalBar {
     this.open(false, false);
   }
 
+  renderHuman(data) {
+    this.shadow.querySelector('.stats').textContent =
+      `Maia ${data.elo}: ${data.move}${data.sacrifice ? ' · nabídka materiálu' : ''} · lokálně`;
+    this.rail.title = `Lidský návrh: ${data.move} · hodnocení baru: Stockfish Lite`;
+  }
+
   dispose() {
     document.removeEventListener('pointerdown', this.onOutside);
     this.host.removeEventListener('keydown', this.onKey);

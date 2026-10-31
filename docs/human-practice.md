@@ -26,3 +26,7 @@ Install the pinned upstream source into a Python 3.12 CPU environment, download 
 ## Verification
 
 Tests cover illegal histories, rating/style bounds, required session, legal replies, material-offer preference versus excessive evaluation loss, both player sides/styles, draft restoration, save-to-review and responsive CS/EN UI. Browser tests isolate inference with fixtures; the release container additionally runs real pinned Maia inference for both styles before image publication and vulnerability scanning.
+
+## Offline Chrome extension
+
+Select Maia-3 in the extension engine selector. Maia-3 5M runs in a dedicated module worker through ONNX Runtime Web 1.24.3 WASM, one CPU thread, no network inference. Rating and natural/attacking settings are persisted. The numeric bar remains Stockfish Lite; the human move is displayed in the status panel. A standalone FEN pads history with the current position, as upstream does when history is unavailable. The ONNX export script decomposes RMSNorm into equivalent arithmetic. Model SHA256: `dd6ad82a106106d74ca18ece93fb7af856b709e859ed15297b6a4d164e472a4d`. Source weights and license remain those of Maia-3, not a newly trained proprietary model.

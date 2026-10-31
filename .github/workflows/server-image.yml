@@ -115,10 +115,10 @@ jobs:
           node tests/coach-review-smoke.mjs
           node tests/theme-locale-smoke.mjs
       - name: Verify packaged extension and local model switching
-        if: inputs.validation == 'extension'
+        if: inputs.validation == 'extension' || inputs.validation == 'human'
         run: |
           node scripts/package-bar.mjs
-          EVALA_EXTENSION_DIR=dist-bar node tests/extension.mjs
+          EVALA_EXTENSION_DIR=dist-bar node tests/maia-local-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR

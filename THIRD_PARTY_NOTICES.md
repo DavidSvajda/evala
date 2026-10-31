@@ -18,3 +18,5 @@ Upstream: https://github.com/official-stockfish/Stockfish/releases/tag/sf_19
 
 The native server image also provides the corresponding stockfish.js port source at `/engine/stockfish-js-source.tar.gz` for its optional browser engine files.
 
+
+ONNX Runtime Web 1.24.3 (Microsoft), MIT, engine/ONNX-LICENSE.txt. Maia-3 5M browser model is exported from the pinned upstream weights documented in docs/human-practice.md; corresponding Maia source and model card are in human-source/.

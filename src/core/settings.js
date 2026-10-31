@@ -11,6 +11,8 @@ export const DEFAULTS = Object.freeze({
   pauseHidden: true,
   backend: 'local',
   engine: 'lite',
+  humanElo: 1400,
+  humanStyle: 'natural',
   serverUrl: '',
   serverVersion: 0,
 });
@@ -26,12 +28,15 @@ export function sanitizeSettings(input = {}) {
     ['hash', 16, 256],
     ['width', 26, 48],
     ['gap', 4, 48],
+    ['humanElo', 800, 2400],
   ]) {
     if (Number.isFinite(input[key]))
       settings[key] = Math.max(min, Math.min(max, Math.round(input[key])));
   }
   if (input.side === 'right') settings.side = 'right';
   if (input.engine === 'full') settings.engine = 'full';
+  if (input.engine === 'maia') settings.engine = 'maia';
+  if (input.humanStyle === 'attacking') settings.humanStyle = 'attacking';
   if (input.backend === 'server' && typeof input.serverUrl === 'string') {
     try {
       const url = new URL(input.serverUrl);

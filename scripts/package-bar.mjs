@@ -36,6 +36,7 @@ for (const path of [
   'study.css',
   'LICENSE',
   'THIRD_PARTY_NOTICES.md',
+  'human-source',
   'icons',
   'fonts',
   'pieces',
@@ -47,6 +48,11 @@ for (const path of [
   'stockfish-19-lite-single.wasm',
   'stockfish-19-single.js',
   'stockfish-19-single.wasm',
+  'maia-worker.js',
+  'maia3-5m.onnx',
+  'ort-wasm-simd-threaded.mjs',
+  'ort-wasm-simd-threaded.wasm',
+  'ONNX-LICENSE.txt',
   'COPYING.txt',
   'UPSTREAM-README.md',
 ]) {
@@ -96,7 +102,8 @@ await writeFile(
 4. Obnov již otevřené stránky Chess.com nebo Lichess.
 5. Nastavení a zkušební desku otevřeš přes ikonu rozšíření.
 
-Výpočet běží lokálně přes Stockfish 19 Lite nebo Full NNUE. Není potřeba Node.js ani server.
+Výpočet běží lokálně přes Stockfish 19 Lite / Full NNUE nebo Maia-3 5M.
+Pro lidský engine vyber Maia-3, úroveň a styl. Lidský tah je ve stavu, číselný bar počítá Stockfish Lite. Není potřeba Node.js ani server.
 V nastavení vyber engine a profil Úsporný / Vyvážený / Důkladný.
 Lite se načítá rychleji; Full používá větší síť a potřebuje více paměti.
 Hloubka i čas jsou horní limity; nejde o nastavení Elo tréninkového soupeře.

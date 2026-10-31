@@ -66,6 +66,12 @@ await build({
   format: 'esm',
   loader: { '.css': 'text' },
 });
+await build({
+  ...common,
+  entryPoints: ['src/engine/maia-worker.js'],
+  outfile: resolve(out, 'engine/maia-worker.js'),
+  format: 'esm',
+});
 await cp(resolve(out, 'frame.js'), resolve(out, 'engine-frame.js'));
 await rm(resolve(out, 'frame.js'));
 await cp(resolve(root, 'src/ui/theme.css'), resolve(out, 'theme.css'));
@@ -85,6 +91,10 @@ await cp(
   resolve(root, 'node_modules/stockfish/README.md'),
   resolve(out, 'engine/UPSTREAM-README.md'),
 );
+for (const file of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm'])
+  await cp(resolve(root, 'node_modules/onnxruntime-web/dist', file), resolve(out, 'engine', file));
+await cp(resolve(root, 'vendor-source/maia3-5m.onnx'), resolve(out, 'engine/maia3-5m.onnx'));
+await cp(resolve(root, 'vendor-source/ONNX-LICENSE.txt'), resolve(out, 'engine/ONNX-LICENSE.txt'));
 await cp(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
 await mkdir(resolve(out, 'human-source'), { recursive: true });
 await cp(

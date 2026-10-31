@@ -15,7 +15,7 @@ export function chooseHumanMove(chess, prediction, analysis, style) {
     ranked = [];
   for (const candidate of prediction.candidates || []) {
     const move = legal.get(candidate.move),
-      line = lines.find((l) => l.pv?.[0] === candidate.move);
+      line = lines.find((l) => l?.pv?.[0] === candidate.move);
     if (
       !move ||
       !line ||
