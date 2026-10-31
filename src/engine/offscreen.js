@@ -1,4 +1,4 @@
-import { EngineController } from './controller.js';
+import { HumanController } from './human-controller.js';
 import { RemoteController } from './remote-controller.js';
 
 const sessions = new Map();
@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   const mode =
     message.settings?.backend === 'server'
       ? `server:${message.settings.serverUrl}:${message.settings.serverVersion || 0}`
-      : `local:${message.settings?.engine === 'full' ? 'full' : 'lite'}`;
+      : `local:${message.settings?.engine || 'lite'}`;
   if (
     session &&
     (session.token !== token || (message.type === 'analyze' && session.mode !== mode))
@@ -45,7 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         mode,
         engine: mode.startsWith('server:')
           ? new RemoteController(message.settings.serverUrl, message.serverToken || '', emit)
-          : new EngineController(
+          : new HumanController(
               (variant) =>
                 new Worker(
                   chrome.runtime.getURL(
@@ -55,6 +55,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
                   ),
                 ),
               emit,
+              (path) => chrome.runtime.getURL(path),
             ),
       };
     } catch {

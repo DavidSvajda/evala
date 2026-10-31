@@ -39,7 +39,16 @@ for (const [path, data] of Object.entries(files))
 web['index.html'] = files['study.html'];
 await writeFile(`release/evala-${version}-web.zip`, zipSync(web, { level: 6 }));
 const source = {};
-for (const dir of ['src', 'server', 'scripts', 'tests', 'public', '.github'])
+for (const dir of [
+  'src',
+  'server',
+  'scripts',
+  'tests',
+  'public',
+  '.github',
+  'vendor-source',
+  'docs',
+])
   for (const path of await filesIn(dir))
     source[path.replaceAll('\\', '/')] = new Uint8Array(await readFile(path));
 for (const path of [

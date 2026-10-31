@@ -1507,6 +1507,10 @@ const reloadLibrary = async ({ resume = false } = {}) => {
   renderAll();
 };
 learningUI = initLearning({
+  importGame: async (pgn) => {
+    await addPgn(pgn);
+    setView('review');
+  },
   selected: () => selected,
   ply: () => ply,
   library: () => library,

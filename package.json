@@ -1,6 +1,6 @@
 {
   "name": "evala",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "private": true,
   "type": "module",
   "description": "Local Stockfish evaluation bar for Chess.com and Lichess",
@@ -27,6 +27,7 @@
     "@azure/storage-blob": "^12.34.0",
     "chess.js": "1.4.0",
     "jose": "^6.2.13",
+    "onnxruntime-web": "1.24.3",
     "stockfish": "19.0.1"
   },
   "devDependencies": {

@@ -14,6 +14,7 @@ import {
   createRequestGuard,
 } from './security.mjs';
 import { createDocumentStore } from './document-store.mjs';
+import { createHumanOpponent } from './human-opponent.mjs';
 import { httpError, sendError } from './http.mjs';
 
 export function createAnalysisServer({
@@ -25,6 +26,7 @@ export function createAnalysisServer({
   publicBudgetSeconds = Number(process.env.PUBLIC_ENGINE_SECONDS || 1800),
   root = resolve('dist'),
   accounts = {},
+  human = {},
 } = {}) {
   const limit = Math.max(1, Math.min(4, Math.floor(concurrency) || 1));
   const slots = Array.from({ length: limit }, () => ({
@@ -48,6 +50,7 @@ export function createAnalysisServer({
     store,
   });
   const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
+  const opponent = createHumanOpponent({ reports, isOwner: authorized, ...human });
   const staticFiles = createStaticFiles({ root, publicReports });
   const originsSet = new Set(origins);
   async function handle(req, res) {
@@ -73,6 +76,7 @@ export function createAnalysisServer({
     if (await identity.handle(req, res, url)) return;
     if (await reports.handle(req, res, url)) return;
     if (await analyze(req, res, url)) return;
+    if (await opponent.handle(req, res, url)) return;
     if (url.pathname.startsWith('/api/')) throw httpError(404, 'Not found');
     await staticFiles(req, res, url);
   }
@@ -89,7 +93,10 @@ export function createAnalysisServer({
   server.keepAliveTimeout = 5000;
   server.maxRequestsPerSocket = 100;
   server.maxConnections = 256;
-  server.on('close', () => slots.forEach((s) => s.engine.dispose()));
+  server.on('close', () => {
+    slots.forEach((s) => s.engine.dispose());
+    opponent.dispose();
+  });
   return server;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

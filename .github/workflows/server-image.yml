@@ -16,6 +16,7 @@ on:
           - security
           - review
           - extension
+          - human
 permissions:
   contents: read
   packages: write
@@ -102,21 +103,22 @@ jobs:
         if: inputs.validation == 'board'
         run: node tests/board-gestures-smoke.mjs
       - name: Verify guided review and release security
-        if: inputs.validation == 'review' || inputs.validation == 'extension'
+        if: inputs.validation == 'review' || inputs.validation == 'extension' || inputs.validation == 'human'
         run: |
           npm run lint
           npm run format:check
           npm audit --audit-level=moderate
-          node --test tests/core.test.mjs tests/training-follow-through.test.mjs tests/learning.test.mjs tests/coach-review.test.mjs tests/gm-coach.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
+          node --test tests/human-opponent.test.mjs tests/core.test.mjs tests/training-follow-through.test.mjs tests/learning.test.mjs tests/coach-review.test.mjs tests/gm-coach.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
+          node tests/human-play-smoke.mjs
           node tests/promotion-smoke.mjs
           node tests/bulk-library-smoke.mjs
           node tests/coach-review-smoke.mjs
           node tests/theme-locale-smoke.mjs
       - name: Verify packaged extension and local model switching
-        if: inputs.validation == 'extension'
+        if: inputs.validation == 'extension' || inputs.validation == 'human'
         run: |
           node scripts/package-bar.mjs
-          EVALA_EXTENSION_DIR=dist-bar node tests/extension.mjs
+          EVALA_EXTENSION_DIR=dist-bar node tests/maia-local-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR
@@ -131,8 +133,8 @@ jobs:
           set -euo pipefail
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
-          docker run -d --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" -e PUBLIC_REPORTS=true "$IMAGE:$GITHUB_SHA"
-          trap 'docker rm -f evala-smoke >/dev/null' EXIT
+          docker run -d --memory=4g --cpus=2 --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" -e PUBLIC_REPORTS=true -e MAIA_DEBUG=true "$IMAGE:$GITHUB_SHA"
+          trap 'docker logs evala-smoke; docker rm -f evala-smoke >/dev/null' EXIT
           for i in {1..30}; do
             if curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health >/dev/null; then break; fi
             sleep 1
@@ -149,6 +151,14 @@ jobs:
             --data '{"pgn":"[Event \"Smoke\"]\n[White \"Guest\"]\n[Black \"Opponent\"]\n[Result \"0-1\"]\n\n1. f3 e5 2. g4 Qh4# 0-1","profile":"quick"}' \
             http://127.0.0.1:8080/api/review-game > review.ndjson
           node --input-type=module -e 'import fs from "node:fs";const game=fs.readFileSync("review.ndjson","utf8").trim().split("\n").map(JSON.parse).find(x=>x.type==="game");if(!game?.game.analysis.complete)throw Error("Public game review failed");console.log("Public session + complete native game review passed");'
+          for style in natural attacking; do
+            curl --fail --silent --max-time 35 --cookie cookies.txt --header 'Content-Type: application/json' \
+              --data "{\"initialFen\":\"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\",\"moves\":[],\"elo\":1400,\"style\":\"$style\"}" \
+              http://127.0.0.1:8080/api/opponent/move > human.json
+            node --input-type=module -e 'import fs from "node:fs";import {Chess} from "chess.js";const result=JSON.parse(fs.readFileSync("human.json","utf8"));if(result.model!=="Maia-3 5M")throw Error("Wrong human model");const m=result.move;new Chess().move({from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]});console.log("Real Maia CPU response passed");'
+          done
+          curl --fail --silent http://127.0.0.1:8080/human-source/maia3-source.tar.gz -o maia-source.tar.gz
+          test -s maia-source.tar.gz
       - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567
         with:
           version: v0.76.1

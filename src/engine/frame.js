@@ -1,4 +1,4 @@
-import { EngineController } from './controller.js';
+import { HumanController } from './human-controller.js';
 
 const token = location.hash.slice(1);
 let parentOrigin = null;
@@ -10,7 +10,7 @@ const send = (message) => {
   if (parentOrigin)
     parent.postMessage({ channel: 'evala-engine', token, ...message }, parentOrigin);
 };
-const engine = new EngineController(
+const engine = new HumanController(
   (variant) =>
     new Worker(
       new URL(
@@ -21,6 +21,7 @@ const engine = new EngineController(
       ),
     ),
   send,
+  (path) => new URL(path, location.href).href,
 );
 
 window.addEventListener('message', (event) => {

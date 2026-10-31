@@ -13,6 +13,7 @@ import {
   ownScore,
 } from '../training/practice.js';
 import { scoreText } from '../core/evaluation.js';
+import { createHumanPlay } from './human-play.js';
 
 const $ = (s) => document.querySelector(s);
 const t = (cs, en) => (language() === 'en' ? en : cs);
@@ -27,6 +28,8 @@ function download(text, name) {
 }
 
 export function initLearning(context) {
+  const human = createHumanPlay(context);
+  let workshopTab = 'drills';
   const panel = document.createElement('section');
   panel.id = 'learning-notes';
   panel.className = 'learning-notes';
@@ -356,6 +359,67 @@ export function initLearning(context) {
     renderFamilies();
     renderRepertoire();
     renderEvidence();
+    const drills = document.createElement('div');
+    drills.id = 'workshop-drills';
+    const heading = root.firstElementChild;
+    while (heading.nextSibling) drills.append(heading.nextSibling);
+    root.append(drills);
+    const tabs = document.createElement('div');
+    tabs.className = 'analysis-tabs';
+    tabs.setAttribute('role', 'tablist');
+    tabs.innerHTML = `<button role="tab" id="workshop-drills-tab">${t('Z mých partií', 'From my games')}</button><button role="tab" id="workshop-human-tab">${t('Hrát s Maiou', 'Play Maia')}</button>`;
+    heading.after(tabs);
+    const humanRoot = document.createElement('section');
+    humanRoot.id = 'human-play';
+    humanRoot.setAttribute('role', 'tabpanel');
+    humanRoot.setAttribute('aria-labelledby', 'workshop-human-tab');
+    drills.setAttribute('role', 'tabpanel');
+    drills.setAttribute('aria-labelledby', 'workshop-drills-tab');
+    root.append(humanRoot);
+    const choose = (tab) => {
+      workshopTab = tab;
+      heading.querySelector('p').textContent =
+        tab === 'human'
+          ? t(
+              'Tréninkový soupeř a rozbor vlastní partie.',
+              'A practice opponent and review of your game.',
+            )
+          : t(
+              'Rozhodování z vlastních partií. Bez tréninkového Elo.',
+              'Decisions from your own games. No puzzle rating at stake.',
+            );
+      cancel();
+      human.cancel();
+      drills.hidden = tab !== 'drills';
+      humanRoot.hidden = tab !== 'human';
+      tabs
+        .querySelector('#workshop-drills-tab')
+        .setAttribute('aria-selected', String(tab === 'drills'));
+      tabs
+        .querySelector('#workshop-human-tab')
+        .setAttribute('aria-selected', String(tab === 'human'));
+      if (tab === 'human') human.mount(humanRoot);
+      tabs.querySelectorAll('[role=tab]').forEach((button) => {
+        button.tabIndex = button.getAttribute('aria-selected') === 'true' ? 0 : -1;
+      });
+    };
+    tabs.querySelector('#workshop-drills-tab').onclick = () => choose('drills');
+    tabs.querySelector('#workshop-human-tab').onclick = () => choose('human');
+    tabs.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      choose(
+        event.key === 'Home'
+          ? 'drills'
+          : event.key === 'End'
+            ? 'human'
+            : workshopTab === 'human'
+              ? 'drills'
+              : 'human',
+      );
+      tabs.querySelector('[aria-selected=true]').focus();
+    });
+    choose(workshopTab);
   }
   function renderFamilies() {
     const root = $('#practice-families');
@@ -700,7 +764,10 @@ export function initLearning(context) {
   }
   document.addEventListener('evala:page', (e) => {
     if (e.detail === 'practice') renderWorkshop();
-    else cancel();
+    else {
+      cancel();
+      human.cancel();
+    }
   });
   document.addEventListener('evala:identity', () => {
     cancel();
@@ -709,9 +776,10 @@ export function initLearning(context) {
     noteKey = '';
     comparison = false;
     $('#practice-root').replaceChildren();
+    if (document.body.dataset.page === 'practice') renderWorkshop();
   });
   document.addEventListener('evala:library', () => {
-    if (document.body.dataset.page === 'practice') renderWorkshop();
+    if (document.body.dataset.page === 'practice' && workshopTab !== 'human') renderWorkshop();
   });
   document.addEventListener('evala:language', () => {
     noteKey = '';

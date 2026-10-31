@@ -82,6 +82,8 @@ export async function mount({ demo = false } = {}) {
       previous.time !== next.time ||
       previous.hash !== next.hash ||
       previous.engine !== next.engine ||
+      previous.humanElo !== next.humanElo ||
+      previous.humanStyle !== next.humanStyle ||
       previous.backend !== next.backend ||
       previous.serverUrl !== next.serverUrl ||
       previous.serverVersion !== next.serverVersion
@@ -149,7 +151,7 @@ export async function mount({ demo = false } = {}) {
       return;
     }
     lastFen = position.fen;
-    const key = `${lastFen}|${settings.engine}|${settings.depth}|${settings.time}|${settings.hash}|${settings.backend}|${settings.serverUrl}|${settings.serverVersion}`;
+    const key = `${lastFen}|${settings.engine}|${settings.humanElo}|${settings.humanStyle}|${settings.depth}|${settings.time}|${settings.hash}|${settings.backend}|${settings.serverUrl}|${settings.serverVersion}`;
     if (!connected || searchKey === key) return;
     searchKey = key;
     requestId++;
@@ -168,6 +170,7 @@ export async function mount({ demo = false } = {}) {
     if (data.id !== requestId || isPaused()) return;
     if (data.type === 'searching') setState('searching');
     if (data.type === 'evaluation') view.renderScore(data.score);
+    if (data.type === 'human') view.renderHuman(data);
     if (data.type === 'done') setState('done');
     if (data.type === 'error') {
       view.renderScore(null);

@@ -190,3 +190,72 @@ body[data-self-analysis='true'] #inspect-status {
   content: ' •';
   color: var(--accent);
 }
+
+#human-play {
+  padding-top: 24px;
+}
+#human-play .practice-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+#human-play select {
+  min-height: 40px;
+  max-width: 240px;
+}
+#human-play .human-moves {
+  line-height: 1.8;
+  max-height: 220px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+#human-status {
+  min-height: 26px;
+  margin: 16px 0;
+}
+#human-play .setup-actions {
+  flex-wrap: wrap;
+}
+#human-board {
+  max-width: 640px;
+}
+#human-play aside h2 {
+  font-size: 18px;
+}
+
+#human-setup > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-weight: 600;
+}
+#human-name {
+  font-size: 18px;
+  margin: 16px 0 0;
+}
+#human-setup .practice-controls {
+  margin-top: 16px;
+}
+@media (min-width: 701px) {
+  #human-board {
+    max-width: min(640px, calc(100svh - 340px));
+  }
+}
+@media (max-width: 700px) {
+  #human-play .practice-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    gap: 12px;
+  }
+  #human-play select {
+    max-width: 100%;
+    width: 100%;
+  }
+  #human-play .practice-controls label {
+    min-width: 0;
+  }
+  #human-play .practice-controls > .primary-button {
+    grid-column: 1/-1;
+  }
+}

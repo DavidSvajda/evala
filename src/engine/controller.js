@@ -81,7 +81,8 @@ export class EngineController {
       return;
     }
     this.worker.postMessage(`setoption name Hash value ${settings.hash}`);
-    this.worker.postMessage('setoption name MultiPV value 1');
+    this.lines = [];
+    this.worker.postMessage(`setoption name MultiPV value ${settings.engine === 'maia' ? 5 : 1}`);
     this.worker.postMessage(`position fen ${fen}`);
     this.worker.postMessage(`go depth ${settings.depth} movetime ${settings.time}`);
     this.searchTimer = setTimeout(
@@ -110,13 +111,21 @@ export class EngineController {
     if (line.startsWith('bestmove')) {
       clearTimeout(this.searchTimer);
       clearTimeout(this.stopTimer);
-      if (this.active && !this.stopping) this.emit({ type: 'done', id: this.active.id });
+      if (this.active && !this.stopping)
+        this.emit({ type: 'done', id: this.active.id, lines: this.lines });
       this.active = null;
       this.stopping = false;
       this.runPending();
       return;
     }
     if (this.active && !this.stopping) {
+      const pv = Number(line.match(/\bmultipv (\d+)/)?.[1] || 1);
+      const parsed = parseInfo(
+        line.replace(/\bmultipv \d+/, 'multipv 1'),
+        this.active.fen.split(' ')[1],
+      );
+      if (parsed && !parsed.bound)
+        this.lines[pv - 1] = { ...parsed, pv: (line.split(' pv ')[1] || '').trim().split(/\s+/) };
       const score = parseInfo(line, this.active.fen.split(' ')[1]);
       if (score && !score.bound) this.emit({ type: 'evaluation', id: this.active.id, score });
     }
