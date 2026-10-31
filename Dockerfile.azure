@@ -52,6 +52,7 @@ COPY --from=maia /usr/local/lib/python3.12 /usr/local/lib/python3.12
 COPY --from=maia /opt/maia/venv /opt/maia/venv
 COPY --from=maia /opt/maia/model.pt /opt/maia/model.pt
 RUN ln -s /usr/local/bin/python3.12 /usr/local/bin/python3 \
+    && ln -s /usr/local/bin/python3.12 /usr/local/bin/python \
     && rm -rf /usr/local/lib/python3.12/site-packages/pip* /usr/local/lib/python3.12/site-packages/setuptools* /usr/local/lib/python3.12/site-packages/pkg_resources /usr/local/lib/python3.12/ensurepip \
     && ldconfig
 # Preserve the complete official distribution, including corresponding source.
