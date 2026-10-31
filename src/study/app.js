@@ -1453,7 +1453,7 @@ try {
     library.find((g) => g.id === sessionStorage.getItem('evala-current-game')) ||
     library[0] ||
     null;
-  if (resume?.gameId === selected?.id) {
+  if (resume && resume.gameId === selected?.id) {
     ply = Math.min(resume.ply, selected.moves.length);
     flipped = resume.flipped;
   }
