@@ -1544,8 +1544,9 @@ learningUI = initLearning({
 await initPlatform({
   library: () => library,
   username: () => options.lastUsername || '',
-  openGame: (game) => {
+  openGame: (game, ply) => {
     selectGame(game);
+    if (Number.isInteger(ply)) navigate(ply);
     focusBoard();
   },
   busy: () => !!job || !!playerReport?.running,

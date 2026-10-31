@@ -1,33 +1,56 @@
 import { choosePuzzle, personalPuzzles } from './logic.js';
+import { FOCUS, localDay, trainingJourney } from './journey.js';
 
 export function createLesson(
   bank,
   games,
   username,
   training,
-  { day = new Date().toISOString().slice(0, 10), goal = 'balanced' } = {},
+  { day = localDay(), goal = 'balanced', focusKey } = {},
 ) {
-  const own = personalPuzzles(games, username).slice(0, goal === 'tactics' ? 1 : 3),
-    ids = own.map((p) => p.id);
+  const priorities = trainingJourney(games, username, training).priorities;
+  const focus = priorities.find((p) => p.key === focusKey) || priorities[0];
+  const related = new Set(focus?.examples.map((e) => 'own-' + e.gameId + '-' + e.ply) || []);
+  const allOwn = personalPuzzles(games, username);
+  const own = focus ? allOwn.filter((p) => related.has(p.id)) : allOwn;
+  const ids = [],
+    positions = new Set();
+  const add = (p) => {
+    const key = p.fen.split(' ').slice(0, 4).join(' ');
+    if (ids.length >= 6 || ids.includes(p.id) || positions.has(key)) return;
+    ids.push(p.id);
+    positions.add(key);
+  };
   const weak = Object.entries(training.themeStats)
     .filter(([, s]) => s.attempted >= 3)
     .sort((a, b) => a[1].solved / a[1].attempted - b[1].solved / b[1].attempted)[0]?.[0];
-  const theme = weak || own[0]?.themes[0] || 'all';
-  const due = bank
+  const theme = FOCUS[focus?.key]?.theme || weak || own[0]?.themes[0] || 'all';
+  const due = [...allOwn, ...bank]
     .filter((p) => training.history[p.id]?.dueAt <= Date.now())
+    .sort((a, b) => training.history[a.id].dueAt - training.history[b.id].dueAt)
     .slice(0, goal === 'review' ? 3 : 1);
-  ids.push(...due.map((p) => p.id));
+  due.forEach(add);
+  own.slice(0, goal === 'tactics' ? 1 : 3).forEach(add);
   while (ids.length < 6) {
-    const pool = bank.filter((p) => !ids.includes(p.id));
+    const pool = bank.filter(
+      (p) => !ids.includes(p.id) && !positions.has(p.fen.split(' ').slice(0, 4).join(' ')),
+    );
     if (!pool.length) break;
-    ids.push(
+    add(
       choosePuzzle(pool, training, {
         theme: pool.some((p) => p.themes.includes(theme)) ? theme : 'all',
         random: () => 0,
-      }).id,
+      }),
     );
   }
-  return { day, ids, done: [], theme, personal: own.length };
+  return {
+    day,
+    ids,
+    done: [],
+    theme,
+    personal: ids.filter((id) => id.startsWith('own-')).length,
+    ...(focus ? { focusKey: focus.key } : {}),
+  };
 }
 export function nextLessonId(plan) {
   return plan?.ids.find((id) => !plan.done.includes(id)) || null;

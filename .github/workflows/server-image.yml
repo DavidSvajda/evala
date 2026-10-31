@@ -17,6 +17,7 @@ on:
           - review
           - extension
           - human
+          - journey
 permissions:
   contents: read
   packages: write
@@ -114,6 +115,16 @@ jobs:
           node tests/bulk-library-smoke.mjs
           node tests/coach-review-smoke.mjs
           node tests/theme-locale-smoke.mjs
+      - name: Verify connected learning journey
+        if: inputs.validation == 'journey'
+        run: |
+          npm run lint
+          npm run format:check
+          npm audit --audit-level=moderate
+          node --test tests/journey.test.mjs tests/lesson.test.mjs tests/account-preferences.test.mjs tests/learning.test.mjs tests/release-version.test.mjs
+          node tests/journey-smoke.mjs
+          node tests/board-sizing-smoke.mjs
+          node tests/learning-smoke.mjs
       - name: Verify packaged extension and local model switching
         if: inputs.validation == 'extension' || inputs.validation == 'human'
         run: |

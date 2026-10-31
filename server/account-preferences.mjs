@@ -61,6 +61,12 @@ export function preferences(input = {}) {
         ? input.lesson.done.filter((id) => input.lesson.ids.includes(id)).slice(0, 6)
         : [],
     };
+    if (
+      ['mate', 'king', 'material', 'opening', 'middlegame', 'endgame'].includes(
+        input.lesson.focusKey,
+      )
+    )
+      p.lesson.focusKey = input.lesson.focusKey;
   }
   if (typeof input.chessUsername === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(input.chessUsername))
     p.chessUsername = input.chessUsername;
