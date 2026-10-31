@@ -7,7 +7,11 @@ await mkdir('test-results', { recursive: true });
 const server = createServer(4174);
 await new Promise((done) => server.on('listening', done));
 const executablePath =
-  process.env.EVALA_BROWSER || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  process.env.EVALA_BROWSER ||
+  process.env.EVALA_BROWSER_EXECUTABLE ||
+  (process.platform === 'win32'
+    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+    : undefined);
 const browser = await chromium.launch({ executablePath, headless: true, args: ['--no-sandbox'] });
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
@@ -84,6 +88,7 @@ try {
   assert.equal(await page.locator('evala-bar .popover').isVisible(), true);
   await page.locator('evala-bar [data-preset=quiet]').click();
   assert.equal(await page.locator('evala-bar #depth').inputValue(), '12');
+  await page.locator('evala-bar .advanced-settings summary').click();
   await page.locator('evala-bar select#side').selectOption('right');
   await page.waitForFunction(() => {
     const shadow = document.querySelector('evala-bar').shadowRoot;

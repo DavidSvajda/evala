@@ -11,7 +11,15 @@ const send = (message) => {
     parent.postMessage({ channel: 'evala-engine', token, ...message }, parentOrigin);
 };
 const engine = new EngineController(
-  () => new Worker(new URL('./engine/stockfish-19-lite-single.js', location.href)),
+  (variant) =>
+    new Worker(
+      new URL(
+        variant === 'full'
+          ? './engine/stockfish-19-single.js'
+          : './engine/stockfish-19-lite-single.js',
+        location.href,
+      ),
+    ),
   send,
 );
 

@@ -15,6 +15,7 @@ on:
           - theme
           - security
           - review
+          - extension
 permissions:
   contents: read
   packages: write
@@ -101,16 +102,21 @@ jobs:
         if: inputs.validation == 'board'
         run: node tests/board-gestures-smoke.mjs
       - name: Verify guided review and release security
-        if: inputs.validation == 'review'
+        if: inputs.validation == 'review' || inputs.validation == 'extension'
         run: |
           npm run lint
           npm run format:check
           npm audit --audit-level=moderate
-          node --test tests/training-follow-through.test.mjs tests/learning.test.mjs tests/coach-review.test.mjs tests/gm-coach.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
+          node --test tests/core.test.mjs tests/training-follow-through.test.mjs tests/learning.test.mjs tests/coach-review.test.mjs tests/gm-coach.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/server.test.mjs
           node tests/promotion-smoke.mjs
           node tests/bulk-library-smoke.mjs
           node tests/coach-review-smoke.mjs
           node tests/theme-locale-smoke.mjs
+      - name: Verify packaged extension and local model switching
+        if: inputs.validation == 'extension'
+        run: |
+          node scripts/package-bar.mjs
+          EVALA_EXTENSION_DIR=dist-bar node tests/extension.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR

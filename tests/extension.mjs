@@ -6,7 +6,11 @@ import { Chess } from 'chess.js';
 
 await mkdir('test-results', { recursive: true });
 const executablePath =
-  process.env.EVALA_BROWSER || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  process.env.EVALA_BROWSER ||
+  process.env.EVALA_BROWSER_EXECUTABLE ||
+  (process.platform === 'win32'
+    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+    : undefined);
 const context = await chromium.launchPersistentContext(resolve('test-results/extension-profile'), {
   executablePath,
   headless: true,
@@ -26,6 +30,12 @@ try {
   const popup = await context.newPage();
   popup.on('pageerror', (error) => errors.push(error.message));
   await popup.goto(`chrome-extension://${id}/popup.html`);
+  await popup.evaluate(() =>
+    chrome.storage.local.set({
+      settings: { enabled: true, depth: 18, time: 1500, engine: 'lite' },
+    }),
+  );
+  await popup.reload();
   await popup.locator('#settings [data-preset="balanced"]').waitFor();
   assert.equal(await popup.locator('#depth').inputValue(), '18');
   assert.equal(await popup.locator('.power').getAttribute('aria-label'), 'Pozastavit engine');
@@ -45,6 +55,33 @@ try {
   );
   assert.ok(!['—', ''].includes(await page.locator('evala-bar .value').textContent()));
   console.log('PASS: extension-origin WASM + CSP + chrome.storage');
+  const controls = await context.newPage();
+  await controls.goto(`chrome-extension://${id}/popup.html`);
+  await controls.locator('[data-preset="quiet"]').click();
+  const fullRequest = context.waitForEvent('request', {
+    predicate: (r) => r.url().includes('/stockfish-19-single.wasm'),
+    timeout: 30000,
+  });
+  await controls.locator('#engine').selectOption('full');
+  await fullRequest;
+  await page.waitForFunction(
+    () =>
+      document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===
+      'done',
+    {},
+    { timeout: 45000 },
+  );
+  await controls.reload();
+  assert.equal(await controls.locator('#engine').inputValue(), 'full');
+  await controls.locator('#engine').selectOption('lite');
+  await page.waitForFunction(() =>
+    document
+      .querySelector('evala-bar')
+      ?.shadowRoot.querySelector('.engine-name')
+      .textContent.includes('Lite'),
+  );
+  await controls.close();
+  console.log('PASS: actual Full NNUE worker/model, persisted selection and switch back to Lite');
 
   const fen = 'rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   const chess = new Chess(fen);

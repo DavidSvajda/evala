@@ -45,6 +45,8 @@ await mkdir(resolve(out, 'engine'), { recursive: true });
 for (const path of [
   'stockfish-19-lite-single.js',
   'stockfish-19-lite-single.wasm',
+  'stockfish-19-single.js',
+  'stockfish-19-single.wasm',
   'COPYING.txt',
   'UPSTREAM-README.md',
 ]) {
@@ -59,7 +61,7 @@ await cp(
 const manifest = JSON.parse(await readFile(resolve(root, 'dist/manifest.json'), 'utf8'));
 manifest.name = 'Evala — Evaluation Bar';
 manifest.description =
-  'Lokální Stockfish 19 Lite: evaluation bar vedle šachovnice Chess.com a Lichess, nastavení výkonu a zkušební deska.';
+  'Lokální Stockfish 19 Lite / Full NNUE: evaluation bar vedle šachovnice Chess.com a Lichess, volba enginu a výkonu.';
 delete manifest.host_permissions;
 delete manifest.optional_host_permissions;
 await writeFile(resolve(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
@@ -68,8 +70,8 @@ const popupPath = resolve(out, 'popup.html');
 await writeFile(
   popupPath,
   (await readFile(popupPath, 'utf8'))
-    .replace(/<button\b[^>]*\bclass="[^"]*\bstudy-link\b[^"]*"[^>]*>[\s\S]*?<\/button>/g, '')
-    .replace('Stockfish 19 ·', 'Stockfish 19 Lite ·'),
+    .replace(/<button\b[^>]*\bclass="[^"]*\bstudy-link\b[^"]*"[^>]*>[\s\S]*?<\/button\s*>/g, '')
+    .replace('Stockfish 19 ·', 'Stockfish 19 Lite / Full ·'),
 );
 const privacyPath = resolve(out, 'privacy.html');
 await writeFile(
@@ -79,12 +81,10 @@ await writeFile(
 const noticesPath = resolve(out, 'THIRD_PARTY_NOTICES.md');
 await writeFile(
   noticesPath,
-  (await readFile(noticesPath, 'utf8'))
-    .replace('Stockfish 19 Full NNUE and Lite single-thread', 'Stockfish 19 Lite single-thread')
-    .replace(
-      'Corresponding engine source archive is supplied with the release in engine-source/.',
-      'Corresponding engine source archive: engine/stockfish-js-source.tar.gz.',
-    ),
+  (await readFile(noticesPath, 'utf8')).replace(
+    'Corresponding engine source archive is supplied with the release in engine-source/.',
+    'Corresponding engine source archive: engine/stockfish-js-source.tar.gz.',
+  ),
 );
 await writeFile(
   resolve(out, 'INSTALACE.txt'),
@@ -96,7 +96,10 @@ await writeFile(
 4. Obnov již otevřené stránky Chess.com nebo Lichess.
 5. Nastavení a zkušební desku otevřeš přes ikonu rozšíření.
 
-Výpočet běží lokálně přes Stockfish 19 Lite. Není potřeba Node.js ani server.
+Výpočet běží lokálně přes Stockfish 19 Lite nebo Full NNUE. Není potřeba Node.js ani server.
+V nastavení vyber engine a profil Úsporný / Vyvážený / Důkladný.
+Lite se načítá rychleji; Full používá větší síť a potřebuje více paměti.
+Hloubka i čas jsou horní limity; nejde o nastavení Elo tréninkového soupeře.
 Rozšíření používej pro rozbor, trénink a povolené sledování.
 Pro aktualizaci stejné instalace ponech složku na stejném místě a klikni Znovu načíst.
 

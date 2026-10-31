@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   const mode =
     message.settings?.backend === 'server'
       ? `server:${message.settings.serverUrl}:${message.settings.serverVersion || 0}`
-      : 'local';
+      : `local:${message.settings?.engine === 'full' ? 'full' : 'lite'}`;
   if (
     session &&
     (session.token !== token || (message.type === 'analyze' && session.mode !== mode))
@@ -46,7 +46,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         engine: mode.startsWith('server:')
           ? new RemoteController(message.settings.serverUrl, message.serverToken || '', emit)
           : new EngineController(
-              () => new Worker(chrome.runtime.getURL('engine/stockfish-19-lite-single.js')),
+              (variant) =>
+                new Worker(
+                  chrome.runtime.getURL(
+                    variant === 'full'
+                      ? 'engine/stockfish-19-single.js'
+                      : 'engine/stockfish-19-lite-single.js',
+                  ),
+                ),
               emit,
             ),
       };

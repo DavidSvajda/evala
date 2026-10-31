@@ -19,7 +19,7 @@ export class EngineController {
     if (this.worker) return;
     this.emit({ type: 'status', state: 'loading' });
     try {
-      this.worker = this.makeWorker();
+      this.worker = this.makeWorker(this.variant || 'lite');
       this.worker.onmessage = (event) => this.onLine(String(event.data));
       this.worker.onerror = (event) => {
         console.error('Evala worker:', event.message || 'Worker load error', event.filename || '');
@@ -44,10 +44,13 @@ export class EngineController {
       });
       return;
     }
+    const settings = sanitizeSettings(request.settings);
+    if (this.worker && this.variant !== settings.engine) this.dispose();
+    this.variant = settings.engine;
     this.pending = {
       id: request.id,
       fen: request.fen,
-      settings: sanitizeSettings(request.settings),
+      settings,
     };
     this.boot();
     if (this.active) this.stopActive();
@@ -81,6 +84,10 @@ export class EngineController {
     this.worker.postMessage('setoption name MultiPV value 1');
     this.worker.postMessage(`position fen ${fen}`);
     this.worker.postMessage(`go depth ${settings.depth} movetime ${settings.time}`);
+    this.searchTimer = setTimeout(
+      () => this.fail('Výpočet překročil časový limit. Zkus kratší profil nebo engine Lite.'),
+      settings.time + 8000,
+    );
     this.emit({ type: 'searching', id });
   }
 
@@ -101,6 +108,7 @@ export class EngineController {
       return;
     }
     if (line.startsWith('bestmove')) {
+      clearTimeout(this.searchTimer);
       clearTimeout(this.stopTimer);
       if (this.active && !this.stopping) this.emit({ type: 'done', id: this.active.id });
       this.active = null;
@@ -126,6 +134,7 @@ export class EngineController {
   }
 
   dispose() {
+    clearTimeout(this.searchTimer);
     clearTimeout(this.bootTimer);
     clearTimeout(this.stopTimer);
     this.worker?.terminate();
