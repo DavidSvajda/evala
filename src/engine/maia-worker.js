@@ -27,7 +27,15 @@ function index(move) {
         'qrbn'.indexOf(move[4])
     : sq(move.slice(0, 2)) * 64 + sq(move.slice(2, 4));
 }
-self.onmessage = async ({ data }) => {
+self.onmessage = async (event) => {
+  if (event.origin && event.origin !== self.location.origin) return;
+  const { data } = event;
+  if (
+    !data ||
+    !Number.isSafeInteger(data.id) ||
+    (data.moves && (!Array.isArray(data.moves) || data.moves.length > 600))
+  )
+    return;
   try {
     session ||= ort.InferenceSession.create(new URL('maia3-5m.onnx', self.location.href).href, {
       executionProviders: ['wasm'],
