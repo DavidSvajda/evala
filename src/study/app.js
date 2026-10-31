@@ -648,7 +648,7 @@ $('#username-form').addEventListener('submit', async (event) => {
 });
 
 function renderReview() {
-  const running = job?.game.id === selected?.id;
+  const running = !!job && job.game.id === selected?.id;
   $('#review-game').disabled = !selected || blind() || (!!job && !running) || playerReport?.running;
   $('#review-game').classList.toggle('running', !!running);
   $('#review-game').innerHTML =
@@ -1453,7 +1453,7 @@ try {
     library.find((g) => g.id === sessionStorage.getItem('evala-current-game')) ||
     library[0] ||
     null;
-  if (resume?.gameId === selected?.id) {
+  if (resume && resume.gameId === selected?.id) {
     ply = Math.min(resume.ply, selected.moves.length);
     flipped = resume.flipped;
   }
@@ -1499,10 +1499,14 @@ const reloadLibrary = async ({ resume = false } = {}) => {
   branch = null;
   retryTarget = null;
   ply = Math.min(
-    position?.gameId === selected?.id ? position.ply : selected?.id === id ? previousPly : 0,
+    position && position.gameId === selected?.id
+      ? position.ply
+      : selected?.id === id
+        ? previousPly
+        : 0,
     selected?.moves.length || 0,
   );
-  if (position?.gameId === selected?.id) flipped = position.flipped;
+  if (position && position.gameId === selected?.id) flipped = position.flipped;
   renderLibrary();
   renderAll();
 };
@@ -1544,8 +1548,9 @@ learningUI = initLearning({
 await initPlatform({
   library: () => library,
   username: () => options.lastUsername || '',
-  openGame: (game) => {
+  openGame: (game, ply) => {
     selectGame(game);
+    if (Number.isInteger(ply)) navigate(ply);
     focusBoard();
   },
   busy: () => !!job || !!playerReport?.running,

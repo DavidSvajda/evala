@@ -116,8 +116,14 @@
               ><span data-icon="plus"></span>Importovat partii</a
             ></div
           >
-          <section id="onboarding" class="setup-strip" hidden
-            ><h2>Nastav si trénink</h2
+          <section
+            id="training-journey"
+            class="training-journey"
+            data-i18n-ignore
+            aria-label="Osobní tréninkový plán"
+          ></section
+          ><details id="onboarding" class="setup-strip" hidden
+            ><summary>Nastavit úroveň a cíl tréninku</summary
             ><form id="onboarding-form"
               ><label
                 >Chess.com profil nebo přezdívka<input
@@ -145,7 +151,7 @@
                 ><button class="text-button" type="button" id="skip-onboarding"
                   >Později</button
                 ></div
-              ><p id="onboarding-status" role="status"></p></form></section
+              ><p id="onboarding-status" role="status"></p></form></details
           ><section class="lesson-strip"
             ><div><h2>Osobní lekce · 10 minut</h2><p id="lesson-progress" data-i18n-ignore></p></div
             ><button class="quiet-button" id="start-lesson">Začít lekci</button></section

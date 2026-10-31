@@ -26,6 +26,8 @@ import {
 import { language, setLanguage, translate } from './i18n.js';
 import { theme, setTheme } from './theme.js';
 import { createLesson, nextLessonId, publicChesscomProfile } from '../training/lesson.js';
+import { trainingJourney, localDay } from '../training/journey.js';
+import { renderJourney } from './journey.js';
 
 const $ = (s) => document.querySelector(s);
 const PREFERENCES = {
@@ -218,7 +220,7 @@ export async function initPlatform(context) {
     return Object.values(training.history).filter((h) => h.dueAt <= Date.now()).length;
   }
   function ownPuzzles() {
-    return personalPuzzles(context.library(), preferences.chessUsername || context.username());
+    return personalPuzzles(context.library(), context.username() || preferences.chessUsername);
   }
   function renderTraining() {
     $('#home-rating').textContent = $('#puzzle-rating').textContent = training.rating;
@@ -235,11 +237,11 @@ export async function initPlatform(context) {
     $('#starting-rating').value = String(training.initialRating || 800);
     $('#starting-rating').disabled = training.attempted > 0;
   }
-  function openGame(id) {
+  function openGame(id, ply) {
     const game = context.library().find((g) => g.id === id);
     if (game) {
       go('analysis');
-      context.openGame(game);
+      context.openGame(game, Number.isInteger(ply) ? ply + 1 : undefined);
     }
   }
   function renderHome() {
@@ -268,6 +270,40 @@ export async function initPlatform(context) {
         ? `${preferences?.lesson?.done?.length || 0}/6 positions practised. Your mistakes, related tactics and review.`
         : `${preferences?.lesson?.done?.length || 0}/6 procvičených pozic. Vlastní chyby, související taktika a opakování.`;
     renderChessProfile();
+    const username = context.username() || preferences.chessUsername;
+    const data = trainingJourney(games, username, training);
+    renderJourney($('#training-journey'), data, {
+      lang: language(),
+      username,
+      plan: preferences.lesson,
+      today: localDay(),
+      onImport: () => go('insights'),
+      onReview: (id, ply) => {
+        openGame(id, ply);
+        $('#analysis-coach-tab').click();
+      },
+      onTrain: (focusKey) => void startFocusedLesson(focusKey).catch((e) => toast(e.message)),
+    });
+    $('#onboarding').hidden = !!preferences.onboardingComplete || data.reviewed > 0;
+    $('.lesson-strip').hidden = true;
+  }
+  async function startFocusedLesson(focusKey) {
+    await getBank();
+    const plan = preferences.lesson;
+    if (plan?.day !== localDay() || !nextLessonId(plan) || plan.focusKey !== focusKey)
+      updatePreferences({
+        lesson: createLesson(
+          bank,
+          context.library(),
+          context.username() || preferences.chessUsername,
+          training,
+          { goal: preferences.trainingGoal, focusKey },
+        ),
+      });
+    mode = 'lesson';
+    if (page === 'puzzles') await loadPuzzle();
+    else go('puzzles');
+    renderHome();
   }
   function renderChessProfile() {
     const name = preferences?.chessUsername;
@@ -286,17 +322,23 @@ export async function initPlatform(context) {
     $('#chesscom-profile').append(link, note);
   }
   async function lessonPuzzle() {
-    const day = new Date().toISOString().slice(0, 10);
+    const day = localDay();
     const available = new Set([...ownPuzzles(), ...bank].map((p) => p.id));
     if (
       preferences.lesson?.day !== day ||
       !preferences.lesson?.ids?.length ||
       preferences.lesson.ids.some((id) => !available.has(id))
     ) {
-      const lesson = createLesson(bank, context.library(), preferences.chessUsername, training, {
-        day,
-        goal: preferences.trainingGoal,
-      });
+      const lesson = createLesson(
+        bank,
+        context.library(),
+        context.username() || preferences.chessUsername,
+        training,
+        {
+          day,
+          goal: preferences.trainingGoal,
+        },
+      );
       updatePreferences({ lesson });
     }
     const id = nextLessonId(preferences.lesson);
@@ -385,7 +427,13 @@ export async function initPlatform(context) {
       const lesson = mode === 'lesson' ? await lessonPuzzle() : null;
       if (mode === 'lesson' && !lesson) {
         $('#puzzle-status').textContent = $('#puzzle-turn').textContent = 'Lekce je hotová';
-        $('#puzzle-message').textContent = 'Pokračuj v taktice nebo se vrať zítra k další lekci.';
+        $('#puzzle-message').textContent =
+          language() === 'en'
+            ? 'Return to your plan, or try applying the ideas in a full position.'
+            : 'Vrať se k plánu nebo zkus myšlenky použít v celé pozici.';
+        $('#puzzle-solution').innerHTML =
+          `<div class="setup-actions"><a class="primary-link" href="#/home">${language() === 'en' ? 'Back to my plan' : 'Zpět k mému plánu'}</a><a class="text-button" href="#/practice">${language() === 'en' ? 'Practise a full position' : 'Procvičit celou pozici'}</a></div>`;
+        renderHome();
         return;
       }
       if (mode === 'lesson' && !account.user) {
@@ -453,6 +501,19 @@ export async function initPlatform(context) {
             : mode === 'daily'
               ? 'Stejná úloha pro všechny hráče dnes.'
               : 'Taktické úlohy podle tvé úrovně.';
+      if (mode === 'lesson')
+        $('#puzzle-subtitle').textContent =
+          language() === 'en'
+            ? 'Your mistakes, spaced review and related positions in one lesson.'
+            : 'Tvoje chyby, opakování a související pozice v jedné lekci.';
+      if (puzzle.personal) {
+        const source = document.createElement('button');
+        source.className = 'text-button';
+        source.textContent =
+          language() === 'en' ? 'Open the source position' : 'Otevřít původní pozici';
+        source.onclick = () => openGame(puzzle.gameId, puzzle.ply);
+        $('#puzzle-solution').append(source);
+      }
     } catch (error) {
       if (request === generation) {
         $('#puzzle-error').textContent = error.message;
@@ -688,7 +749,7 @@ export async function initPlatform(context) {
     const id = button.dataset.startLesson,
       games = [...context.library()].sort((a, b) => Number(b.id === id) - Number(a.id === id));
     updatePreferences({
-      lesson: createLesson(bank, games, preferences.chessUsername, training, {
+      lesson: createLesson(bank, games, context.username() || preferences.chessUsername, training, {
         goal: preferences.trainingGoal,
       }),
     });
@@ -880,6 +941,7 @@ export async function initPlatform(context) {
   renderHome();
   flushAccountPreferences().catch(() => {});
   miniBoard($('#preview-board'), new Chess().fen());
+  $('#home-board').textContent = translate('Načítám dnešní úlohu…');
   getBank()
     .then(() => {
       const preview = choosePuzzle(bank, training, { mode: 'daily' }),
@@ -888,7 +950,12 @@ export async function initPlatform(context) {
       $('#home-to-move').textContent = start.color === 'w' ? 'Bílý na tahu' : 'Černý na tahu';
       $('#home-training-count').textContent = bank.length.toLocaleString('cs-CZ') + ' úloh';
     })
-    .catch((e) => toast(e.message));
+    .catch((e) => {
+      $('#home-board').textContent = translate(
+        'Úloha se nenačetla. Otevři Trénink a zkus to znovu.',
+      );
+      toast(e.message);
+    });
   fromUrl();
   return { go, preferences: () => preferences, refresh: renderHome };
 }

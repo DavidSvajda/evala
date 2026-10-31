@@ -1,4 +1,8 @@
 export const EN = {
+  'Načítám dnešní úlohu…': 'Loading today’s puzzle…',
+  'Úloha se nenačetla. Otevři Trénink a zkus to znovu.':
+    'Puzzle unavailable. Open Training to try again.',
+  'Nastavit úroveň a cíl tréninku': 'Set training level and goal',
   Zrušit: 'Cancel',
   'Řazení partií': 'Sort games',
   Nejnovější: 'Newest first',

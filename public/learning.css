@@ -73,7 +73,7 @@
 }
 .practice-layout {
   display: grid;
-  grid-template-columns: minmax(0, 640px) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 32px;
   align-items: start;
 }
@@ -257,5 +257,174 @@ body[data-self-analysis='true'] #inspect-status {
   }
   #human-play .practice-controls > .primary-button {
     grid-column: 1/-1;
+  }
+}
+.training-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 1fr);
+  gap: 40px;
+  padding: 26px 0 32px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.journey-main h2 {
+  font-size: 25px;
+  line-height: 1.25;
+  margin: 0 0 14px;
+}
+.journey-main p {
+  max-width: 60ch;
+  margin: 0 0 22px;
+}
+.journey-main .journey-progress {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.journey-evidence h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.journey-evidence > p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.journey-example {
+  display: grid;
+  grid-template-columns: 75px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  text-align: left;
+  font-size: 13px;
+}
+.journey-example span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.journey-example span:last-child {
+  color: var(--accent);
+}
+.journey-example:hover {
+  background: var(--raised);
+}
+.journey-evidence .hint {
+  margin-top: 14px;
+}
+.lesson-strip[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .training-journey {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 26px;
+    padding-top: 6px;
+  }
+  .journey-main h2 {
+    font-size: 23px;
+  }
+  .journey-main .primary-button {
+    min-height: 44px;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 16px;
+  }
+  .workspace .position-workspace {
+    display: contents;
+  }
+  .position-workspace > .game-heading {
+    grid-row: 1;
+  }
+  .position-workspace > .board-stage {
+    grid-row: 2;
+  }
+  .position-workspace > .promotion {
+    grid-row: 3;
+  }
+  .position-workspace > .board-toolbar {
+    grid-row: 4;
+  }
+  .position-workspace > .board-caption {
+    grid-row: 5;
+  }
+  .workspace > .analysis-panel {
+    grid-row: 6;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .position-workspace > .graph-heading {
+    grid-row: 7;
+  }
+  .position-workspace > .eval-graph {
+    grid-row: 8;
+  }
+  .analysis-panel .analysis-tabs {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 2;
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1050px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace .position-workspace {
+    max-width: none;
+  }
+  .workspace .analysis-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    border-left: 0;
+    padding-left: 0;
+    width: 100%;
+  }
+  .puzzle-layout,
+  body[data-sidebar-collapsed='true'] .puzzle-layout,
+  .practice-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.app-main {
+  container-type: inline-size;
+  container-name: study-content;
+}
+@container study-content (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace .position-workspace {
+    max-width: 960px;
+  }
+  .workspace .analysis-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    border-left: 0;
+    padding-left: 0;
+    width: 100%;
+  }
+  .puzzle-layout,
+  body[data-sidebar-collapsed='true'] .puzzle-layout,
+  .practice-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .puzzle-board-area,
+  .practice-layout > div {
+    max-width: 960px;
   }
 }
