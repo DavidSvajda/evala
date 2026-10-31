@@ -86,6 +86,16 @@ await cp(
   resolve(out, 'engine/UPSTREAM-README.md'),
 );
 await cp(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
+await mkdir(resolve(out, 'human-source'), { recursive: true });
+await cp(
+  resolve(root, 'vendor-source/maia3-1e13597c42d4858b7cfd7cfdae01e297263364b2.tar.gz'),
+  resolve(out, 'human-source/maia3-source.tar.gz'),
+);
+await cp(resolve(root, 'server/maia-runtime.py'), resolve(out, 'human-source/maia-runtime.py'));
+await cp(
+  resolve(root, 'vendor-source/maia3-model-card.md'),
+  resolve(out, 'human-source/MODEL-CARD.md'),
+);
 await cp(resolve(root, 'THIRD_PARTY_NOTICES.md'), resolve(out, 'THIRD_PARTY_NOTICES.md'));
 await mkdir(resolve(out, 'fonts'), { recursive: true });
 for (const subset of ['latin', 'latin-ext'])

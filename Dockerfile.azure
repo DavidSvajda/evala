@@ -17,11 +17,27 @@ COPY . .
 ARG GITHUB_SHA
 RUN GITHUB_SHA="$GITHUB_SHA" npm run build
 
+# Offline Maia-3 CPU runtime. Immutable source/model plus checksum verification.
+FROM python:3.12-slim-bookworm AS maia
+WORKDIR /opt/maia
+COPY vendor-source/maia3-1e13597c42d4858b7cfd7cfdae01e297263364b2.tar.gz source.tar.gz
+RUN echo '06cc1d77eac19b6cb4228c7ca6d8971c97d0284b88b3208b39191c5ca61af080  source.tar.gz' | sha256sum --check \
+    && mkdir source && tar -xzf source.tar.gz -C source \
+    && python -m venv /opt/maia/venv
+COPY server/maia-requirements.txt requirements.txt
+RUN /opt/maia/venv/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 'torch==2.15.0+cpu' \
+    && /opt/maia/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /opt/maia/venv/bin/pip install --no-cache-dir --no-deps ./source \
+    && /opt/maia/venv/bin/pip uninstall -y pip setuptools
+RUN python -c "import urllib.request; urllib.request.urlretrieve('https://huggingface.co/UofTCSSLab/Maia3-5M/resolve/b6559de2398d7140b985f28fd2c19fb5e47ddabe/maia3-5m.pt', 'model.pt')" \
+    && echo 'ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f  model.pt' | sha256sum --check
+
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080 ENGINE_CONCURRENCY=1 ENGINE_THREADS=2 \
-    STOCKFISH_PATH=/opt/stockfish/stockfish-linux-x86-64-universal
+    STOCKFISH_PATH=/opt/stockfish/stockfish-linux-x86-64-universal \
+    MAIA_PYTHON=/opt/maia/venv/bin/python MAIA_MODEL=/opt/maia/model.pt HF_HUB_OFFLINE=1
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 libffi8 libssl3 libbz2-1.0 liblzma5 libsqlite3-0 zlib1g libexpat1 \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 # Dependency installation is complete at build time. The runtime only executes
@@ -30,9 +46,21 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force \
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=native /engine /opt/stockfish
+COPY --from=maia /usr/local/bin/python3.12 /usr/local/bin/python3.12
+COPY --from=maia /usr/local/lib/libpython3.12.so.1.0 /usr/local/lib/libpython3.12.so.1.0
+COPY --from=maia /usr/local/lib/python3.12 /usr/local/lib/python3.12
+COPY --from=maia /opt/maia/venv /opt/maia/venv
+COPY --from=maia /opt/maia/model.pt /opt/maia/model.pt
+RUN ln -s /usr/local/bin/python3.12 /usr/local/bin/python3 \
+    && rm -rf /usr/local/lib/python3.12/site-packages/pip* /usr/local/lib/python3.12/site-packages/setuptools* /usr/local/lib/python3.12/site-packages/pkg_resources /usr/local/lib/python3.12/ensurepip \
+    && ldconfig
 # Preserve the complete official distribution, including corresponding source.
 COPY --from=native /download/stockfish.tar.gz /app/dist/engine/stockfish-19-native-distribution.tar.gz
 COPY --from=build /app/dist ./dist
+COPY --from=maia /opt/maia/source.tar.gz /app/dist/human-source/maia3-source.tar.gz
+COPY --from=maia /opt/maia/source/LICENSE /app/dist/human-source/MAIA-LICENSE.txt
+COPY server/maia-runtime.py /app/dist/human-source/maia-runtime.py
+COPY vendor-source/maia3-model-card.md /app/dist/human-source/MODEL-CARD.md
 COPY vendor-source/stockfish-0d5dd7944f88c817c07a26bc4fb1905d5f9c46d6.tar.gz ./dist/engine/stockfish-js-source.tar.gz
 COPY src/core ./src/core
 COPY src/study ./src/study

@@ -127,7 +127,16 @@ const zip = zipSync(files, { level: 6 });
 await writeFile(resolve(release, `evala-bar-${manifest.version}.zip`), zip);
 
 const source = {};
-for (const dir of ['src', 'server', 'scripts', 'tests', 'public', '.github', 'vendor-source']) {
+for (const dir of [
+  'src',
+  'server',
+  'scripts',
+  'tests',
+  'public',
+  '.github',
+  'vendor-source',
+  'docs',
+]) {
   for (const path of await filesIn(resolve(root, dir)))
     source[relative(root, path).replaceAll('\\', '/')] = new Uint8Array(await readFile(path));
 }

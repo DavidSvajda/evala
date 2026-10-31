@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Evala — Chess Evaluation Bar",
   "short_name": "Evala",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "Stockfish 19: evaluation bar, import PGN a veřejných partií, varianty a rozbor her. Lokální výpočet a volitelný vlastní server.",
   "minimum_chrome_version": "116",
   "permissions": [
