@@ -648,7 +648,7 @@ $('#username-form').addEventListener('submit', async (event) => {
 });
 
 function renderReview() {
-  const running = job?.game.id === selected?.id;
+  const running = !!job && job.game.id === selected?.id;
   $('#review-game').disabled = !selected || blind() || (!!job && !running) || playerReport?.running;
   $('#review-game').classList.toggle('running', !!running);
   $('#review-game').innerHTML =
@@ -1499,10 +1499,14 @@ const reloadLibrary = async ({ resume = false } = {}) => {
   branch = null;
   retryTarget = null;
   ply = Math.min(
-    position?.gameId === selected?.id ? position.ply : selected?.id === id ? previousPly : 0,
+    position && position.gameId === selected?.id
+      ? position.ply
+      : selected?.id === id
+        ? previousPly
+        : 0,
     selected?.moves.length || 0,
   );
-  if (position?.gameId === selected?.id) flipped = position.flipped;
+  if (position && position.gameId === selected?.id) flipped = position.flipped;
   renderLibrary();
   renderAll();
 };
