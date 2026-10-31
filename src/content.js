@@ -171,6 +171,7 @@ export async function mount({ demo = false } = {}) {
     if (data.type === 'searching') setState('searching');
     if (data.type === 'evaluation') view.renderScore(data.score);
     if (data.type === 'human') view.renderHuman(data);
+    if (data.type === 'move') view.renderArrow(data.move);
     if (data.type === 'done') setState('done');
     if (data.type === 'error') {
       view.renderScore(null);

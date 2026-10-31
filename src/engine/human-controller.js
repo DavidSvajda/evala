@@ -9,7 +9,11 @@ export class HumanController {
       if (event.type === 'done' && this.request?.settings?.engine === 'maia') {
         this.lines = event.lines;
         this.finish();
-      } else emit(event);
+      } else {
+        if (event.type === 'done' && event.lines?.[0]?.pv?.[0])
+          emit({ type: 'move', id: event.id, move: event.lines[0].pv[0] });
+        emit(event);
+      }
     });
   }
   analyze(request) {
