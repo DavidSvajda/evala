@@ -69,7 +69,7 @@ async function refresh() {
       : 'Otevři Chess.com nebo Lichess';
   document.querySelector('.summary-detail').textContent = status?.score
     ? `Hloubka ${status.score.depth} · skóre z pohledu bílého`
-    : 'Bar se zobrazí vedle viditelné šachovnice.';
+    : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · bar vedle šachovnice`;
   document.querySelector('.mini-white').style.height = `${whitePercent(status?.score)}%`;
 }
 globalThis.chrome?.storage?.onChanged.addListener(async (changes) => {

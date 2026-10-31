@@ -73,10 +73,44 @@ test('terminal positions distinguish checkmate, stalemate and normal play', () =
 });
 
 test('settings from storage or messages cannot create unbounded UCI commands', () => {
+  assert.equal(sanitizeSettings({ engine: 'full' }).engine, 'full');
+  assert.equal(sanitizeSettings({ engine: '../bad-worker.js' }).engine, 'lite');
   assert.equal(sanitizeSettings({ hash: 999999 }).hash, 256);
   assert.equal(sanitizeSettings({ depth: '30\ngo infinite' }).depth, 18);
   assert.equal(sanitizeSettings({ time: Infinity }).time, 1500);
   assert.equal(sanitizeSettings({ enabled: 'false' }).enabled, true);
+});
+test('changing local model terminates the previous worker before starting the new request', () => {
+  const workers = [],
+    variants = [];
+  const controller = new EngineController(
+    (variant) => {
+      variants.push(variant);
+      const worker = {
+        sent: [],
+        postMessage(value) {
+          this.sent.push(value);
+        },
+        terminate() {
+          this.terminated = true;
+        },
+      };
+      workers.push(worker);
+      return worker;
+    },
+    () => {},
+  );
+  controller.analyze({ id: 1, fen: START_FEN, settings: { engine: 'lite' } });
+  controller.onLine('uciok');
+  controller.onLine('readyok');
+  controller.analyze({ id: 2, fen: START_FEN, settings: { engine: 'full' } });
+  assert.equal(workers[0].terminated, true);
+  assert.deepEqual(variants, ['lite', 'full']);
+  assert.equal(controller.pending.id, 2);
+  controller.onLine('uciok');
+  controller.onLine('readyok');
+  assert.ok(workers[1].sent.some((s) => s.startsWith('go ')));
+  controller.dispose();
 });
 
 test('UCI waits for stop acknowledgement and drops all stale evaluation output', () => {

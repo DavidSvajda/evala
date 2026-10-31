@@ -2,6 +2,8 @@ import { DEFAULTS, sanitizeSettings } from '../core/settings.js';
 
 export function settingsMarkup(settings) {
   return `<div class="settings-form">
+    <div class="form-row"><label for="engine">Lokální engine</label><select id="engine" name="engine"><option value="lite">Stockfish 19 Lite</option><option value="full">Stockfish 19 Full NNUE</option></select></div>
+    <p class="hint" data-engine-help></p><button type="button" class="text-button use-local" hidden>Přepnout na lokální výpočet</button>
     <fieldset class="presets"><legend>Výkon enginu</legend><div class="segmented"><button type="button" data-preset="quiet">Úsporný</button><button type="button" data-preset="balanced">Vyvážený</button><button type="button" data-preset="deep">Důkladný</button></div></fieldset>
     <label class="range-label" for="depth">Maximální hloubka <output id="depth-value">${settings.depth}</output></label>
     <input id="depth" name="depth" type="range" min="6" max="30" value="${settings.depth}">
@@ -16,8 +18,10 @@ export function settingsMarkup(settings) {
     ]
       .map(([v, t]) => `<option value="${v}">${t}</option>`)
       .join('')}</select></div>
-    <div class="form-row"><label for="hash">Paměť enginu</label><select id="hash" name="hash">${[16, 32, 64, 128, 256].map((v) => `<option value="${v}">${v} MB</option>`).join('')}</select></div>
-    <p class="hint">Výpočet skončí při dosažení hloubky nebo času. Jedno CPU vlákno · lokální výpočet.</p>
+    <p class="hint">Hloubka a čas jsou horní limity. Výpočet využívá jedno CPU vlákno. Profil určuje výpočetní rozpočet, nikoli Elo soupeře.</p>
+    <details class="advanced-settings"><summary>Další nastavení</summary>
+    <div class="form-row"><label for="hash">Paměť pro pozice</label><select id="hash" name="hash">${[16, 32, 64, 128, 256].map((v) => `<option value="${v}">${v} MB</option>`).join('')}</select></div>
+    <p class="hint">Paměť pro pozice nezahrnuje neuronovou síť a režii enginu. Pro notebook začni na 32 MB.</p>
     <div class="section-rule"></div>
     <div class="form-row"><label for="side">Umístění baru</label><select id="side" name="side"><option value="left">Vlevo</option><option value="right">Vpravo</option></select></div>
     <label class="range-label" for="width">Šířka baru <output id="width-value">${settings.width} px</output></label><input id="width" name="width" type="range" min="26" max="48" value="${settings.width}">
@@ -25,7 +29,7 @@ export function settingsMarkup(settings) {
     <label class="check-row"><span>Otáčet podle šachovnice</span><input type="checkbox" name="autoFlip" ${settings.autoFlip ? 'checked' : ''}></label>
     <label class="check-row"><span>Zobrazovat dosaženou hloubku</span><input type="checkbox" name="showDepth" ${settings.showDepth ? 'checked' : ''}></label>
     <label class="check-row"><span>Pozastavit na neaktivní kartě</span><input type="checkbox" name="pauseHidden" ${settings.pauseHidden ? 'checked' : ''}></label>
-    <button type="button" class="text-button reset">Obnovit výchozí nastavení</button>
+    <button type="button" class="text-button reset">Obnovit výchozí nastavení</button></details>
   </div>`;
 }
 
@@ -37,6 +41,14 @@ export function bindSettings(root, initial, onChange) {
     deep: { depth: 24, time: 10000, hash: 128 },
   };
   const sync = () => {
+    const server = settings.backend === 'server';
+    root.querySelector('#engine').disabled = server;
+    root.querySelector('.use-local').hidden = !server;
+    root.querySelector('[data-engine-help]').textContent = server
+      ? 'Výpočet běží na vlastním serveru. Pro použití lokálního enginu přepni níže.'
+      : settings.engine === 'full'
+        ? 'Plná neuronová síť pro důkladnější analýzu. Načítá se déle a potřebuje více paměti.'
+        : 'Menší neuronová síť a rychlé načtení. Doporučeno pro běžné použití a notebooky.';
     root.querySelectorAll('[name]').forEach((input) => {
       if (input.type === 'checkbox') input.checked = settings[input.name];
       else {
@@ -76,7 +88,7 @@ export function bindSettings(root, initial, onChange) {
       [input.name]:
         input.type === 'checkbox'
           ? input.checked
-          : input.tagName === 'SELECT' && input.name === 'side'
+          : input.tagName === 'SELECT' && ['side', 'engine'].includes(input.name)
             ? input.value
             : Number(input.value),
     });
@@ -90,6 +102,10 @@ export function bindSettings(root, initial, onChange) {
   );
   root.querySelector('.reset').addEventListener('click', () => {
     settings = { ...DEFAULTS, enabled: settings.enabled };
+    commit();
+  });
+  root.querySelector('.use-local').addEventListener('click', () => {
+    settings = { ...settings, backend: 'local' };
     commit();
   });
   sync();

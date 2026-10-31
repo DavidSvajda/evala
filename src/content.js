@@ -81,6 +81,7 @@ export async function mount({ demo = false } = {}) {
       previous.depth !== next.depth ||
       previous.time !== next.time ||
       previous.hash !== next.hash ||
+      previous.engine !== next.engine ||
       previous.backend !== next.backend ||
       previous.serverUrl !== next.serverUrl ||
       previous.serverVersion !== next.serverVersion
@@ -148,7 +149,7 @@ export async function mount({ demo = false } = {}) {
       return;
     }
     lastFen = position.fen;
-    const key = `${lastFen}|${settings.depth}|${settings.time}|${settings.hash}|${settings.backend}|${settings.serverUrl}|${settings.serverVersion}`;
+    const key = `${lastFen}|${settings.engine}|${settings.depth}|${settings.time}|${settings.hash}|${settings.backend}|${settings.serverUrl}|${settings.serverVersion}`;
     if (!connected || searchKey === key) return;
     searchKey = key;
     requestId++;

@@ -57,7 +57,7 @@ export class EvalBar {
     this.shadow.querySelector('.engine-name').textContent =
       settings.backend === 'server'
         ? 'Stockfish 19 Full · vlastní server'
-        : 'Stockfish 19 Lite · zdarma · lokální výpočet';
+        : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokální výpočet`;
   }
 
   place(board, flipped) {
@@ -137,7 +137,7 @@ export class EvalBar {
       this.shadow.querySelector('.stats').textContent =
         this.settings.backend === 'server'
           ? 'Stockfish 19 Full · server'
-          : 'Stockfish 19 Lite · lokálně';
+          : `Stockfish 19 ${this.settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokálně`;
   }
 
   hide() {

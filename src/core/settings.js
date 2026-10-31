@@ -10,6 +10,7 @@ export const DEFAULTS = Object.freeze({
   showDepth: true,
   pauseHidden: true,
   backend: 'local',
+  engine: 'lite',
   serverUrl: '',
   serverVersion: 0,
 });
@@ -30,6 +31,7 @@ export function sanitizeSettings(input = {}) {
       settings[key] = Math.max(min, Math.min(max, Math.round(input[key])));
   }
   if (input.side === 'right') settings.side = 'right';
+  if (input.engine === 'full') settings.engine = 'full';
   if (input.backend === 'server' && typeof input.serverUrl === 'string') {
     try {
       const url = new URL(input.serverUrl);
