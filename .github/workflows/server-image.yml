@@ -133,7 +133,7 @@ jobs:
           set -euo pipefail
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
-          docker run -d --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" -e PUBLIC_REPORTS=true -e MAIA_DEBUG=true "$IMAGE:$GITHUB_SHA"
+          docker run -d --memory=4g --cpus=2 --name evala-smoke -p 127.0.0.1:8080:8080 -e API_TOKEN="$token" -e PUBLIC_REPORTS=true -e MAIA_DEBUG=true "$IMAGE:$GITHUB_SHA"
           trap 'docker logs evala-smoke; docker rm -f evala-smoke >/dev/null' EXIT
           for i in {1..30}; do
             if curl --fail --silent --header "Authorization: Bearer $token" http://127.0.0.1:8080/api/health >/dev/null; then break; fi
