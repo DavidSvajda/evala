@@ -21,18 +21,25 @@ export function parsePgn(pgn) {
   if (typeof pgn !== 'string' || pgn.length > 2_000_000)
     throw new Error('PGN je prázdné nebo větší než 2 MB. Rozděl soubor na menší části.');
   const chess = new Chess();
+  pgn = normalizePgn(pgn);
   try {
     chess.loadPgn(pgn);
   } catch {
     throw new Error('PGN obsahuje neplatný tah nebo zápis. Zkus původní export PGN z webu.');
   }
+  const explicitFen = pgn.match(/^\[FEN\s+"([^"]+)"\]/m)?.[1];
+  if (!chess.history().length && /^\[SetUp\s+"1"\]/m.test(pgn) && validPosition(explicitFen)) {
+    chess.setHeader('SetUp', '1');
+    chess.setHeader('FEN', chess.fen());
+  }
   const headers = chess.getHeaders();
   if (headers.Variant && !/^(standard|chess)$/i.test(headers.Variant))
     throw new Error('Podporujeme standardní šachy. Tato partie používá jinou variantu.');
   const history = chess.history({ verbose: true });
-  if (!history.length) throw new Error('V PGN nejsou žádné tahy.');
+  if (!history.length && !(headers.SetUp === '1' && headers.FEN && validPosition(headers.FEN)))
+    throw new Error('V PGN nejsou žádné tahy.');
   if (history.length > 600) throw new Error('Limit je 600 půltahů na partii.');
-  const initialFen = history[0].before;
+  const initialFen = history[0]?.before || chess.fen();
   if (!validPosition(initialFen)) throw new Error('Neplatná výchozí pozice partie.');
   const comments = new Map(chess.getComments().map((item) => [item.fen, item.comment]));
   const moves = history.map((m) => {
@@ -78,14 +85,65 @@ export function parsePgn(pgn) {
   };
 }
 
+// Accept the common human-readable title format without silently dropping
+// arbitrary invalid text or repairing illegal chess moves.
+export function normalizePgn(text) {
+  let value = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+  value = value.replace(/^```(?:pgn)?\s*\n([\s\S]*?)\n```$/i, '$1').trim();
+  const title = value.match(
+    /^([^\n\r\[\]]{1,120}?)\s+(?:v\.?|vs\.?)\s+([^\n\r\[\]]{1,120}?)\s*\((\d{4})\)\s*\r?\n\s*(?=\d+\.)/i,
+  );
+  if (title) {
+    const safe = (s) => s.trim().replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    value =
+      `[White "${safe(title[1])}"]\n[Black "${safe(title[2])}"]\n[Date "${title[3]}.??.??"]\n\n` +
+      value.slice(title[0].length);
+  }
+  return value;
+}
+
+export function parseFenGame(text) {
+  const fen =
+    typeof text === 'string'
+      ? text
+          .trim()
+          .replace(/^FEN:\s*/i, '')
+          .replace(/\s+/g, ' ')
+      : '';
+  if (!validPosition(fen)) throw new Error('Neplatný FEN. Vlož úplný zápis pozice se šesti poli.');
+  return parsePgn(
+    `[Event "FEN"]\n[White "Position"]\n[Black "FEN"]\n[SetUp "1"]\n[FEN "${new Chess(fen).fen()}"]\n[Result "*"]\n\n*`,
+  );
+}
+
 export function parsePgnCollection(text) {
   if (typeof text !== 'string' || text.length > 2_000_000)
     throw new Error('Soubor je větší než 2 MB. Importuj menší výběr partií.');
-  const parts = text
-    .replace(/^\uFEFF/, '')
-    .trim()
-    .split(/(?=^\[Event\s)/m)
-    .filter((s) => s.trim());
+  const parts = [];
+  let lines = [],
+    started = false,
+    comment = false;
+  for (const line of normalizePgn(text).split(/\r?\n/)) {
+    const header = !comment && /^\s*\[\w+\s+"(?:[^"\\]|\\.)*"\s*\]\s*$/.test(line);
+    if (header && started) {
+      parts.push(lines.join('\n'));
+      lines = [];
+      started = false;
+    }
+    lines.push(line);
+    if (!header) {
+      const visible = line.replace(/;.*$/, '');
+      if (!comment && /^\s*(?:\d+\.|1-0|0-1|1\/2-1\/2|\*)/.test(visible)) started = true;
+      for (const c of visible) {
+        if (c === '{') comment = true;
+        else if (c === '}') comment = false;
+      }
+    }
+  }
+  if (lines.join('').trim()) parts.push(lines.join('\n'));
   if (parts.length > 100) throw new Error('Importuj nejvýše 100 partií najednou.');
   const games = [],
     errors = [];

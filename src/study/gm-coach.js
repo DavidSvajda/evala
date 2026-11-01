@@ -302,13 +302,13 @@ function continuations(fenBefore, fenAfter, before, after, en, bestSan) {
               : ' dává šach'
             : '';
       text += en
-        ? ` Opponent’s engine reply: ${lineToSan(fenAfter, reply, 3)}${consequence}.`
-        : ` Odpověď soupeře podle enginu: ${lineToSan(fenAfter, reply, 3)}${consequence}.`;
+        ? `\n\nEngine continuation: ${lineToSan(fenAfter, reply, 3)}${consequence}.`
+        : `\n\nPokračování po tvém tahu: ${lineToSan(fenAfter, reply, 3)}${consequence}.`;
     }
     if (best.length)
       text += en
-        ? ` Compare your alternative: ${lineToSan(fenBefore, best, 3)}.`
-        : ` Porovnej vlastní alternativu: ${lineToSan(fenBefore, best, 3)}.`;
+        ? `\n\nStronger alternative: ${lineToSan(fenBefore, best, 3)}.`
+        : `\n\nSilnější varianta: ${lineToSan(fenBefore, best, 3)}.`;
     else if (bestSan) text += en ? ` Compare ${bestSan}.` : ` Porovnej ${bestSan}.`;
   } catch {
     if (bestSan) text += en ? ` Compare ${bestSan}.` : ` Porovnej ${bestSan}.`;

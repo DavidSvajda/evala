@@ -112,6 +112,23 @@ try {
     () => document.querySelector('#analysis-coach-tab').textContent === 'Coach',
   );
   assert.match(await page.locator('#coach-progress').innerText(), /Decision/);
+  await page.setViewportSize({ width: 1920, height: 600 });
+  await page.locator('#coach-next').click();
+  await page.evaluate(() => {
+    document.querySelector('#gm-coach-text').textContent +=
+      '\n\n' + 'Long continuation for layout verification. '.repeat(25);
+    document.querySelector('#position-notes-detail').open = true;
+  });
+  const feedback = await page.locator('.move-feedback').boundingBox();
+  const notes = await page.locator('.learning-notes').boundingBox();
+  const card = await page.locator('#gm-coach-card').boundingBox();
+  assert.ok(
+    card.y + card.height <= feedback.y + feedback.height + 1,
+    'coach card stays inside feedback',
+  );
+  assert.ok(notes.y >= feedback.y + feedback.height - 1, 'notes must not overlap coach');
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.locator('#coach-next').click();
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/coach-desktop-light.png', fullPage: true });
   await page.locator('#toggle-theme').click();
