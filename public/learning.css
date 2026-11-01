@@ -408,7 +408,7 @@ body[data-self-analysis='true'] #inspect-status {
     grid-template-columns: minmax(0, 1fr);
   }
   .workspace .position-workspace {
-    max-width: 960px;
+    max-width: min(100%, var(--board-fit, 960px));
   }
   .workspace .analysis-panel {
     position: static;
@@ -425,7 +425,7 @@ body[data-self-analysis='true'] #inspect-status {
   }
   .puzzle-board-area,
   .practice-layout > div {
-    max-width: 960px;
+    max-width: min(100%, var(--board-fit, 960px));
   }
 }
 
@@ -443,4 +443,114 @@ body[data-self-analysis='true'] #inspect-status {
   .journey-evidence {
     overflow-wrap: anywhere;
   }
+}
+
+.position-workspace > .board-stage {
+  width: 100%;
+  max-width: var(--board-fit, 100%);
+}
+.puzzle-board-area {
+  max-width: min(100%, var(--board-fit, 100%));
+  justify-self: center;
+}
+.practice-layout > div {
+  max-width: min(100%, var(--board-fit, 100%));
+  width: 100%;
+  justify-self: center;
+}
+
+.puzzle-board-footer {
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.puzzle-board-footer #puzzle-number {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.puzzle-board-footer #puzzle-level {
+  flex-basis: 100%;
+  order: 3;
+}
+@media (max-height: 700px) {
+  .puzzles-page {
+    padding-top: 12px;
+  }
+  .puzzles-page > .page-heading {
+    margin-bottom: 10px;
+  }
+  .puzzles-page #puzzle-subtitle {
+    max-width: 40ch;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .puzzles-page .training-tabs {
+    margin-bottom: 12px;
+  }
+  .puzzles-page .training-tabs button {
+    padding-block: 8px;
+  }
+}
+
+.workspace {
+  align-content: start;
+}
+.position-workspace > .board-stage {
+  margin-block: 0;
+  align-self: start;
+}
+
+@media (max-width: 340px) {
+  .main-navigation {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .study-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 48px;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .workspace {
+    padding-inline: 12px;
+  }
+  .page {
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 700px) {
+  .skip-link {
+    left: 12px;
+    max-width: calc(100% - 24px);
+  }
+  .main-navigation {
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .main-navigation > a,
+  .main-navigation > button {
+    flex-shrink: 0;
+  }
+  .analysis-tabs {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    gap: 16px;
+  }
+  .analysis-tabs button {
+    flex-shrink: 0;
+  }
+}
+.puzzles-page .page-heading {
+  gap: 12px;
+}
+.puzzles-page .page-heading > div:first-child {
+  min-width: 0;
+  flex: 1;
 }
