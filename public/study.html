@@ -302,6 +302,11 @@
                 ><h1 id="game-title">Vyber partii</h1
                 ><p id="game-subtitle">Vyber partii v knihovně nebo importuj PGN.</p></div
               ><button id="flip-board" class="icon-button" aria-label="Otočit šachovnici"></button
+              ><button
+                id="fullscreen-analysis"
+                class="icon-button"
+                aria-label="Celá obrazovka"
+              ></button
               ><details class="game-actions"
                 ><summary title="Další akce partie">Partie</summary
                 ><div class="export-row"
@@ -723,7 +728,12 @@
                 ><span id="puzzle-player-dot" class="player-dot"></span
                 ><strong id="puzzle-turn">Načítám úlohu…</strong
                 ><button id="flip-puzzle" class="icon-button" aria-label="Otočit šachovnici"
-                  ><span data-icon="flip"></span></button></div
+                  ><span data-icon="flip"></span></button
+                ><button
+                  id="fullscreen-puzzle"
+                  class="icon-button"
+                  aria-label="Celá obrazovka"
+                ></button></div
               ><div id="puzzle-board" tabindex="0"></div
               ><div class="puzzle-board-footer"
                 ><span id="puzzle-number"></span><strong id="puzzle-level"></strong
@@ -913,6 +923,12 @@
           ></main
         >
         <main class="practice-page page" data-page="practice" hidden
+          ><div class="practice-fullscreen-wrap"
+            ><button
+              id="fullscreen-practice"
+              class="icon-button"
+              aria-label="Celá obrazovka"
+            ></button></div
           ><div id="practice-root" data-i18n-ignore></div
         ></main>
         <main class="account-page page" data-page="account" hidden
