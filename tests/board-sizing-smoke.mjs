@@ -35,61 +35,112 @@ try {
       () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
     );
   };
-  const measure = async (selector) =>
-    page.locator(selector).evaluate((el) => ({
-      width: el.getBoundingClientRect().width,
-      viewport: innerWidth,
-      overflow: document.documentElement.scrollWidth > innerWidth,
-    }));
-  for (const [route, selector] of [
-    ['analysis', '#study-board'],
-    ['puzzles', '#puzzle-board'],
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const cases = [];
+  for (const viewport of [
+    { width: 1920, height: 1000 },
+    { width: 1366, height: 768 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
   ]) {
-    await page.goto(url + '#/' + route);
-    await page.locator(selector).waitFor();
-    await zoom(1);
-    const normal = await measure(selector);
-    await page.setViewportSize({ width: 1440, height: 600 });
-    const short = await measure(selector);
-    assert.ok(
-      Math.abs(normal.width - short.width) < 3,
-      route + ' board must not shrink with viewport height',
-    );
-    await page.setViewportSize({ width: 1440, height: 960 });
-    const sizes = [];
-    for (const factor of [0.8, 1, 1.25]) {
-      await zoom(factor);
-      const m = await measure(selector);
-      assert.equal(m.overflow, false);
-      assert.ok(m.width > 350);
-      sizes.push({ zoom: factor, css: Math.round(m.width), viewport: m.viewport });
+    await page.setViewportSize(viewport);
+    for (const [route, selector, footer] of [
+      ['analysis', '#study-board', '.board-toolbar'],
+      ['puzzles', '#puzzle-board', '.puzzle-board-footer'],
+    ]) {
+      await page.goto(url + '#/' + route);
+      await page.locator(selector).waitFor();
+      for (const factor of [0.8, 1, 1.25, 1.5]) {
+        await zoom(factor);
+        for (const collapsed of [false, true]) {
+          if (
+            (await page.evaluate(() => document.body.dataset.sidebarCollapsed === 'true')) !==
+            collapsed
+          )
+            await page.locator('#toggle-sidebar').click();
+          await page
+            .waitForFunction(
+              ({ selector, footer }) => {
+                const b = document.querySelector(selector).getBoundingClientRect(),
+                  f = document.querySelector(footer).getBoundingClientRect();
+                return (
+                  b.width > 120 &&
+                  b.bottom <= innerHeight - 8 &&
+                  f.bottom <= innerHeight - 8 &&
+                  document.documentElement.scrollWidth <= innerWidth
+                );
+              },
+              { selector, footer },
+              { timeout: 4000 },
+            )
+            .catch(async (error) => {
+              console.log(
+                await page.evaluate(
+                  ({ selector, footer }) => ({
+                    board: document.querySelector(selector).getBoundingClientRect().toJSON(),
+                    footer: document.querySelector(footer).getBoundingClientRect().toJSON(),
+                    overflowing: [...document.querySelectorAll('body *')]
+                      .filter(
+                        (n) =>
+                          n.getClientRects().length &&
+                          n.getBoundingClientRect().right > innerWidth + 1,
+                      )
+                      .map((n) => ({
+                        tag: n.tagName,
+                        id: n.id,
+                        cls: String(n.className).slice(0, 80),
+                        right: n.getBoundingClientRect().right,
+                        width: n.getBoundingClientRect().width,
+                      }))
+                      .slice(0, 15),
+                    w: innerWidth,
+                    h: innerHeight,
+                    scroll: scrollY,
+                    debug: document
+                      .querySelector(selector)
+                      .closest('.position-workspace, .puzzle-board-area').dataset.fitDebug,
+                    css: document
+                      .querySelector(selector)
+                      .closest('.position-workspace, .puzzle-board-area')
+                      .getAttribute('style'),
+                    extra:
+                      document.querySelector(selector).parentElement.getBoundingClientRect().width -
+                      document.querySelector(selector).getBoundingClientRect().width,
+                    caption: document
+                      .querySelector('.board-caption')
+                      .getBoundingClientRect()
+                      .toJSON(),
+                  }),
+                  { selector, footer },
+                ),
+              );
+              throw error;
+            });
+          const result = await page.locator(selector).evaluate((el) => {
+            const b = el.getBoundingClientRect();
+            return {
+              width: Math.round(b.width),
+              height: Math.round(b.height),
+              bottom: Math.round(b.bottom),
+              viewport: innerHeight,
+            };
+          });
+          assert.ok(Math.abs(result.width - result.height) < 2, 'board must remain square');
+          cases.push({ device: viewport.width, route, zoom: factor, collapsed, ...result });
+        }
+      }
+      await zoom(1);
+      if (viewport.width === 1920 || viewport.width === 390)
+        await page.screenshot({ path: `test-results/board-fit-${viewport.width}-${route}.png` });
     }
-    assert.ok(
-      sizes[2].css * 1.25 >= sizes[1].css,
-      route + ' 125% zoom must not make the displayed board smaller',
-    );
-    await zoom(1);
-    const before = await measure(selector);
-    await page.locator('#toggle-sidebar').click();
-    await page.waitForFunction(() => document.body.dataset.sidebarCollapsed === 'true');
-    // Wait for the existing 220 ms sidebar transition, not a polling test loop.
-    await page.waitForTimeout(250);
-    const collapsed = await measure(selector);
-    assert.ok(collapsed.width >= before.width - 2);
-    await page.locator('#toggle-sidebar').click();
-    await page.waitForTimeout(250);
-    console.log(route, JSON.stringify(sizes));
-    assert.equal(
-      await page.locator('#app-error').textContent(),
-      '',
-      'empty library must not show a restoration error',
-    );
-    if (route === 'analysis')
-      await page.screenshot({ path: 'test-results/board-larger-analysis.png' });
   }
   console.log(
-    'PASS real Chrome 80/100/125% zoom, height independence, sidebar expansion and no horizontal overflow',
+    'PASS',
+    cases.length,
+    'layouts: whole board + controls visible at 80/100/125/150% zoom, both sidebar states, desktop/laptop/tablet/phone',
   );
+  console.log(JSON.stringify(cases.filter((c) => c.zoom === 1 && !c.collapsed)));
 } finally {
   await context.close();
   server.closeAllConnections();

@@ -15,7 +15,7 @@
   --negative: #a94739;
 }
 body {
-  min-width: 320px;
+  min-width: 0;
   background: var(--surface);
   font-size: 14px;
   line-height: 1.55;
@@ -950,7 +950,7 @@ progress::-webkit-progress-value {
 }
 .position-workspace {
   min-width: 0;
-  max-width: 960px;
+  max-width: min(100%, var(--board-fit, 960px));
   width: 100%;
   justify-self: center;
 }

@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { moveIcon } from '../ui/move-icons.js';
 import { language } from './i18n.js';
+import { fitBoard } from './board-fit.js';
 const names = { p: 'pěšec', n: 'jezdec', b: 'střelec', r: 'věž', q: 'dáma', k: 'král' };
 const englishNames = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 export class StudyBoard {
@@ -15,6 +16,7 @@ export class StudyBoard {
     this.grid = document.createElement('div');
     this.grid.className = 'square-grid';
     element.append(this.grid);
+    fitBoard(element);
     this.arrows = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.arrows.setAttribute('viewBox', '0 0 800 800');
     this.arrows.classList.add('board-arrows');
