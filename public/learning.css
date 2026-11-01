@@ -428,3 +428,19 @@ body[data-self-analysis='true'] #inspect-status {
     max-width: 960px;
   }
 }
+
+@media (max-width: 700px) {
+  .app-main,
+  .app-sidebar {
+    transition: none;
+  }
+  .overview-grid > *,
+  .journey-main,
+  .journey-evidence {
+    min-width: 0;
+  }
+  .journey-main,
+  .journey-evidence {
+    overflow-wrap: anywhere;
+  }
+}
