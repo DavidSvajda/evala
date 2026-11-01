@@ -108,6 +108,7 @@ try {
   await page.locator('#toggle-theme').click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/journey-mobile-dark.png' });
+  await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   // Persisted completion, including a reload, must offer the follow-up step.
   await page.evaluate(() => {
