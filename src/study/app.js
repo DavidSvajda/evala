@@ -61,6 +61,31 @@ $('#first-move').innerHTML = stroke('<path d="M7 5v14m10-13-7 6 7 6"/>');
 $('#previous-move').innerHTML = stroke('<path d="m15 5-7 7 7 7"/>');
 $('#next-move').innerHTML = stroke('<path d="m9 5 7 7-7 7"/>');
 $('#last-move').innerHTML = stroke('<path d="M17 5v14M7 6l7 6-7 6"/>');
+// Fullscreen buttons
+const fullscreenBtns = ['fullscreen-analysis', 'fullscreen-puzzle', 'fullscreen-practice']
+  .map((id) => $('#' + id))
+  .filter(Boolean);
+
+function updateFullscreenIcons() {
+  const inFs = !!document.fullscreenElement;
+  for (const btn of fullscreenBtns) {
+    btn.innerHTML = inFs ? icons.fullscreenExit : icons.fullscreen;
+    btn.setAttribute('aria-label', inFs ? 'Ukončit celou obrazovku' : 'Celá obrazovka');
+  }
+}
+
+if (document.fullscreenEnabled) {
+  updateFullscreenIcons();
+  for (const btn of fullscreenBtns) {
+    btn.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    });
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenIcons);
+} else {
+  for (const btn of fullscreenBtns) btn.hidden = true;
+}
 let showThreat = false,
   retryTarget = null,
   learningUI;

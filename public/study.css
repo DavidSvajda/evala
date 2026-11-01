@@ -2464,3 +2464,8 @@ body[data-skill='advanced'] .analysis-panel .line-san {
 .danger-zone input {
   max-width: 200px;
 }
+.practice-fullscreen-wrap {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 0;
+}
