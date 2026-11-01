@@ -14,7 +14,7 @@ import {
 import { Chess } from 'chess.js';
 import { StudyEngine, searchSettings } from './uci.js';
 import { RemoteEngine, serverAddress, remoteReview, connectPublicServer } from './remote.js';
-import { parsePgnCollection, DEMO_PGN, lineToSan, annotatedPgn } from './game.js';
+import { parsePgnCollection, parseFenGame, DEMO_PGN, lineToSan, annotatedPgn } from './game.js';
 import { reviewGame, summarize } from './review.js';
 import {
   loadLibrary,
@@ -595,6 +595,17 @@ async function addPgn(text) {
   $('#import-panel').open = false;
   return games;
 }
+$('#import-fen').addEventListener('click', async () => {
+  try {
+    await addPgn(parseFenGame($('#fen-input').value).pgn);
+    $('#fen-input').value = '';
+    setView('review');
+    $('#toggle-settings').setAttribute('aria-expanded', 'false');
+    $('#analysis-lines-tab')?.click();
+  } catch (e) {
+    $('#import-status').textContent = translate(e.message);
+  }
+});
 $('#import-pgn').addEventListener('click', async () => {
   try {
     await addPgn($('#pgn-input').value);
@@ -649,7 +660,8 @@ $('#username-form').addEventListener('submit', async (event) => {
 
 function renderReview() {
   const running = !!job && job.game.id === selected?.id;
-  $('#review-game').disabled = !selected || blind() || (!!job && !running) || playerReport?.running;
+  $('#review-game').disabled =
+    !selected?.moves.length || blind() || (!!job && !running) || playerReport?.running;
   $('#review-game').classList.toggle('running', !!running);
   $('#review-game').innerHTML =
     `${running ? 'Pozastavit rozbor' : selected?.analysis?.complete ? 'Znovu rozebrat' : selected?.analysis ? 'Pokračovat v rozboru' : 'Rozebrat partii'}<span>${running ? icons.pause : icons.arrow}</span>`;
@@ -815,7 +827,7 @@ function renderPosition() {
       ? `${Math.ceil(ply / 2)}${ply % 2 ? '.' : '…'} ${selected.moves[ply - 1].san}`
       : 'Výchozí pozice';
   $('#return-game').hidden = !branch;
-  $('#save-variation').hidden = !branch;
+  $('#save-variation').hidden = !branch || !selected?.moves.length;
   $('#first-move').disabled = branch ? branch.index === 0 : ply === 0;
   $('#previous-move').disabled = $('#first-move').disabled;
   $('#last-move').disabled = branch

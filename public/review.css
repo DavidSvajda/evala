@@ -57,6 +57,25 @@
   display: flex;
   flex-direction: column;
 }
+.analysis-panel[data-tab='coach'] > * {
+  flex-shrink: 0;
+  min-width: 0;
+}
+.gm-coach-card > * {
+  flex-shrink: 0;
+}
+.gm-coach-header,
+.gm-coach-actions {
+  flex-wrap: wrap;
+}
+.gm-coach-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.gm-coach-card[hidden],
+.threat-radar-card[hidden] {
+  display: none;
+}
 .analysis-panel[data-tab='coach'] .analysis-tabs {
   order: -3;
   margin-top: 0;

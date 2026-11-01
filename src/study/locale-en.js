@@ -1,4 +1,11 @@
 export const EN = {
+  'Importovat pozici FEN': 'Import a FEN position',
+  'FEN pozice': 'FEN position',
+  'Úplný FEN se šesti poli': 'Complete FEN with six fields',
+  'Otevřít pozici': 'Open position',
+  'Neplatný FEN. Vlož úplný zápis pozice se šesti poli.':
+    'Invalid FEN. Enter a complete position with six fields',
+
   'Načítám dnešní úlohu…': 'Loading today’s puzzle…',
   'Úloha se nenačetla. Otevři Trénink a zkus to znovu.':
     'Puzzle unavailable. Open Training to try again.',

@@ -277,6 +277,18 @@
                 spellcheck="false"
               ></textarea
               ><button id="import-pgn" class="text-button">Importovat vložené PGN</button
+              ><details class="fen-import"
+                ><summary>Importovat pozici FEN</summary><label for="fen-input">FEN pozice</label
+                ><textarea
+                  id="fen-input"
+                  rows="2"
+                  maxlength="150"
+                  spellcheck="false"
+                  placeholder="Úplný FEN se šesti poli"
+                ></textarea
+                ><button id="import-fen" class="quiet-button" type="button"
+                  >Otevřít pozici</button
+                ></details
               ><p id="import-status" class="inline-status" role="status"></p></details
             ><div id="game-list" class="game-list"></div
             ><button id="demo-game" class="demo-game text-button">Ukázková partie</button
