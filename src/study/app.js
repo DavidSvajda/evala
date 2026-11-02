@@ -1326,7 +1326,7 @@ async function inspectPosition() {
       ? undefined
       : { initialFen: selected.initialFen, moves: selected.moves.slice(0, ply).map((m) => m.uci) };
     const result = await engine('inspect').search(
-      { fen, history, settings: { ...settings(), time: Math.max(1500, options.time) } },
+      { fen, history, settings: settings() },
       {
         signal: controller.signal,
         onInfo: (result) => {

@@ -149,6 +149,10 @@
   opacity: 0.5;
   cursor: default;
 }
+/* Removing the evaluation rail must also remove its 32px grid track. */
+body[data-self-analysis='true'] .board-stage {
+  grid-template-columns: minmax(0, 1fr);
+}
 body[data-self-analysis='true'] .study-eval,
 body[data-self-analysis='true'] #eval-graph,
 body[data-self-analysis='true'] .graph-heading,

@@ -48,6 +48,7 @@ export class StudyEngine {
     this.configured = {};
     this.cache = [];
     this.cacheBytes = 0;
+    this.localScope = {};
   }
   boot() {
     if (this.ready) return this.ready;
@@ -114,7 +115,7 @@ export class StudyEngine {
               : [0, 1000, 0],
         };
       const settings = searchSettings(request.settings),
-        scope = request.cacheScope;
+        scope = request.cacheScope ?? this.localScope;
       // Server-issued scope objects isolate result reuse between sessions.
       // Full history and all search settings are part of the exact input key.
       const cacheKey =

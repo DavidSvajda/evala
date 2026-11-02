@@ -18,3 +18,5 @@ __pycache__/
 *.pfx
 .local-data/
 .azure-cli-venv/
+
+.gitnexus/
