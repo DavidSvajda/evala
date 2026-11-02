@@ -49,6 +49,7 @@ await page.route('**/api/account/library', async (route) => {
   await route.fulfill({ json: { games: [] } });
 });
 try {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(`http://127.0.0.1:${server.address().port}/study.html`);
   await page.waitForFunction(() => window.EvalaFixture);
   const game = parsePgn('1. e4 e5 *');

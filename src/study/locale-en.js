@@ -1,4 +1,48 @@
 export const EN = {
+  Sdílet: 'Share',
+  'Sdílet partii': 'Share game',
+  'Sdílení partie': 'Game sharing',
+  'Kdokoli s odkazem ji otevře bez účtu. Soukromé poznámky se nesdílejí.':
+    'Anyone with the link can open it without an account. Private notes are excluded.',
+  'Sdílení odkazem je dostupné na hostované Evale.': 'Link sharing is available on hosted Evala.',
+  'Zkopírovat odkaz na partii': 'Copy game link',
+  'Zkopírovat aktuální pozici': 'Copy current position',
+  'Zkopírovat vlastní variantu': 'Copy your variation',
+  'Zkopírovat odkaz': 'Copy link',
+  Odkaz: 'Link',
+  'Odkaz můžeš zrušit v tomto prohlížeči. Jeho uložené kopie tím nezmizí.':
+    'You can revoke the link in this browser. Copies already saved will remain.',
+  'Sdílená kopie. Rozbor běží na tvém zařízení.': 'Shared copy. Analysis runs on your device.',
+  'Uložit do mých partií': 'Save to my games',
+  'Kopie je uložená v tvé knihovně.': 'The copy is saved in your library.',
+  'Neplatný odkaz na partii.': 'Invalid game link.',
+  'Partie je uložená v jiném prohlížeči. Požádej autora o odkaz přes Sdílet.':
+    'This game is stored in another browser. Ask its owner for a link using Share.',
+  'Neplatná varianta.': 'Invalid variation.',
+  'Sdílená partie není dostupná. Odkaz mohl být zrušen.':
+    'The shared game is unavailable. Its link may have been revoked.',
+  'Sdílení se nepodařilo. Zkus to znovu.': 'Sharing failed. Try again.',
+  'Nejprve zruš některý ze starších odkazů.': 'Revoke an older link first.',
+  'Účet se změnil. Zkus sdílení znovu.': 'The account changed. Try sharing again.',
+  'Zrušit odkaz': 'Revoke link',
+  'Odkaz zrušen.': 'Link revoked.',
+  'Připravuji odkaz…': 'Preparing link…',
+  'Odkaz je připravený ke zkopírování.': 'The link is ready to copy.',
+  'Dnešní limit je 20 nových sdílení.': 'The daily limit is 20 new shared links.',
+  'Sdílení je dočasně zaplněné. Zkus to později.':
+    'Sharing capacity is temporarily full. Try again later.',
+  'Příliš mnoho požadavků na sdílení.': 'Too many sharing requests.',
+  'Načíst nové partie': 'Load new games',
+  'Hledat nové partie při obnovení a návratu do aplikace':
+    'Check for new games on reload and when returning to the app',
+  'Nejdřív zadej šachovou přezdívku v importu.': 'Enter your chess username in Import first.',
+  'Hledám nové dokončené partie…': 'Checking for new completed games…',
+  'Nové partie:': 'New games:',
+  'Žádné nové dokončené partie. Knihovna je aktuální.':
+    'No new completed games. Your library is up to date.',
+  Dnes: 'Today',
+  Částečně: 'Partial',
+  'Načítání trvá příliš dlouho. Zkus to znovu.': 'Loading took too long. Try again.',
   'Vlastní klasifikace Evala, nikoli odznaky Chess.com. Skóre tahů používá převod hodnocení z veřejné formule Lichess. Skvělý tah nachází jedinou dobrou možnost nebo rozhodujícím způsobem využívá chybu soupeře. Promarněná šance označuje minutý mat nebo nevyužitou chybu soupeře. Brilantní tah je silná oběť figury nebo kvality, včetně nabídky jiné než zahrané figury. Kompenzaci ověřuje engine při dosažené hloubce alespoň 14, i v rychlém rozboru. Podrobnější profil prověří více kandidátů. Starší partie znovu rozeber pro nové ověření obětí. Hlubší rozbor může hodnocení změnit.':
     'Evala uses its own classifications. Move scores use the published Lichess conversion. Great moves find the only good option or decisively exploit an opponent’s mistake. A Miss identifies a missed mate or opportunity. A Brilliant is a strong piece or exchange sacrifice, including offers of a different piece. The engine verifies compensation at a reached depth of at least 14, including in Quick review. More detailed profiles check more candidates. Analyse older games again to verify sacrifices. Deeper analysis can change classifications.',
   'Jediný tah, který podle spočítaných alternativ zachovává výhru nebo drží pozici.':

@@ -36,6 +36,7 @@ try {
         },
       }),
     );
+    await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
     await page.goto(`http://127.0.0.1:${server.address().port}/study.html#/puzzles`);
     await page.locator('#puzzle-board [data-square="a7"]').click();
     await page.locator('#puzzle-board [data-square="a8"]').click();

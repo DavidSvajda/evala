@@ -218,9 +218,16 @@
         <main class="games-page page" data-page="games" hidden
           ><div class="page-heading"
             ><div><h1>Moje partie</h1><p>Import, uložené rozbory a vlastní poznámky.</p></div
+            ><button id="refresh-games" class="quiet-button" type="button"
+              >Načíst nové partie</button
             ><button id="sync-library" class="quiet-button"
               ><span data-icon="cloud"></span>Synchronizovat</button
             ></div
+          ><div class="library-refresh-options"
+            ><label class="check-row"
+              ><input id="auto-refresh-games" type="checkbox" checked />Hledat nové partie při
+              obnovení a návratu do aplikace</label
+            ><p id="library-refresh-status" role="status"></p></div
           ><section class="library" aria-label="Knihovna partií"
             ><div class="section-title"><h2>Knihovna</h2><span id="library-count">0</span></div
             ><div class="library-filters"
@@ -302,6 +309,43 @@
                 ><h1 id="game-title">Vyber partii</h1
                 ><p id="game-subtitle">Vyber partii v knihovně nebo importuj PGN.</p></div
               ><div class="game-heading-actions"
+                ><details id="share-menu" class="game-actions share-menu"
+                  ><summary class="icon-button" title="Sdílet" aria-label="Sdílet"
+                    ><svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M12 15V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"
+                      /></svg></summary
+                  ><section class="share-panel" aria-label="Sdílení partie"
+                    ><strong>Sdílet partii</strong
+                    ><p>Kdokoli s odkazem ji otevře bez účtu. Soukromé poznámky se nesdílejí.</p
+                    ><p id="share-unavailable" hidden
+                      >Sdílení odkazem je dostupné na hostované Evale.</p
+                    ><button type="button" class="quiet-button" data-share-mode="game"
+                      >Zkopírovat odkaz na partii</button
+                    ><button type="button" class="quiet-button" data-share-mode="position"
+                      >Zkopírovat aktuální pozici</button
+                    ><button type="button" class="quiet-button" data-share-mode="variation"
+                      >Zkopírovat vlastní variantu</button
+                    ><div id="share-output" hidden
+                      ><label for="share-url">Odkaz</label
+                      ><input id="share-url" type="text" readonly /><button
+                        type="button"
+                        id="copy-share-url"
+                        class="text-button"
+                        >Zkopírovat odkaz</button
+                      ></div
+                    ><p id="share-status" role="status"></p><div id="share-links"></div
+                    ><p
+                      >Odkaz můžeš zrušit v tomto prohlížeči. Jeho uložené kopie tím nezmizí.</p
+                    ></section
+                  ></details
                 ><button id="flip-board" class="icon-button" aria-label="Otočit šachovnici"></button
                 ><button
                   id="fullscreen-analysis"
@@ -315,6 +359,11 @@
                     ><button id="delete-game" class="text-button">Smazat partii</button></div
                   ></details
                 ></div
+              ></div
+            ><div id="shared-game-banner" class="shared-game-banner" hidden
+              ><span id="shared-game-message">Sdílená kopie. Rozbor běží na tvém zařízení.</span
+              ><button type="button" id="save-shared-game" class="text-button"
+                >Uložit do mých partií</button
               ></div
             ><div class="board-stage"
               ><div

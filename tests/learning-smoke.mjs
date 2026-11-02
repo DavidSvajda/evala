@@ -50,6 +50,7 @@ await page.route('**/api/analyze', async (route) => {
   });
 });
 try {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/home');
   const g = parsePgn(DEMO_PGN);
   g.headers.White = 'Schweits';

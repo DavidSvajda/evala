@@ -1,3 +1,5 @@
+import { gameStatusMarkup } from './views/game-status.js';
+import { createLibraryRefresh } from './library-refresh.js';
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
 import { reviewMoments, legalContinuation, judgeRetry } from './coach-review.js';
@@ -45,12 +47,14 @@ import { brand, icons } from '../ui/icons.js';
 import { moveIcon } from '../ui/move-icons.js';
 import { initializeLanguage, language, translate } from './i18n.js';
 import { initializeFullscreen } from './fullscreen.js';
+import { createSharing } from './sharing.js';
 import {
   readSettings as readBarSettings,
   writeSettings as writeBarSettings,
 } from '../core/settings.js';
 
 const $ = (selector) => document.querySelector(selector);
+let sharing = null;
 initializeLanguage();
 const stroke = (path) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -460,7 +464,7 @@ function renderLibrary() {
     const button = document.createElement('button');
     button.className = 'game-item';
     button.setAttribute('aria-current', String(selected?.id === game.id));
-    button.innerHTML = `<span class="game-result">${esc(game.headers.Result || '*')}</span><span class="recent-players"><strong>${esc(game.headers.White || 'Bílý')} <span>–</span> ${esc(game.headers.Black || 'Černý')}</strong><small>${esc(game.headers.Opening || game.headers.ECO || 'Standardní šachy')} · ${Math.ceil(game.moves.length / 2)} tahů</small></span><span class="game-date">${esc(game.headers.Date?.includes('?') ? '' : game.headers.Date || '')}</span><span class="game-state ${game.analysis?.complete ? 'game-analysed complete' : ''}">${game.analysis?.complete ? 'Rozebráno' : game.analysis ? 'Částečný rozbor' : 'Bez rozboru'}</span><span>→</span>`;
+    button.innerHTML = `<span class="game-result">${esc(game.headers.Result || '*')}</span><span class="recent-players"><strong>${esc(game.headers.White || 'Bílý')} <span>–</span> ${esc(game.headers.Black || 'Černý')}</strong><small>${esc(game.headers.Opening || game.headers.ECO || 'Standardní šachy')} · ${Math.ceil(game.moves.length / 2)} tahů</small></span><span class="game-date">${esc(game.headers.Date?.includes('?') ? '' : game.headers.Date || '')}</span>${gameStatusMarkup(game)}<span>→</span>`;
     button.addEventListener('click', () => {
       setView('review');
       selectGame(game);
@@ -578,7 +582,7 @@ function selectGame(game) {
   $('.workspace').classList.remove('library-open');
   if (activeView === 'review') focusBoard();
 }
-async function addPgn(text) {
+async function addPgn(text, { select = true } = {}) {
   const { games, errors } = parsePgnCollection(text);
   let added = 0;
   for (const game of [...games].reverse()) {
@@ -598,7 +602,7 @@ async function addPgn(text) {
   $('#import-status').textContent =
     `${added} nových partií${errors.length ? ' · ' + errors.join(' ') : games.length > added ? ' · duplicity přeskočeny' : ''}`;
   const first = library.find((g) => g.id === games[0].id);
-  if (first) selectGame(first);
+  if (first && select) selectGame(first);
   else renderLibrary();
   $('#import-panel').open = false;
   return games;
@@ -845,6 +849,7 @@ function renderPosition() {
   $('#analyze-position').disabled = !selected || blind();
   $('#export-pgn').disabled = !selected;
   $('#delete-game').disabled = !selected || job?.game.id === selected?.id;
+  sharing?.sync();
   $('#move-classification').innerHTML = mark
     ? `<span class="classification ${esc(mark.kind)}">${moveIcon(mark.kind)}<span>${esc(last?.san)} · ${esc(mark.label)}</span></span>`
     : '';
@@ -1668,4 +1673,45 @@ window.addEventListener('pagehide', () => {
   importController?.abort();
   reviewer?.dispose();
   inspector?.dispose();
+});
+// Shared links restore only after library and routing have initialized.
+sharing = createSharing({
+  enabled: hostedServer,
+  owner: () => account.user?.id || 'guest',
+  game: () => selected,
+  ply: () => ply,
+  branch: () => branch,
+  library: () => library,
+  save: addPgn,
+  clear: () => {
+    selected = null;
+    branch = null;
+    renderAll();
+  },
+  open: (game, index, variation, step) => {
+    setView('review');
+    selectGame(game);
+    navigate(index);
+    if (variation) {
+      startBranch(variation.moves);
+      if (branch) {
+        branch.index = /^\d{1,3}$/.test(step || '')
+          ? Math.min(branch.moves.length, Number(step))
+          : branch.moves.length;
+        renderPosition();
+        renderMoves();
+      }
+    }
+  },
+});
+await sharing.openUrl();
+
+createLibraryRefresh({
+  options: () => options,
+  saveOptions: () => savePreferences(options),
+  library: () => library,
+  owner: () => account.user?.id || 'guest',
+  busy: () => !!job || !!playerReport?.running || !!importController,
+  add: (pgn) => addPgn(pgn, { select: false }),
+  render: renderLibrary,
 });

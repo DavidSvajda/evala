@@ -26,6 +26,7 @@ page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
 try {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto('http://127.0.0.1:4175/study.html');
   await page
     .locator('#pgn-input')

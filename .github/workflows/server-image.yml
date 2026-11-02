@@ -20,6 +20,7 @@ on:
           - journey
           - classification
           - local-only
+          - sharing
 permissions:
   contents: read
   packages: write
@@ -146,18 +147,25 @@ jobs:
           node tests/coach-review-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Verify sharing, refresh and language preferences
+        if: inputs.validation == 'sharing'
+        run: |
+          npm run lint
+          npm run format:check
+          node --test tests/sharing.test.mjs tests/release-version.test.mjs tests/account-preferences.test.mjs tests/imports.test.mjs
+          node tests/sharing-smoke.mjs
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
       - name: Build browser-only web host
-        if: inputs.validation == 'local-only'
+        if: inputs.validation == 'local-only' || inputs.validation == 'sharing'
         run: docker build --platform linux/amd64 --file Dockerfile.web --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Build and verify native engine
-        if: inputs.validation != 'local-only'
+        if: inputs.validation != 'local-only' && inputs.validation != 'sharing'
         run: docker build --platform linux/amd64 --file Dockerfile.azure --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Smoke test the container
-        if: inputs.validation != 'local-only'
+        if: inputs.validation != 'local-only' && inputs.validation != 'sharing'
         shell: bash
         run: |
           set -euo pipefail

@@ -35,6 +35,7 @@ try {
     if (req.url === '/api/analyze') calls++;
   });
   await new Promise((done) => backend.listen(0, '127.0.0.1', done));
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(`chrome-extension://${id}/study.html`);
   await page.locator('#toggle-settings').click();
   await page.locator('#backend').selectOption('server');

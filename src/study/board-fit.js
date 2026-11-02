@@ -59,7 +59,7 @@ export function fitBoard(element) {
     document.fonts?.ready.then(schedule);
     observer = new ResizeObserver(schedule);
     for (const node of document.querySelectorAll(
-      '.app-main, .app-sidebar, .study-header, .game-heading, .board-toolbar, .board-caption, .puzzle-board-footer',
+      '.app-main, .app-sidebar, .study-header, .game-heading, .shared-game-banner, .board-toolbar, .board-caption, .puzzle-board-footer',
     ))
       observer.observe(node);
   }

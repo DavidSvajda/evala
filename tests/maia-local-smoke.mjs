@@ -22,6 +22,7 @@ try {
   context.on('request', (r) => {
     if (/^https?:/.test(r.url())) remote.push(r.url());
   });
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(`chrome-extension://${id}/popup.html`);
   const result = await page.evaluate(async () => {
     const worker = new Worker(chrome.runtime.getURL('engine/maia-worker.js'), { type: 'module' });

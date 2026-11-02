@@ -44,6 +44,7 @@ const select = async (sample) => {
 };
 const score = () => page.evaluate(() => window.evalaDemo.getStatus().score);
 try {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto('http://127.0.0.1:4174/demo.html');
   await waitDone();
   assert.ok((await score()).depth >= 6, 'real WASM must finish a search');

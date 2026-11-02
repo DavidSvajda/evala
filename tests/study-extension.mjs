@@ -19,6 +19,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 try {
   const cdp = await context.browser().newBrowserCDPSession();
   const { id } = await cdp.send('Extensions.loadUnpacked', { path: resolve('dist') });
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(`chrome-extension://${id}/study.html?username=Schweits`);
   assert.equal(await page.locator('#username').inputValue(), 'Schweits');
   await page.locator('#import-username').click();

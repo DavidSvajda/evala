@@ -1,6 +1,17 @@
 import { EN, patterns } from './locale-en.js';
 
-let selected = localStorage.getItem('evala-language') === 'en' ? 'en' : 'cs';
+function initialLanguage() {
+  const explicit = new URLSearchParams(location.search).get('lang');
+  if (['en', 'cs'].includes(explicit)) return explicit;
+  try {
+    const saved = localStorage.getItem('evala-language');
+    if (['en', 'cs'].includes(saved)) return saved;
+  } catch {
+    /* Storage can be unavailable. */
+  }
+  return 'en';
+}
+let selected = initialLanguage();
 const originals = new WeakMap(),
   attributes = new WeakMap();
 const canonicalSources = new Map();
@@ -87,7 +98,16 @@ export function setLanguage(value) {
   const next = value === 'en' ? 'en' : 'cs',
     changed = next !== selected;
   selected = next;
-  localStorage.setItem('evala-language', next);
+  try {
+    localStorage.setItem('evala-language', next);
+  } catch {
+    /* Keep the current tab usable. */
+  }
+  if (changed) {
+    const url = new URL(location.href);
+    url.searchParams.set('lang', next);
+    if (url.href !== location.href) history.replaceState(null, '', url);
+  }
   document.documentElement.lang = next;
   walk(document.body);
   if (changed) document.dispatchEvent(new CustomEvent('evala:language', { detail: next }));

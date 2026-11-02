@@ -41,6 +41,7 @@ try {
     });
   });
   const base = `http://127.0.0.1:${server.address().port}/study.html`;
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '#/practice');
   await page.locator('#workshop-human-tab').click();
   await page.waitForFunction(() => !document.querySelector('#human-new').disabled);

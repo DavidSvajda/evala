@@ -46,6 +46,7 @@ page.on('request', (r) => {
   if (r.url().endsWith('.wasm')) wasm++;
 });
 async function route(name) {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/' + name);
   await page.locator(`main[data-page="${name}"]`).waitFor();
   await page.locator('#home-board img').first().waitFor({ state: 'attached' });

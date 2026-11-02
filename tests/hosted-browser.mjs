@@ -23,6 +23,7 @@ try {
     if (request.url().endsWith('.wasm')) wasm++;
     if (request.url().endsWith('/api/review-game')) requests++;
   });
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base);
   await page.locator('#backend').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#backend').inputValue(), 'server');

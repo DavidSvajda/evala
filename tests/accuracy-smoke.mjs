@@ -30,6 +30,7 @@ try {
   await page.addInitScript(() => {
     localStorage.setItem('evala-display:guest', JSON.stringify({ onboardingComplete: true }));
   });
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/home');
   await page.locator('#home-board img').first().waitFor({ state: 'attached' });
   if (process.env.EVALA_BASE_URL) {

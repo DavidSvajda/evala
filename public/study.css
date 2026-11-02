@@ -2485,3 +2485,111 @@ body[data-skill='advanced'] .analysis-panel .line-san {
 [hidden].icon-button {
   display: none;
 }
+.share-menu > summary {
+  list-style: none;
+}
+.share-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.share-panel {
+  position: fixed;
+  z-index: 210;
+  width: min(340px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px #18251b20;
+}
+.share-panel p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+.share-panel input {
+  width: 100%;
+  min-width: 0;
+}
+.share-panel .quiet-button {
+  text-align: left;
+}
+.share-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.shared-game-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.shared-game-banner[hidden] {
+  display: none;
+}
+.status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  white-space: normal;
+}
+.game-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.game-status svg {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+.status-pending {
+  color: var(--negative, #a94739);
+  background: color-mix(in srgb, var(--negative, #a94739) 9%, transparent);
+}
+.status-complete {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.status-partial {
+  color: var(--ink);
+  background: color-mix(in srgb, #b39343 18%, transparent);
+}
+.status-today {
+  color: var(--accent);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.library-refresh-options {
+  margin: -12px 0 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.library-refresh-options .check-row {
+  justify-content: flex-start;
+}
+.library-refresh-options p {
+  min-height: 1.5em;
+  margin: 8px 0 0;
+}
+.games-page > .page-heading {
+  flex-wrap: wrap;
+}

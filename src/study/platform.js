@@ -108,6 +108,8 @@ export async function initPlatform(context) {
       ...local,
       ...account.user?.preferences,
     };
+    const linkLanguage = new URLSearchParams(location.search).get('lang');
+    if (['en', 'cs'].includes(linkLanguage)) preferences.language = linkLanguage;
     if ((account.user?.preferences?.soundVersion ?? local.soundVersion) !== 1) {
       preferences.sound = true;
       preferences.soundVersion = 1;

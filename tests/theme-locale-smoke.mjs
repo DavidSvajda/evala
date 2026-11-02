@@ -34,6 +34,7 @@ try {
       JSON.stringify({ onboardingComplete: true, soundVersion: 1 }),
     ),
   );
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/home');
   await page.locator('#toggle-theme').waitFor();
   assert.equal(
