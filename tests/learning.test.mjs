@@ -57,14 +57,16 @@ test('brilliant needs current, deep, complete acceptance proof; losing or shallo
   ])
     assert.equal(verifiedBrilliant(m, before, after, p), null);
   assert.equal(verifiedBrilliant(m, { ...before, depth: 13 }, after, proof), null);
+  // Multiple good attacking continuations do not disqualify a sound sacrifice
+  // when the player is not simply giving back a material advantage.
   assert.equal(
     verifiedBrilliant(
       m,
       { ...before, lines: [before.lines[0], { kind: 'cp', value: 600, depth: 20 }] },
       after,
       proof,
-    ),
-    null,
+    ).kind,
+    'brilliant',
   );
 });
 test('legacy brilliant badges are removed on migration without losing completed analysis', () => {

@@ -46,8 +46,14 @@ export function sanitizeSettings(input = {}) {
         url.protocol === 'https:' ||
         (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
       ) {
-        settings.backend = 'server';
-        settings.serverUrl = url.origin;
+        // Migrate extensions previously connected to the retired paid engine.
+        if (
+          url.origin !==
+          'https://evala.bravestone-92178a1e.germanywestcentral.azurecontainerapps.io'
+        ) {
+          settings.backend = 'server';
+          settings.serverUrl = url.origin;
+        }
       }
     } catch {}
   }

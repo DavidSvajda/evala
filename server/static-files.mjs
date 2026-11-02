@@ -7,6 +7,8 @@ import { httpError } from './http.mjs';
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.onnx': 'application/octet-stream',
   '.css': 'text/css',
   '.wasm': 'application/wasm',
   '.svg': 'image/svg+xml',
@@ -25,7 +27,12 @@ const contained = (root, file) => {
   return name !== '..' && !name.startsWith('..' + sep) && !isAbsolute(name);
 };
 
-export function createStaticFiles({ root, publicReports, backend = true }) {
+export function createStaticFiles({
+  root,
+  publicReports,
+  backend = true,
+  localEngineOnly = false,
+}) {
   // Hosted public mode uses our backend and the two chess import providers.
   // Custom remote engines remain available in the local/private deployment.
   const policy = publicReports
@@ -64,7 +71,7 @@ export function createStaticFiles({ root, publicReports, backend = true }) {
       const type =
         types[extname(file)] || (basename(file) === 'LICENSE' ? 'text/plain; charset=utf-8' : null);
       if (!info.isFile() || !type) throw httpError(404, 'Not found');
-      const etag = `W/"${info.size}-${info.mtimeMs}-${publicReports ? 1 : 0}"`;
+      const etag = `W/"${info.size}-${info.mtimeMs}-${publicReports ? 1 : 0}-${localEngineOnly ? 1 : 0}"`;
       res.setHeader('Content-Type', type);
       res.setHeader('Content-Security-Policy', policy);
       res.setHeader('ETag', etag);
@@ -83,7 +90,7 @@ export function createStaticFiles({ root, publicReports, backend = true }) {
         const data = Buffer.from(
           (await handle.readFile('utf8')).replace(
             /<\/head\s*>/i,
-            `<meta name="evala-backend" content="server">${publicReports ? '<meta name="evala-public" content="true">' : ''}</head>`,
+            `<meta name="evala-backend" content="server">${localEngineOnly ? '<meta name="evala-compute" content="local">' : ''}${publicReports ? '<meta name="evala-public" content="true">' : ''}</head>`,
           ),
         );
         res.setHeader('Content-Length', data.length);

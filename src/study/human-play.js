@@ -3,9 +3,59 @@ import { StudyBoard } from './board.js';
 import { language } from './i18n.js';
 import { account } from './account.js';
 import { playMoveSound } from './audio.js';
+import { HumanController } from '../engine/human-controller.js';
 
 const t = (cs, en) => (language() === 'en' ? en : cs);
 export function createHumanPlay(context) {
+  const local =
+    !!document.querySelector('meta[name="evala-compute"][content="local"]') ||
+    !document.querySelector('meta[name="evala-backend"]');
+  let humanClient = null,
+    localPending = null,
+    localSequence = 0;
+  function stopLocal() {
+    humanClient?.dispose();
+    humanClient = null;
+    localPending?.reject(new DOMException('Cancelled', 'AbortError'));
+    localPending = null;
+  }
+  async function localMove(signal) {
+    const asset = (path) => new URL(path, location.href).href;
+    humanClient ||= new HumanController(
+      () => new Worker(asset('engine/stockfish-19-lite-single.js')),
+      (event) => {
+        if (event.id !== localPending?.id) return;
+        if (event.type === 'human') localPending?.resolve(event);
+        if (event.type === 'error') localPending?.reject(new Error(event.message));
+      },
+      asset,
+    );
+    const id = ++localSequence;
+    const timeout = setTimeout(stopLocal, 45000);
+    signal.addEventListener('abort', stopLocal, { once: true });
+    try {
+      return await new Promise((resolve, reject) => {
+        localPending = { resolve, reject, id };
+        humanClient.analyze({
+          id,
+          fen: game.fen(),
+          settings: {
+            engine: 'maia',
+            humanElo: config.elo,
+            humanStyle: config.style,
+            depth: 14,
+            time: 600,
+            hash: 32,
+          },
+        });
+      });
+    } finally {
+      clearTimeout(timeout);
+      signal.removeEventListener('abort', stopLocal);
+      if (localPending?.id === id) localPending = null;
+    }
+  }
+
   let root,
     board,
     game,
@@ -26,6 +76,7 @@ export function createHumanPlay(context) {
     }
   }
   function cancel() {
+    stopLocal();
     generation++;
     controller?.abort();
     controller = null;
@@ -99,32 +150,36 @@ export function createHumanPlay(context) {
       ),
     );
     try {
-      await fetch('/api/session', { signal, credentials: 'same-origin' });
-      const response = await fetch('/api/opponent/move', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.any([signal, AbortSignal.timeout(35000)]),
-        body: JSON.stringify({
-          initialFen: config.initialFen,
-          moves: [
-            ...config.prefix,
-            ...game.history({ verbose: true }).map((m) => m.from + m.to + (m.promotion || '')),
-          ],
-          elo: config.elo,
-          style: config.style,
-        }),
-      });
-      if (!response.ok)
-        throw new Error(
-          response.status === 429
-            ? t(
-                'Server je vytížený nebo je vyčerpaný limit. Zkus Pokračovat později.',
-                'The server is busy or its allowance is exhausted. Try Continue later.',
-              )
-            : t('Soupeř není dostupný. Zkus Pokračovat.', 'Opponent unavailable. Try Continue.'),
-        );
-      const result = await response.json();
+      let result;
+      if (local) result = await localMove(signal);
+      else {
+        await fetch('/api/session', { signal, credentials: 'same-origin' });
+        const response = await fetch('/api/opponent/move', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.any([signal, AbortSignal.timeout(35000)]),
+          body: JSON.stringify({
+            initialFen: config.initialFen,
+            moves: [
+              ...config.prefix,
+              ...game.history({ verbose: true }).map((m) => m.from + m.to + (m.promotion || '')),
+            ],
+            elo: config.elo,
+            style: config.style,
+          }),
+        });
+        if (!response.ok)
+          throw new Error(
+            response.status === 429
+              ? t(
+                  'Server je vytížený nebo je vyčerpaný limit. Zkus Pokračovat později.',
+                  'The server is busy or its allowance is exhausted. Try Continue later.',
+                )
+              : t('Soupeř není dostupný. Zkus Pokračovat.', 'Opponent unavailable. Try Continue.'),
+          );
+        result = await response.json();
+      }
       if (signal.aborted || ticket !== generation) return;
       if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(result.move))
         throw new Error(t('Neplatná odpověď soupeře.', 'Invalid opponent response.'));
@@ -314,6 +369,18 @@ export function createHumanPlay(context) {
       board.interactive = false;
     }
     const ticket = generation;
+    if (local) {
+      available = true;
+      $('#human-new').disabled = false;
+      if (!game)
+        status(
+          t(
+            'Maia poběží na tvém zařízení. Vyber nastavení a spusť partii.',
+            'Maia runs on your device. Choose settings and start a game.',
+          ),
+        );
+      return;
+    }
     void fetch('/api/opponent/config')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {

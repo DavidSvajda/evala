@@ -112,6 +112,11 @@ try {
     () => document.querySelector('#analysis-coach-tab').textContent === 'Coach',
   );
   assert.match(await page.locator('#coach-progress').innerText(), /Decision/);
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.classification-note')
+      .textContent.includes('Evala uses its own classifications.'),
+  );
   await page.setViewportSize({ width: 1920, height: 600 });
   await page.locator('#coach-next').click();
   await page.evaluate(() => {

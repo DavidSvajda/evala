@@ -72,7 +72,7 @@ test('move quality is symmetric, and high evaluations do not invent brilliants',
       { kind: 'mate', value: 3, depth: 20, lines: [best, { kind: 'mate', value: 4, depth: 20 }] },
       { kind: 'mate', value: 2, depth: 20 },
     ),
-    false,
+    true,
   );
 });
 

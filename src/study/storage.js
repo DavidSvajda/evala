@@ -250,16 +250,24 @@ export const STUDY_DEFAULTS = {
 };
 const optionsKey = () =>
   owner === 'guest' ? 'evala-study-options' : 'evala-study-options:' + owner;
+const computePreferences = (options) =>
+  globalThis.document?.querySelector('meta[name="evala-compute"][content="local"]')
+    ? { ...options, backend: 'local', serverUrl: '' }
+    : options;
 export function getPreferences(defaults = {}) {
   try {
-    return {
+    return computePreferences({
       ...STUDY_DEFAULTS,
       ...defaults,
       ...JSON.parse(localStorage.getItem(optionsKey()) || '{}'),
       ...account.user?.preferences?.study,
-    };
+    });
   } catch {
-    return { ...STUDY_DEFAULTS, ...defaults, ...account.user?.preferences?.study };
+    return computePreferences({
+      ...STUDY_DEFAULTS,
+      ...defaults,
+      ...account.user?.preferences?.study,
+    });
   }
 }
 export function savePreferences(settings) {

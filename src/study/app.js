@@ -76,6 +76,7 @@ let library = [],
   promotionMove = null,
   activeView = 'review';
 const hostedServer = !!document.querySelector('meta[name="evala-backend"][content="server"]');
+const localOnly = !!document.querySelector('meta[name="evala-compute"][content="local"]');
 const publicServer = !!document.querySelector('meta[name="evala-public"][content="true"]');
 renderAccountIdentity();
 await initializeAccount(hostedServer, renderAccountIdentity);
@@ -271,6 +272,11 @@ function engine(role) {
   return value;
 }
 function syncSettings() {
+  if (localOnly) {
+    options.backend = 'local';
+    options.serverUrl = '';
+    $('#backend').disabled = true;
+  }
   for (const [id, key] of Object.entries(settingsFields)) {
     const el = $('#' + id);
     if (el.type === 'checkbox') el.checked = !!options[key];

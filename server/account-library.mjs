@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { parseServerPgn } from './pgn-parser.mjs';
-import { classifyMove, normalizeReview } from '../src/study/review.js';
+import { classifyMove, normalizeReview, SACRIFICE_VERSION } from '../src/study/review.js';
 import { cleanLearning } from '../src/training/practice.js';
 import { checkedResult } from '../src/core/engine-result.js';
 import { json, readJsonBody, httpError } from './http.mjs';
@@ -98,13 +98,13 @@ export async function handleLibrary(req, res, url, { store, s, account, mutateAc
             mark = game.analysis.moves[i];
           if (
             mark &&
-            source?.proof?.version === 2 &&
+            [2, SACRIFICE_VERSION].includes(source?.proof?.version) &&
             Array.isArray(source.proof.captures) &&
             source.proof.captures.length <= 3
           ) {
             try {
               mark.proof = {
-                version: 2,
+                version: source.proof.version,
                 captures: source.proof.captures.map((p) => ({
                   capture: String(p.capture).slice(0, 5),
                   score: checkedResult(p.score),
