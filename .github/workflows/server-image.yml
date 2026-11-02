@@ -18,6 +18,7 @@ on:
           - extension
           - human
           - journey
+          - classification
 permissions:
   contents: read
   packages: write
@@ -134,6 +135,14 @@ jobs:
         run: |
           node scripts/package-bar.mjs
           EVALA_EXTENSION_DIR=dist-bar node tests/maia-local-smoke.mjs
+      - name: Verify researched move classifications
+        if: inputs.validation == 'classification'
+        run: |
+          npm run lint
+          npm run format:check
+          node --test tests/special-moves.test.mjs tests/learning.test.mjs tests/analytics.test.mjs tests/study.test.mjs tests/accounts.test.mjs tests/public-reports.test.mjs tests/performance.test.mjs tests/accuracy.test.mjs
+          node tests/special-moves-smoke.mjs
+          node tests/coach-review-smoke.mjs
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Authenticate to GHCR

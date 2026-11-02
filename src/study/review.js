@@ -2,8 +2,9 @@ import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
 import { gameAccuracy } from '../core/game-accuracy.js';
 
-export const REVIEW_VERSION = 4;
-export const SACRIFICE_VERSION = 2;
+export const REVIEW_VERSION = 5;
+export const SACRIFICE_VERSION = 3;
+export const SPECIAL_DEPTH = 14;
 const values = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 export function expectedPercent(score) {
@@ -19,30 +20,82 @@ function material(chess, color) {
     .reduce((sum, p) => sum + (p.color === color ? 1 : -1) * values[p.type], 0);
 }
 
+const ownPercent = (score, color) =>
+  color === 'w' ? expectedPercent(score) : 100 - expectedPercent(score);
+
+export function specialReviewLimits(options = {}) {
+  const count = (value, fallback, max) =>
+    Number.isFinite(value) ? clamp(Math.floor(value), 0, max) : fallback;
+  return {
+    great: count(options.greatLimit, 4, 4),
+    sacrifices: options.verifySacrifices === false ? 0 : count(options.specialLimit, 6, 8),
+    positionTime: Math.max(1200, Math.min(2500, (options.time || 500) * 3)),
+    proofTime: Math.max(800, Math.min(2400, (options.time || 500) * 2)),
+  };
+}
+
+export function specialReviewBudget(options) {
+  const limits = specialReviewLimits(options);
+  return (
+    (limits.great * 3 * limits.positionTime +
+      limits.sacrifices * (2 * limits.positionTime + 3 * limits.proofTime)) /
+    1000
+  );
+}
+
+function greatReason(move, before, after, previous) {
+  if (!before?.lines?.[1] || !after) return null;
+  const best = ownPercent(before, move.color),
+    next = ownPercent(after, move.color),
+    second = ownPercent(before.lines[1], move.color),
+    gap = best - second;
+  if (next < 45 || best - next >= 2) return null;
+  if (gap >= 12 && ((next >= 65 && second <= 55) || second <= 35))
+    return {
+      note: 'Jediný tah, který podle spočítaných alternativ zachovává výhru nebo drží pozici.',
+      recovery: false,
+    };
+  if (previous && gap >= 6) {
+    const prior = ownPercent(previous, move.color);
+    if (best - prior >= 15 && ((prior <= 35 && next >= 47) || (prior <= 55 && next >= 70)))
+      return {
+        note: 'Využívá chybu soupeře a mění prohranou pozici na udržitelnou nebo vyrovnanou na vyhranou.',
+        recovery: true,
+      };
+  }
+  return null;
+}
+
 export function classifyMove(move, before, after, { previous } = {}) {
   if (!before || !after) return null;
   const sign = move.color === 'w' ? 1 : -1;
   const loss = Math.max(0, (expectedPercent(before) - expectedPercent(after)) * sign);
   const accuracy = clamp(103.1668 * Math.exp(-0.04354 * loss) - 3.1669, 0, 100);
   const best = before.lines?.[0]?.pv?.[0] === move.uci;
-  const base = { loss, accuracy, best, depth: Math.min(before.depth || 0, after.depth || 0) };
+  const base = {
+    loss,
+    accuracy,
+    best,
+    depth: Math.min(before.depth || 0, after.terminal ? before.depth || 0 : after.depth || 0),
+  };
   const own = (score) =>
     move.color === 'w' ? expectedPercent(score) : 100 - expectedPercent(score);
   const second = before.lines?.[1];
+  const great = greatReason(move, before, after, previous);
   if (
     best &&
     loss < 2 &&
-    base.depth >= 14 &&
-    second?.depth >= 14 &&
-    own(after) >= 45 &&
-    own(before) - own(second) >= 20
+    base.depth >= SPECIAL_DEPTH &&
+    second?.depth >= SPECIAL_DEPTH &&
+    (!great?.recovery || previous?.depth >= SPECIAL_DEPTH) &&
+    great
   )
     return {
       ...base,
       kind: 'great',
       label: 'Skvělý tah',
       symbol: '!',
-      note: 'Výrazně lepší než druhá spočítaná varianta. Hloubka obou variant je alespoň 14.',
+      note: great.note,
     };
   if (
     !best &&
@@ -118,17 +171,21 @@ export function brilliantEligible(move, before, after) {
   if (!before || !after || !alternative) return false;
   if (!move.fenBefore) return false;
   const chess = new Chess(move.fenBefore);
+  const nonPawnMaterial = chess
+    .board()
+    .flat()
+    .filter((p) => p && !['p', 'k'].includes(p.type))
+    .reduce((sum, p) => sum + values[p.type], 0);
+  // A sound sacrifice may be nearly best, an exchange, an interposition while
+  // in check, or a quiet move offering a different piece. Uniqueness matters
+  // in an endgame; it is not a blanket requirement in an attacking middlegame.
   return (
-    !chess.isCheck() &&
     chess.moves().length > 1 &&
-    move.piece !== 'p' &&
-    !move.promotion &&
-    before.lines?.[0]?.pv?.[0] === move.uci &&
-    [before, after, before.lines[0], alternative].every((s) => s.depth >= 18) &&
-    own(alternative) < 75 &&
-    own(after) >= 49 &&
-    own(before) - own(alternative) >= 5 &&
-    own(before) - own(after) <= 2
+    [before, after, before.lines[0], alternative].every((s) => s?.depth >= SPECIAL_DEPTH) &&
+    own(after) >= 45 &&
+    own(before) - own(after) <= 2 &&
+    !(own(alternative) >= 90 && material(chess, move.color) >= 200) &&
+    (nonPawnMaterial > 2600 || own(alternative) < 60)
   );
 }
 
@@ -139,32 +196,45 @@ export function sacrificeCandidates(move) {
     owner = move.color,
     baseline = material(new Chess(move.fenBefore), owner),
     candidates = [];
-  if (move.piece === 'p' || move.promotion) return candidates;
-  // Only the moved piece may be offered. Include material won by the initial
-  // move and the entire legal exchange, not just one immediate recapture.
-  const exchange = (square, depth = 0) => {
-    let score = material(chess, owner);
+  // Include material won by the initial move and the entire legal exchange.
+  // A rook for a bishop costs 170 centipawns, so a 200cp cutoff missed real
+  // exchange sacrifices. Pawns alone do not qualify as a piece sacrifice.
+  const exchange = (board, square, depth = 0) => {
+    let score = material(board, owner);
     if (depth >= 8) return score;
-    const maximize = chess.turn() === owner;
-    for (const m of chess.moves({ verbose: true }).filter((m) => m.to === square && m.captured)) {
-      chess.move(m);
-      const next = exchange(square, depth + 1);
-      chess.undo();
+    const maximize = board.turn() === owner;
+    for (const m of board.moves({ verbose: true }).filter((m) => m.to === square && m.captured)) {
+      board.move(m);
+      const next = exchange(board, square, depth + 1);
+      board.undo();
       score = maximize ? Math.max(score, next) : Math.min(score, next);
     }
     return score;
   };
+  // Compare an unmoved piece to the threats that already existed. Merely
+  // ignoring an unrelated hanging bishop must not badge every quiet move.
+  const parts = move.fenBefore.split(' ');
+  parts[1] = owner === 'w' ? 'b' : 'w';
+  parts[3] = '-';
+  const prior = new Chess(parts.join(' ')),
+    priorLoss = new Map();
+  for (const capture of prior.moves({ verbose: true }).filter((m) => values[m.captured] >= 300)) {
+    prior.move(capture);
+    const loss = baseline - exchange(prior, capture.to);
+    prior.undo();
+    priorLoss.set(capture.to, Math.max(priorLoss.get(capture.to) || 0, loss));
+  }
   for (const capture of chess
     .moves({ verbose: true })
-    .filter((m) => m.to === move.to && m.captured && values[m.captured] >= 300)) {
+    .filter((m) => m.captured && values[m.captured] >= 300)) {
     chess.move(capture);
     const capturedFen = chess.fen();
-    const bestMaterial = exchange(capture.to);
-    if (baseline - bestMaterial >= 200)
+    const loss = baseline - exchange(chess, capture.to);
+    if (loss >= 150 && (capture.to === move.to || loss > (priorLoss.get(capture.to) || 0) + 100))
       candidates.push({
         capture: capture.from + capture.to + (capture.promotion || ''),
         fen: capturedFen,
-        materialLoss: baseline - bestMaterial,
+        materialLoss: loss,
       });
     chess.undo();
   }
@@ -172,7 +242,8 @@ export function sacrificeCandidates(move) {
 }
 
 export function verifiedBrilliant(move, before, after, proof) {
-  if (proof?.version !== SACRIFICE_VERSION || !brilliantEligible(move, before, after)) return null;
+  if (![2, SACRIFICE_VERSION].includes(proof?.version) || !brilliantEligible(move, before, after))
+    return null;
   const candidates = sacrificeCandidates(move);
   if (!candidates.length || candidates.length > 3) return null;
   const own = (score) =>
@@ -180,15 +251,24 @@ export function verifiedBrilliant(move, before, after, proof) {
   if (
     !candidates.every((c) => {
       const p = proof.captures?.find((p) => p.capture === c.capture);
-      return p?.score?.depth >= 18 && own(p.score) >= 49 && own(after) - own(p.score) <= 3;
+      const terminalDraw =
+        p?.score?.terminal &&
+        p.score.kind === 'cp' &&
+        p.score.value === 0 &&
+        new Chess(c.fen).isStalemate();
+      return (
+        (p?.score?.depth >= SPECIAL_DEPTH || terminalDraw) &&
+        own(p.score) >= 45 &&
+        own(after) - own(p.score) <= 6
+      );
     })
   )
     return null;
   return {
     kind: 'brilliant',
-    label: 'Brilantní*',
+    label: 'Brilantní',
     symbol: '!!',
-    note: 'Ověřená oběť zahrané figury: materiál po výměnách zůstává odevzdaný, všechny legální možnosti přijetí mají potvrzenou kompenzaci. Vlastní přísná klasifikace Evala.',
+    note: 'Silný tah s ověřenou obětí figury nebo kvality. Engine potvrzuje kompenzaci po všech nalezených možnostech přijetí oběti.',
     proof: {
       version: SACRIFICE_VERSION,
       captures: candidates.map((c) => {
@@ -328,6 +408,7 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
     multipv: options.multipv,
     refineLimit: options.refineLimit ?? 8,
     verifySacrifices: options.verifySacrifices !== false,
+    specialLimits: specialReviewLimits(options),
   });
   if (game.analysis?.key !== key)
     game.analysis = {
@@ -398,7 +479,8 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
   report.refinedPositions ||= [];
   for (const [n, { i }] of critical.entries()) {
     if (report.refined.includes(i)) continue;
-    for (const index of [i, i + 1]) {
+    // Search the child first so the root can reuse its tactical information.
+    for (const index of [i + 1, i]) {
       if (report.refinedPositions.includes(index)) continue;
       setPosition(
         index,
@@ -425,29 +507,93 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
     report.refined.push(i);
     publish('refine', n + 1, critical.length);
   }
+  const limits = specialReviewLimits(options);
+  const deepen = async (index, alternatives = false) => {
+    const current = report.positions[index];
+    if (
+      current?.terminal ||
+      (current?.depth >= SPECIAL_DEPTH &&
+        (!alternatives || current.lines?.[1]?.depth >= SPECIAL_DEPTH))
+    )
+      return;
+    setPosition(
+      index,
+      await engine.search(
+        {
+          cacheScope: options.cacheScope,
+          gameKey,
+          fen: game.fens[index],
+          history: {
+            initialFen: game.initialFen,
+            moves: game.moves.slice(0, index).map((m) => m.uci),
+          },
+          settings: {
+            ...options,
+            time: limits.positionTime,
+            depth: Math.max(20, options.depth),
+            multipv: Math.max(2, options.multipv),
+          },
+        },
+        { signal },
+      ),
+    );
+  };
+  // Fast searches nominate candidates; they must not veto them merely for
+  // lacking the very evidence that this bounded refinement is about to obtain.
+  const greatNominees = report.moves
+    .map((mark, i) => ({ mark, i }))
+    .filter(
+      ({ mark, i }) =>
+        mark?.best &&
+        greatReason(
+          game.moves[i],
+          report.positions[i],
+          report.positions[i + 1],
+          report.positions[i - 1],
+        ),
+    )
+    .sort((a, b) => {
+      const gap = ({ i }) =>
+        Math.abs(
+          expectedPercent(report.positions[i]) - expectedPercent(report.positions[i].lines[1]),
+        );
+      return gap(b) - gap(a);
+    })
+    .slice(0, limits.great);
+  for (const { i } of greatNominees) {
+    await deepen(i + 1);
+    await deepen(i, true);
+    if (i > 0 && report.positions[i - 1]?.depth < SPECIAL_DEPTH) await deepen(i - 1);
+    publish('refine', i + 1, game.moves.length);
+  }
   const nominees =
     options.verifySacrifices === false
       ? []
       : report.moves
           .map((mark, i) => ({ mark, i }))
-          .filter(({ mark, i }) => mark?.loss < 2 && mark.best && game.moves[i].piece !== 'p');
+          .filter(({ mark }) => mark?.loss < 5)
+          .map((candidate) => ({
+            ...candidate,
+            sacrifices: sacrificeCandidates(game.moves[candidate.i]),
+          }))
+          .filter(({ sacrifices }) => sacrifices.length > 0 && sacrifices.length <= 3)
+          .sort((a, b) => b.sacrifices[0].materialLoss - a.sacrifices[0].materialLoss)
+          .slice(0, limits.sacrifices);
   let verified = 0;
   report.specials ||= [];
-  for (const [scan, { i }] of nominees.entries()) {
+  for (const { i, sacrifices } of nominees) {
     if (signal?.aborted) throw new DOMException('Rozbor byl pozastaven.', 'AbortError');
-    if (scan && scan % 12 === 0) await new Promise((done) => setTimeout(done, 0));
-    if (verified >= 6) break;
     const move = game.moves[i];
     const ownExpected = (score) =>
       move.color === 'w' ? expectedPercent(score) : 100 - expectedPercent(score);
     // The second-best continuation matters: a winning best move can be the
     // only way to win. A winning score BEFORE it is not enough to reject it.
+    await deepen(i + 1);
+    await deepen(i, true);
+    publish('brilliant', verified, nominees.length);
     if (!brilliantEligible(move, report.positions[i], report.positions[i + 1])) continue;
-    const sacrifices = sacrificeCandidates(move);
-    if (!sacrifices.length) continue;
-    if (sacrifices.length > 3) continue;
     verified++;
-    publish('brilliant', verified, Math.min(6, nominees.length));
+    publish('brilliant', verified, nominees.length);
     const proof = { version: SACRIFICE_VERSION, captures: [] };
     for (const candidate of sacrifices) {
       const score = await engine.search(
@@ -461,7 +607,7 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
           },
           settings: {
             ...options,
-            time: Math.max(1200, options.time * 2),
+            time: limits.proofTime,
             depth: Math.max(20, options.depth),
             multipv: 1,
           },
@@ -474,16 +620,16 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
         continuation: lineToSan(candidate.fen, score.lines?.[0]?.pv || [], 8),
       });
       if (
-        score.depth < 18 ||
-        ownExpected(score) < 49 ||
-        ownExpected(report.positions[i + 1]) - ownExpected(score) > 3
+        (!score.terminal && score.depth < SPECIAL_DEPTH) ||
+        ownExpected(score) < 45 ||
+        ownExpected(report.positions[i + 1]) - ownExpected(score) > 6
       )
         break;
     }
     const special = verifiedBrilliant(move, report.positions[i], report.positions[i + 1], proof);
     report.specials = report.specials.filter(([index]) => index !== i);
     if (special) report.specials.push([i, special]);
-    publish('brilliant', verified, Math.min(6, nominees.length));
+    publish('brilliant', verified, nominees.length);
   }
   report.complete = true;
   report.finishedAt = Date.now();

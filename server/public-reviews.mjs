@@ -3,12 +3,30 @@ import { cookie, setCookie, createRateLimiter, clientAddress } from './security.
 import { randomBytes } from 'node:crypto';
 import { parseServerPgn } from './pgn-parser.mjs';
 import { createEngineBudget } from './engine-budget.mjs';
-import { reviewGame } from '../src/study/review.js';
+import { reviewGame, specialReviewBudget } from '../src/study/review.js';
 import { reviewProgressEncoder } from '../src/study/review-stream.js';
 
 export const REPORT_PROFILES = {
-  quick: { time: 150, depth: 16, multipv: 2, hash: 64, refineLimit: 2, verifySacrifices: false },
-  balanced: { time: 500, depth: 20, multipv: 3, hash: 64, refineLimit: 4, verifySacrifices: true },
+  quick: {
+    time: 150,
+    depth: 16,
+    multipv: 2,
+    hash: 64,
+    refineLimit: 2,
+    greatLimit: 2,
+    specialLimit: 2,
+    verifySacrifices: true,
+  },
+  balanced: {
+    time: 500,
+    depth: 20,
+    multipv: 3,
+    hash: 64,
+    refineLimit: 4,
+    greatLimit: 4,
+    specialLimit: 6,
+    verifySacrifices: true,
+  },
 };
 export function createPublicReviews({
   slots,
@@ -157,7 +175,7 @@ export function createPublicReviews({
       const estimate =
         (game.fens.length * options.time) / 1000 +
         (options.refineLimit * 4 * options.time) / 1000 +
-        (options.verifySacrifices ? (18 * Math.max(1200, options.time * 2)) / 1000 : 0);
+        specialReviewBudget(options);
       await reserve(req, estimate, true);
       res.writeHead(200, {
         'Content-Type': 'application/x-ndjson; charset=utf-8',

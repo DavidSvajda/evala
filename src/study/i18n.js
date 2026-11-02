@@ -13,7 +13,9 @@ export function translate(value) {
   if (selected !== 'en' || typeof value !== 'string') return value;
   const source = value.trim();
   if (!source) return value;
-  let result = EN[source];
+  // HTML formatters wrap long paragraphs. Whitespace must not break an exact
+  // translation while the original text remains available when switching back.
+  let result = EN[source] ?? EN[source.replace(/\s+/g, ' ')];
   if (result === undefined) {
     for (const [pattern, replacement] of patterns) {
       if (pattern.test(source)) {

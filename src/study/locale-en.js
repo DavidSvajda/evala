@@ -1,4 +1,12 @@
 export const EN = {
+  'Vlastní klasifikace Evala, nikoli odznaky Chess.com. Skóre tahů používá převod hodnocení z veřejné formule Lichess. Skvělý tah nachází jedinou dobrou možnost nebo rozhodujícím způsobem využívá chybu soupeře. Promarněná šance označuje minutý mat nebo nevyužitou chybu soupeře. Brilantní tah je silná oběť figury nebo kvality, včetně nabídky jiné než zahrané figury. Kompenzaci ověřuje engine při dosažené hloubce alespoň 14, i v rychlém rozboru. Důkladný profil prověří více kandidátů. Starší partie znovu rozeber pro nové ověření obětí. Hlubší rozbor může hodnocení změnit.':
+    'Evala uses its own classifications. Move scores use the published Lichess conversion. Great moves find the only good option or decisively exploit an opponent’s mistake. A Miss identifies a missed mate or opportunity. A Brilliant is a strong piece or exchange sacrifice, including offers of a different piece. The engine verifies compensation at a reached depth of at least 14, including in Quick review. Balanced review checks more candidates. Analyse older games again to verify sacrifices. Deeper analysis can change classifications.',
+  'Jediný tah, který podle spočítaných alternativ zachovává výhru nebo drží pozici.':
+    'The only move among the analysed alternatives that keeps the win or holds the position.',
+  'Využívá chybu soupeře a mění prohranou pozici na udržitelnou nebo vyrovnanou na vyhranou.':
+    'Exploits the opponent’s mistake to save a losing position or turn an equal position into a win.',
+  'Silný tah s ověřenou obětí figury nebo kvality. Engine potvrzuje kompenzaci po všech nalezených možnostech přijetí oběti.':
+    'A strong move with a verified piece or exchange sacrifice. The engine confirms compensation after every identified acceptance.',
   'Celá obrazovka': 'Fullscreen',
   'Ukončit celou obrazovku': 'Exit fullscreen',
   'Prohlížeč nepovolil celou obrazovku. Zkus to znovu tlačítkem.':
