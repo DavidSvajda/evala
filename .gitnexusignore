@@ -1,0 +1,9 @@
+.local-data/
+.azure-cli-venv/
+node_modules/
+dist/
+dist-bar/
+release/
+test-results/
+vendor-source/
+.gitnexus/
