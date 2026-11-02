@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { moveIcon } from '../ui/move-icons.js';
 import { language } from './i18n.js';
 import { fitBoard } from './board-fit.js';
+import { createBoardMotion } from './board-motion.js';
 const names = { p: 'pěšec', n: 'jezdec', b: 'střelec', r: 'věž', q: 'dáma', k: 'král' };
 const englishNames = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 export class StudyBoard {
@@ -16,6 +17,7 @@ export class StudyBoard {
     this.grid = document.createElement('div');
     this.grid.className = 'square-grid';
     element.append(this.grid);
+    this.motion = createBoardMotion(this.grid);
     fitBoard(element);
     this.arrows = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.arrows.setAttribute('viewBox', '0 0 800 800');
@@ -126,6 +128,7 @@ export class StudyBoard {
           this.paintArrow();
         }
       } else if (dragged) {
+        this.skipMotion = true;
         this.selected = square;
         if (target && this.interactive && this.chess.fen() === start.fen) this.click(target);
         else {
@@ -187,6 +190,7 @@ export class StudyBoard {
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.square = square;
+        if (piece) button.dataset.piece = piece.color + piece.type;
         button.className = 'square ' + ((file + rank) % 2 ? 'light' : 'dark');
         if (this.dragSquare === square) button.classList.add('drag-source');
         if (this.lastMove && (this.lastMove.from === square || this.lastMove.to === square))
@@ -242,7 +246,10 @@ export class StudyBoard {
     const focused = this.grid.contains(document.activeElement)
       ? document.activeElement.dataset.square
       : null;
+    this.motion.beforePaint();
     this.grid.replaceChildren(fragment);
+    this.motion.paint(this.flipped, this.skipMotion);
+    this.skipMotion = false;
     this.paintArrow();
     if (focused)
       this.grid.querySelector(`[data-square="${focused}"]`)?.focus({ preventScroll: true });
