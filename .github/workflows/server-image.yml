@@ -19,6 +19,7 @@ on:
           - human
           - journey
           - classification
+          - local-only
 permissions:
   contents: read
   packages: write
@@ -149,9 +150,14 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Build browser-only web host
+        if: inputs.validation == 'local-only'
+        run: docker build --platform linux/amd64 --file Dockerfile.web --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Build and verify native engine
+        if: inputs.validation != 'local-only'
         run: docker build --platform linux/amd64 --file Dockerfile.azure --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Smoke test the container
+        if: inputs.validation != 'local-only'
         shell: bash
         run: |
           set -euo pipefail

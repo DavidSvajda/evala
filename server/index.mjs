@@ -15,7 +15,7 @@ import {
 } from './security.mjs';
 import { createDocumentStore } from './document-store.mjs';
 import { createHumanOpponent } from './human-opponent.mjs';
-import { httpError, sendError } from './http.mjs';
+import { httpError, sendError, json } from './http.mjs';
 
 export function createAnalysisServer({
   token = process.env.API_TOKEN || '',
@@ -23,13 +23,14 @@ export function createAnalysisServer({
   origins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
   allowExtensionOrigins = process.env.ALLOW_EXTENSION_ORIGINS === 'true',
   publicReports = process.env.PUBLIC_REPORTS === 'true',
+  localEngineOnly = process.env.LOCAL_ENGINE_ONLY === 'true',
   publicBudgetSeconds = Number(process.env.PUBLIC_ENGINE_SECONDS || 1800),
   root = resolve('dist'),
   accounts = {},
   human = {},
 } = {}) {
   const limit = Math.max(1, Math.min(4, Math.floor(concurrency) || 1));
-  const slots = Array.from({ length: limit }, () => ({
+  const slots = Array.from({ length: localEngineOnly ? 0 : limit }, () => ({
     engine: new StudyEngine(() => nodeWorker()),
     busy: false,
   }));
@@ -40,7 +41,7 @@ export function createAnalysisServer({
   const reports = createPublicReviews({
     store,
     slots,
-    enabled: publicReports,
+    enabled: publicReports && !localEngineOnly,
     isOwner: authorized,
     budgetSeconds: Math.max(1, Math.min(7200, publicBudgetSeconds || 1800)),
   });
@@ -50,8 +51,14 @@ export function createAnalysisServer({
     store,
   });
   const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
-  const opponent = createHumanOpponent({ reports, isOwner: authorized, ...human });
-  const staticFiles = createStaticFiles({ root, publicReports });
+  const opponent = localEngineOnly
+    ? { dispose() {} }
+    : createHumanOpponent({ reports, isOwner: authorized, ...human });
+  const staticFiles = createStaticFiles({
+    root,
+    publicReports: publicReports && !localEngineOnly,
+    localEngineOnly,
+  });
   const originsSet = new Set(origins);
   async function handle(req, res) {
     securityHeaders(req, res);
@@ -73,10 +80,27 @@ export function createAnalysisServer({
       throw httpError(400, 'Bad URL');
     }
     guard(req, res, url);
+    if (localEngineOnly && url.pathname === '/api/health') {
+      json(res, 200, {
+        ok: true,
+        engine: 'browser',
+        compute: 'local',
+        slots: 0,
+        busy: 0,
+        publicReports: false,
+      });
+      return;
+    }
+    if (
+      localEngineOnly &&
+      (['/api/analyze', '/api/review-game', '/api/session'].includes(url.pathname) ||
+        url.pathname.startsWith('/api/opponent/'))
+    )
+      throw httpError(410, 'Výpočet běží ve tvém prohlížeči. Serverové enginy jsou vypnuté.');
     if (await identity.handle(req, res, url)) return;
     if (await reports.handle(req, res, url)) return;
     if (await analyze(req, res, url)) return;
-    if (await opponent.handle(req, res, url)) return;
+    if (await opponent.handle?.(req, res, url)) return;
     if (url.pathname.startsWith('/api/')) throw httpError(404, 'Not found');
     await staticFiles(req, res, url);
   }
