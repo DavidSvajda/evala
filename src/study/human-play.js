@@ -30,11 +30,11 @@ export function createHumanPlay(context) {
       },
       asset,
     );
+    const id = ++localSequence;
     const timeout = setTimeout(stopLocal, 45000);
     signal.addEventListener('abort', stopLocal, { once: true });
     try {
       return await new Promise((resolve, reject) => {
-        const id = ++localSequence;
         localPending = { resolve, reject, id };
         humanClient.analyze({
           id,
@@ -52,7 +52,7 @@ export function createHumanPlay(context) {
     } finally {
       clearTimeout(timeout);
       signal.removeEventListener('abort', stopLocal);
-      localPending = null;
+      if (localPending?.id === id) localPending = null;
     }
   }
 
