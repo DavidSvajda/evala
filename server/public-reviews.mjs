@@ -6,28 +6,8 @@ import { createEngineBudget } from './engine-budget.mjs';
 import { reviewGame, specialReviewBudget } from '../src/study/review.js';
 import { reviewProgressEncoder } from '../src/study/review-stream.js';
 
-export const REPORT_PROFILES = {
-  quick: {
-    time: 150,
-    depth: 16,
-    multipv: 2,
-    hash: 64,
-    refineLimit: 2,
-    greatLimit: 2,
-    specialLimit: 2,
-    verifySacrifices: true,
-  },
-  balanced: {
-    time: 500,
-    depth: 20,
-    multipv: 3,
-    hash: 64,
-    refineLimit: 4,
-    greatLimit: 4,
-    specialLimit: 6,
-    verifySacrifices: true,
-  },
-};
+import { REVIEW_PROFILES as REPORT_PROFILES } from '../src/study/review-profiles.js';
+export { REPORT_PROFILES };
 export function createPublicReviews({
   slots,
   enabled = false,

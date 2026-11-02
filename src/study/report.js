@@ -2,7 +2,8 @@ import { escapeHtml as esc } from '../ui/dom.js';
 import { importUsername } from './import.js';
 import { parsePgnCollection } from './game.js';
 import { remoteReview, connectPublicServer } from './remote.js';
-import { reviewGame } from './review.js';
+import { reviewGame, currentReview, specialReviewBudget } from './review.js';
+import { REVIEW_PROFILES } from './review-profiles.js';
 
 const $ = (selector) => document.querySelector(selector);
 export class PlayerReport {
@@ -124,10 +125,12 @@ export class PlayerReport {
     $('#report-all').indeterminate = this.checked.size > 0 && this.checked.size < this.games.length;
     $('#report-analyze').textContent = `Rozebrat vybrané (${this.checked.size})`;
     $('#report-analyze').disabled = this.running || !this.checked.size;
-    const pending = this.games.filter((g) => this.checked.has(g.id) && !g.analysis?.complete),
+    const pending = this.games.filter((g) => this.checked.has(g.id) && !currentReview(g)),
       profile = $('#report-profile').value;
+    const profileOptions = REVIEW_PROFILES[profile] || REVIEW_PROFILES.quick;
     const seconds = Math.ceil(
-      pending.reduce((n, g) => n + g.fens.length, 0) * (profile === 'balanced' ? 0.5 : 0.15) * 1.4,
+      ((pending.reduce((n, g) => n + g.fens.length, 0) * profileOptions.time) / 1000) * 1.4 +
+        pending.length * specialReviewBudget(profileOptions),
     );
     $('#report-estimate').textContent = pending.length
       ? `${pending.length} partií bez hotového rozboru · odhad ${seconds < 60 ? seconds + ' s' : Math.ceil(seconds / 60) + ' min'} + fronta. Během rozboru nech kartu otevřenou.`
@@ -169,7 +172,7 @@ export class PlayerReport {
           $('#report-progress-text').textContent =
             `Partie ${completed + 1}/${games.length} · ${phase === 'queued' ? 'čeká ve frontě' : phase === 'positions' ? `pozice ${index}/${total}` : phase === 'done' ? 'ukládám' : 'ověřuji kritické tahy'}`;
         };
-        if (!game.analysis?.complete) {
+        if (!currentReview(game)) {
           if (settings.backend === 'server')
             await remoteReview(settings.serverUrl, settings.token, game, {
               profile,
@@ -182,11 +185,7 @@ export class PlayerReport {
               this.engine(),
               {
                 ...settings,
-                time: profile === 'balanced' ? 500 : 150,
-                depth: profile === 'balanced' ? 20 : 16,
-                multipv: profile === 'balanced' ? 3 : 2,
-                refineLimit: profile === 'balanced' ? 4 : 2,
-                verifySacrifices: profile === 'balanced',
+                ...(REVIEW_PROFILES[profile] || REVIEW_PROFILES.quick),
               },
               { signal: controller.signal, onUpdate: update },
             );
