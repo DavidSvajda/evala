@@ -62,11 +62,15 @@ export class EvalBar {
     const toggle = this.shadow.querySelector('.toggle');
     toggle.innerHTML = settings.enabled ? icons.pause : icons.play;
     toggle.setAttribute('aria-label', settings.enabled ? 'Pozastavit engine' : 'Spustit engine');
+    toggle.setAttribute('aria-pressed', String(!settings.enabled));
+    this.shadow.querySelector('.track').hidden = !settings.showBar;
     this.shadow.querySelector('.depth').hidden = !settings.showDepth;
     this.shadow.querySelector('.engine-name').textContent =
       settings.backend === 'server'
         ? 'Stockfish 19 Full · vlastní server'
         : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokální výpočet`;
+    this.renderArrow(this.arrowMove);
+    this.renderStats();
   }
 
   place(board, flipped) {
@@ -124,7 +128,10 @@ export class EvalBar {
   }
 
   renderScore(score) {
-    if (!score) this.renderArrow(null);
+    if (!score) {
+      this.humanData = null;
+      this.renderArrow(null);
+    }
     this.score = score;
     const percent = whitePercent(score);
     this.rail.dataset.empty = String(!score);
@@ -144,7 +151,17 @@ export class EvalBar {
       ),
     );
     meter.setAttribute('aria-valuetext', `${evaluationLabel(score)} ${scoreText(score)}`);
-    if (score)
+    this.renderStats();
+  }
+
+  renderStats() {
+    const score = this.score;
+    if (this.humanData && this.settings.showArrows) {
+      const data = this.humanData;
+      this.shadow.querySelector('.stats').textContent =
+        `Maia ${data.elo}: ${data.move}${data.sacrifice ? ' · nabídka materiálu' : ''} · lokálně`;
+      this.rail.title = `Lidský návrh: ${data.move} · hodnocení baru: Stockfish Lite`;
+    } else if (score)
       this.shadow.querySelector('.stats').textContent =
         `Hloubka ${score.depth} · ${new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(score.nps)} uzlů/s · ${(score.time / 1000).toFixed(1)} s`;
     else
@@ -152,6 +169,7 @@ export class EvalBar {
         this.settings.backend === 'server'
           ? 'Stockfish 19 Full · server'
           : `Stockfish 19 ${this.settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokálně`;
+    if (!this.settings.showArrows) this.rail.title = 'Evala · tahové návrhy skryté';
   }
 
   hide() {
@@ -161,16 +179,17 @@ export class EvalBar {
   }
 
   renderHuman(data) {
+    this.humanData = data;
     this.renderArrow(data.move);
-    this.shadow.querySelector('.stats').textContent =
-      `Maia ${data.elo}: ${data.move}${data.sacrifice ? ' · nabídka materiálu' : ''} · lokálně`;
-    this.rail.title = `Lidský návrh: ${data.move} · hodnocení baru: Stockfish Lite`;
+    this.renderStats();
   }
 
   renderArrow(move) {
     this.arrowMove = move;
     const r = this.boardRect;
     this.arrow.hidden =
+      !this.settings.enabled ||
+      !this.settings.showArrows ||
       !r ||
       !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move || '') ||
       r.bottom < 0 ||

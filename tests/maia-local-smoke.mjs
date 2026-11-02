@@ -64,6 +64,61 @@ try {
   );
   assert.equal(remote.length, 0);
   assert.equal(await page.locator('evala-bar .human-arrow').isVisible(), true);
+  const controls = await context.newPage();
+  await controls.goto(`chrome-extension://${id}/popup.html`);
+  // Background tabs must keep calculating for this pause/resume check.
+  await controls.locator('details.advanced-settings').evaluate((el) => (el.open = true));
+  await controls.locator('[name="pauseHidden"]').uncheck();
+  await controls.locator('[name="showArrows"]').uncheck();
+  await page.waitForFunction(() => {
+    const shadow = document.querySelector('evala-bar').shadowRoot;
+    return (
+      shadow.querySelector('.human-arrow').hasAttribute('hidden') &&
+      !shadow.querySelector('.stats').textContent.includes('Maia 1400:') &&
+      !shadow.querySelector('.rail').title.includes('Lidský návrh:')
+    );
+  });
+  assert.equal(await page.locator('evala-bar .track').isVisible(), true);
+  await controls.locator('[name="showBar"]').uncheck();
+  await controls.locator('[name="showArrows"]').check();
+  await page.waitForFunction(() => {
+    const s = document.querySelector('evala-bar').shadowRoot;
+    return (
+      s.querySelector('.track').hidden && !s.querySelector('.human-arrow').hasAttribute('hidden')
+    );
+  });
+  assert.equal(await page.locator('evala-bar .gear').isVisible(), true);
+  await controls.locator('[name="enabled"]').uncheck();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('evala-bar').shadowRoot.querySelector('.rail').dataset.state ===
+      'paused',
+  );
+  assert.equal(await page.locator('evala-bar .human-arrow').isVisible(), false);
+  await controls.reload();
+  assert.equal(await controls.locator('[name="enabled"]').isChecked(), false);
+  assert.equal(await controls.locator('[name="showBar"]').isChecked(), false);
+  assert.equal(await controls.locator('[name="showArrows"]').isChecked(), true);
+  await controls.locator('.power').click();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('evala-bar')
+        .shadowRoot.querySelector('.stats')
+        .textContent.includes('Maia 1400:'),
+    {},
+    { timeout: 45000 },
+  );
+  assert.equal(await controls.locator('[name="enabled"]').isChecked(), true);
+  // With the entire bar hidden, its settings control still lets the user restore it.
+  await page.locator('evala-bar .gear').click();
+  await page.locator('evala-bar [name="showBar"]').check();
+  await page.locator('evala-bar .close').click();
+  assert.equal(await page.locator('evala-bar .track').isVisible(), true);
+  assert.equal(remote.length, 0);
+  console.log(
+    'PASS independent bar/arrows visibility, hidden move copy, saved controls and real Maia pause/resume',
+  );
   console.log(
     'PASS real MV3 Maia inference, legal Black move, local-only requests, attacking bar integration',
   );

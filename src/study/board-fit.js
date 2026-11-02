@@ -51,6 +51,7 @@ export function fitBoard(element) {
     window.visualViewport?.addEventListener('resize', schedule);
     document.addEventListener('evala:page', schedule);
     document.addEventListener('evala:language', schedule);
+    document.addEventListener('fullscreenchange', schedule);
     new MutationObserver(schedule).observe(document.body, {
       attributes: true,
       attributeFilter: ['data-sidebar-collapsed', 'data-page'],

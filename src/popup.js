@@ -15,15 +15,18 @@ const form = bindSettings(root, settings, async (next) => {
 });
 const power = document.querySelector('.power');
 function renderPower() {
+  document.querySelector('.position-summary').hidden = !settings.showBar;
   document.querySelector('.local-tag').textContent =
     settings.backend === 'server' ? 'SERVER' : 'LOKÁLNĚ';
   power.innerHTML = settings.enabled ? icons.pause : icons.play;
   power.setAttribute('aria-label', settings.enabled ? 'Pozastavit engine' : 'Spustit engine');
   power.title = settings.enabled ? 'Pozastavit engine' : 'Spustit engine';
+  power.setAttribute('aria-pressed', String(!settings.enabled));
 }
 power.addEventListener('click', async () => {
   settings.enabled = !settings.enabled;
   await writeSettings(settings);
+  form.sync(settings);
   renderPower();
   refresh();
 });

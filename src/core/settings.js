@@ -1,5 +1,7 @@
 export const DEFAULTS = Object.freeze({
   enabled: true,
+  showBar: true,
+  showArrows: true,
   depth: 18,
   time: 1500,
   hash: 32,
@@ -19,7 +21,7 @@ export const DEFAULTS = Object.freeze({
 
 export function sanitizeSettings(input = {}) {
   const settings = { ...DEFAULTS };
-  for (const key of ['enabled', 'autoFlip', 'showDepth', 'pauseHidden']) {
+  for (const key of ['enabled', 'showBar', 'showArrows', 'autoFlip', 'showDepth', 'pauseHidden']) {
     if (typeof input[key] === 'boolean') settings[key] = input[key];
   }
   for (const [key, min, max] of [
