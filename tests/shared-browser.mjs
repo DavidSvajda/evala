@@ -45,6 +45,7 @@ try {
   await page.route('https://api.chess.com/pub/player/friend/games/2026/10', (route) =>
     route.fulfill({ json: { games } }),
   );
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html');
   assert.equal(await page.locator('#analytics-workspace').isVisible(), true);
   assert.equal(await page.locator('#study-settings').isVisible(), false);

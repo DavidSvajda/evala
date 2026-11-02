@@ -26,6 +26,7 @@ try {
         messages.push(message.text().slice(0, 300));
     });
     try {
+      await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForFunction(
         () =>

@@ -16,6 +16,7 @@ import {
 import { createDocumentStore } from './document-store.mjs';
 import { createHumanOpponent } from './human-opponent.mjs';
 import { httpError, sendError, json } from './http.mjs';
+import { createGameShares } from './game-shares.mjs';
 
 export function createAnalysisServer({
   token = process.env.API_TOKEN || '',
@@ -38,6 +39,7 @@ export function createAnalysisServer({
     !token || constantTimeEqual(req.headers.authorization || '', 'Bearer ' + token);
   const store = accounts.store || createDocumentStore();
   const guard = createRequestGuard();
+  const shares = createGameShares({ store });
   const reports = createPublicReviews({
     store,
     slots,
@@ -80,6 +82,7 @@ export function createAnalysisServer({
       throw httpError(400, 'Bad URL');
     }
     guard(req, res, url);
+    if (await shares(req, res, url)) return;
     if (localEngineOnly && url.pathname === '/api/health') {
       json(res, 200, {
         ok: true,

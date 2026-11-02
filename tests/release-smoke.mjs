@@ -21,6 +21,7 @@ try {
   await page.route('https://api.chess.com/pub/player/schweits', (r) =>
     r.fulfill({ json: { username: 'Schweits' } }),
   );
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/home');
   await page.locator('#onboarding').waitFor();
   await page.locator('#onboarding-username').fill('https://www.chess.com/member/Schweits');

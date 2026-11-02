@@ -24,6 +24,7 @@ try {
     ['puzzles', '#fullscreen-puzzle', '#puzzle-board', '.puzzle-board-footer'],
     ['practice', '#fullscreen-practice', '#practice-board', null],
   ]) {
+    await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
     await page.goto(base + '#/' + route);
     await page.locator(button).waitFor();
     await page.locator(button).click();

@@ -57,6 +57,7 @@ try {
     localStorage.setItem('evala-display:guest', JSON.stringify({ onboardingComplete: true })),
   );
   const base = `http://127.0.0.1:${server.address().port}/study.html`;
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base);
   await page.locator('#toggle-theme').waitFor();
   await page.evaluate(async (game) => {

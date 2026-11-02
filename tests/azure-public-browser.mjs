@@ -18,6 +18,7 @@ try {
   page.on('request', (r) => {
     if (r.url().endsWith('.wasm')) wasm++;
   });
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(url + '/study.html');
   await page.locator('#report-username').waitFor();
   assert.equal(await page.locator('#study-settings').isVisible(), false);

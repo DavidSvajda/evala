@@ -26,6 +26,7 @@ try {
   await page.addInitScript(() =>
     localStorage.setItem('evala-display:guest', JSON.stringify({ onboardingComplete: true })),
   );
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base);
   await page.locator('#library-sort').waitFor();
   await page.evaluate(async (games) => {

@@ -73,6 +73,8 @@ export function createStaticFiles({
       if (!info.isFile() || !type) throw httpError(404, 'Not found');
       const etag = `W/"${info.size}-${info.mtimeMs}-${publicReports ? 1 : 0}-${localEngineOnly ? 1 : 0}"`;
       res.setHeader('Content-Type', type);
+      if (type.startsWith('text/html') && url.searchParams.has('share'))
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
       res.setHeader('Content-Security-Policy', policy);
       res.setHeader('ETag', etag);
       res.setHeader('Cache-Control', file.endsWith('.wasm') ? 'public, max-age=86400' : 'no-cache');

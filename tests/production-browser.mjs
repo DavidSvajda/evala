@@ -16,6 +16,7 @@ page.on('pageerror', (error) => errors.push(error.message));
 let workers = 0;
 page.on('worker', () => workers++);
 try {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/home');
   await page.locator('#home-board img').first().waitFor({ state: 'attached' });
   const config = await page.evaluate(async () => await (await fetch('/api/account/config')).json());

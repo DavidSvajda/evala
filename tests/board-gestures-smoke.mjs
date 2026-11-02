@@ -31,6 +31,7 @@ async function drag(from, to, button = 'left') {
   await page.mouse.up({ button });
 }
 async function load(pgn) {
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/games');
   if (!(await page.locator('#import-panel').evaluate((el) => el.open)))
     await page.locator('#import-panel > summary').click();

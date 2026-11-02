@@ -20,6 +20,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 try {
   await mkdir('test-results', { recursive: true });
   const base = `http://127.0.0.1:${server.address().port}/study.html`;
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '#/home');
   await page.locator('#journey-primary').click();
   assert.ok(page.url().endsWith('#/insights'));

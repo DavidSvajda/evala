@@ -49,6 +49,7 @@ try {
       ['analysis', '#study-board', '.board-toolbar'],
       ['puzzles', '#puzzle-board', '.puzzle-board-footer'],
     ]) {
+      await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
       await page.goto(url + '#/' + route);
       await page.locator(selector).waitFor();
       for (const factor of [0.8, 1, 1.25, 1.5]) {

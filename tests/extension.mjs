@@ -45,6 +45,7 @@ try {
   await popup.close();
   console.log('PASS: popup settings initialize without JavaScript errors');
   // Same extension iframe/worker/storage path as the installed product.
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(`chrome-extension://${id}/demo.html`);
   await page.waitForFunction(
     () =>

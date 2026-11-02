@@ -27,6 +27,7 @@ try {
   await page.addInitScript(() =>
     localStorage.setItem('evala-display:guest', '{"onboardingComplete":true}'),
   );
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '/study.html#/settings');
   const manifestURL = await page.locator('link[rel="manifest"]').getAttribute('href'),
     response = await page.request.get(new URL(manifestURL, base).href),

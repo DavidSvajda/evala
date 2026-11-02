@@ -17,6 +17,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 try {
   const base = `http://127.0.0.1:${server.address().port}/study.html`;
+  await page.addInitScript(() => localStorage.setItem('evala-language', 'cs'));
   await page.goto(base + '#/games');
   await page.locator('#pgn-input').fill(await readFile('tests/fixtures/immortal.pgn', 'utf8'));
   await page.locator('#import-pgn').click();
