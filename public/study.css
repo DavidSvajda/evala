@@ -956,24 +956,37 @@ progress::-webkit-progress-value {
 }
 .game-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
 }
-.game-heading > div {
-  flex: 1;
+.game-heading > div:first-child {
+  flex: 1 0 min(100%, 220px);
   min-width: 0;
 }
 .game-heading h1 {
   font-size: 18px;
   font-weight: 750;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .game-heading p {
   font-size: 12px;
   color: var(--muted);
   margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.game-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 .game-actions {
   position: relative;
@@ -2468,4 +2481,7 @@ body[data-skill='advanced'] .analysis-panel .line-san {
   display: flex;
   justify-content: flex-end;
   padding: 8px 12px 0;
+}
+[hidden].icon-button {
+  display: none;
 }

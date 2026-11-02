@@ -154,3 +154,6 @@ footer p {
 .bar-demo-link {
   margin-top: 12px;
 }
+.position-summary[hidden] {
+  display: none;
+}

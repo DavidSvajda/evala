@@ -126,6 +126,8 @@ jobs:
           node tests/coach-review-smoke.mjs
           node tests/journey-smoke.mjs
           node tests/board-sizing-smoke.mjs
+          node tests/fullscreen-smoke.mjs
+          node tests/maia-local-smoke.mjs
           node tests/learning-smoke.mjs
       - name: Verify packaged extension and local model switching
         if: inputs.validation == 'extension' || inputs.validation == 'human'

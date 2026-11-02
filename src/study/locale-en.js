@@ -1,4 +1,8 @@
 export const EN = {
+  'Celá obrazovka': 'Fullscreen',
+  'Ukončit celou obrazovku': 'Exit fullscreen',
+  'Prohlížeč nepovolil celou obrazovku. Zkus to znovu tlačítkem.':
+    'The browser did not allow fullscreen. Try the button again.',
   'Importovat pozici FEN': 'Import a FEN position',
   'FEN pozice': 'FEN position',
   'Úplný FEN se šesti poli': 'Complete FEN with six fields',
