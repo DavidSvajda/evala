@@ -19,7 +19,10 @@ export function settingsMarkup(settings) {
       [750, '0,75 s'],
       [1500, '1,5 s'],
       [3000, '3 s'],
+      [5000, '5 s'],
+      [7500, '7,5 s'],
       [10000, '10 s'],
+      [15000, '15 s'],
       [30000, '30 s'],
     ]
       .map(([v, t]) => `<option value="${v}">${t}</option>`)
