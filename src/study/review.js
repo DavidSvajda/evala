@@ -5,8 +5,12 @@ import { gameAccuracy } from '../core/game-accuracy.js';
 export const REVIEW_VERSION = 5;
 export const SACRIFICE_VERSION = 3;
 export const SPECIAL_DEPTH = 14;
-export const currentReview = (game) =>
-  !!game.analysis?.complete && game.analysis.version === REVIEW_VERSION;
+export const currentReview = (game, profile) =>
+  !!game.analysis?.complete &&
+  game.analysis.version === REVIEW_VERSION &&
+  (profile !== 'balanced' ||
+    game.analysis.profile === 'balanced' ||
+    (game.analysis.options?.time >= 500 && game.analysis.options?.multipv >= 3));
 const values = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 export function expectedPercent(score) {

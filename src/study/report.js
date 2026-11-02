@@ -125,8 +125,8 @@ export class PlayerReport {
     $('#report-all').indeterminate = this.checked.size > 0 && this.checked.size < this.games.length;
     $('#report-analyze').textContent = `Rozebrat vybrané (${this.checked.size})`;
     $('#report-analyze').disabled = this.running || !this.checked.size;
-    const pending = this.games.filter((g) => this.checked.has(g.id) && !currentReview(g)),
-      profile = $('#report-profile').value;
+    const profile = $('#report-profile').value,
+      pending = this.games.filter((g) => this.checked.has(g.id) && !currentReview(g, profile));
     const profileOptions = REVIEW_PROFILES[profile] || REVIEW_PROFILES.quick;
     const seconds = Math.ceil(
       ((pending.reduce((n, g) => n + g.fens.length, 0) * profileOptions.time) / 1000) * 1.4 +
@@ -172,7 +172,7 @@ export class PlayerReport {
           $('#report-progress-text').textContent =
             `Partie ${completed + 1}/${games.length} · ${phase === 'queued' ? 'čeká ve frontě' : phase === 'positions' ? `pozice ${index}/${total}` : phase === 'done' ? 'ukládám' : 'ověřuji kritické tahy'}`;
         };
-        if (!currentReview(game)) {
+        if (!currentReview(game, profile)) {
           if (settings.backend === 'server')
             await remoteReview(settings.serverUrl, settings.token, game, {
               profile,
@@ -189,6 +189,7 @@ export class PlayerReport {
               },
               { signal: controller.signal, onUpdate: update },
             );
+          game.analysis.profile = profile;
           await this.save(game);
         }
         completed++;

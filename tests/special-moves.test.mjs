@@ -8,6 +8,8 @@ import {
   brilliantEligible,
   SACRIFICE_VERSION,
   specialReviewBudget,
+  currentReview,
+  REVIEW_VERSION,
 } from '../src/study/review.js';
 import { REPORT_PROFILES } from '../server/public-reviews.mjs';
 const cp = (value, depth = 18, pv = []) => ({ kind: 'cp', value, depth, pv });
@@ -94,4 +96,15 @@ test('Quick and Balanced both verify sacrifices with bounded CPU reservations', 
     const budget = specialReviewBudget(profile);
     assert.ok(budget > 0 && budget < 70);
   }
+});
+
+test('legacy reviews and a Quick-to-Balanced upgrade are not silently reused', () => {
+  const game = { analysis: { complete: true, version: REVIEW_VERSION - 1, profile: 'quick' } };
+  assert.equal(currentReview(game, 'quick'), false);
+  game.analysis.version = REVIEW_VERSION;
+  assert.equal(currentReview(game, 'quick'), true);
+  assert.equal(currentReview(game, 'balanced'), false);
+  game.analysis.profile = 'balanced';
+  assert.equal(currentReview(game, 'balanced'), true);
+  assert.equal(currentReview(game, 'quick'), true);
 });
