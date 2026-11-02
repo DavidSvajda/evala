@@ -27,7 +27,12 @@ try {
     await page.goto(base + '#/' + route);
     await page.locator(button).waitFor();
     await page.locator(button).click();
-    await page.waitForFunction(() => !!document.fullscreenElement);
+    await page.waitForFunction(
+      (button) =>
+        !!document.fullscreenElement &&
+        document.querySelector(button).getAttribute('aria-pressed') === 'true',
+      button,
+    );
     assert.equal(await page.locator(button).getAttribute('aria-pressed'), 'true');
     if (route === 'analysis') {
       await page.locator('#toggle-language').click();
@@ -51,7 +56,12 @@ try {
       );
     // Exiting through the browser also needs to update every route's button.
     await page.evaluate(() => document.exitFullscreen());
-    await page.waitForFunction(() => !document.fullscreenElement);
+    await page.waitForFunction(
+      (button) =>
+        !document.fullscreenElement &&
+        document.querySelector(button).getAttribute('aria-pressed') === 'false',
+      button,
+    );
     assert.equal(await page.locator(button).getAttribute('aria-pressed'), 'false');
     await page.locator(button).click();
     await page.waitForFunction(() => !!document.fullscreenElement);
