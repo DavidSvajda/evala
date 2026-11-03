@@ -155,6 +155,8 @@ jobs:
           node --test tests/sharing.test.mjs tests/release-version.test.mjs tests/account-preferences.test.mjs tests/imports.test.mjs
           node tests/sharing-smoke.mjs
           node tests/board-motion-smoke.mjs
+          node --test tests/admin.test.mjs
+          node tests/admin-browser.mjs
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

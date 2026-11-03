@@ -8,7 +8,9 @@ Malé rozšíření s evaluation barem počítá přes lokální Stockfish. Neod
 
 Import veřejných partií kontaktuje API Chess.com nebo Lichess. Služba uvidí požadovanou přezdívku a síťový požadavek. Evala nevyžaduje heslo k šachovému účtu. Samotné zadání přezdívky neověřuje vlastnictví profilu.
 
-Při serverovém rozboru se posílá PGN včetně hlaviček, tahů a případných hodin. Při samostatném výpočtu pozice se posílá FEN, historie a nastavení. Veřejné výpočty používají technickou HttpOnly cookie s platností osm hodin pro frontu a kvóty. Probíhající rozbor vyžaduje otevřenou kartu.
+Na evala.me běží Stockfish i Maia na zařízení návštěvníka. Serverové enginy jsou vypnuté. Pozice se kvůli výpočtu na server neposílají. Přihlášená knihovna se synchronizuje do úložiště; výslovně sdílená partie se ukládá jako veřejná kopie.
+
+Aktuální zveřejněné zásady v češtině a angličtině jsou v `public/privacy.html` a `src/privacy.js`. Provozovatel David Svajda, kontakt svajdada@gmail.com. Od 3. listopadu 2026 doplňují účely a právní základy, přístup správce k jménu/e-mailu/registraci/poslednímu přihlášení, práva uživatelů, cookies a místní úložiště, veřejné odkazy a denní souhrnné počty načtení bez IP či identifikátorů návštěvníků. Součty pokrývají posledních 30 dní, včetně F5 a robotů, a nejsou počtem unikátních lidí. Podmínky používání jsou v `public/terms.html`.
 
 ## Google účet
 
