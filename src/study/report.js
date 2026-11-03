@@ -49,6 +49,14 @@ export class PlayerReport {
       if (this.games.every((g) => g.analysis?.complete)) this.compact();
     }
   }
+  useLibrary(ids) {
+    if (this.running) return;
+    this.restore(ids);
+    $('.player-setup').classList.remove('report-complete');
+    $('#report-complete-bar').hidden = true;
+    $('#report-selection-details').open = true;
+    this.onChange();
+  }
   compact() {
     $('#report-complete-summary').textContent =
       `${$('#report-username').value} · ${this.checked.size} vybraných partií`;

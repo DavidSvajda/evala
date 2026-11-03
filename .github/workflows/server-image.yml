@@ -157,6 +157,8 @@ jobs:
           node tests/board-motion-smoke.mjs
           node --test tests/admin.test.mjs
           node tests/admin-browser.mjs
+          node tests/promotion-smoke.mjs
+          node tests/library-batch-smoke.mjs
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

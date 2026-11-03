@@ -1,4 +1,5 @@
 export const EN = {
+  'Počet partií pro výběr': 'Number of games to select',
   Sdílet: 'Share',
   'Sdílet partii': 'Share game',
   'Sdílení partie': 'Game sharing',
