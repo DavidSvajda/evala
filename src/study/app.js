@@ -501,6 +501,8 @@ $('#library-search').addEventListener('input', renderLibrary);
 $('#library-filter').addEventListener('change', renderLibrary);
 $('#library-sort').addEventListener('change', renderLibrary);
 function renderLibrarySelection() {
+  $('#library-analyze-selected').disabled =
+    !librarySelection.size || bulkDeleting || !!job || !!playerReport?.running;
   $('#library-delete-selected').disabled = !librarySelection.size || bulkDeleting;
   $('#library-delete-all').disabled = !library.length || bulkDeleting;
   $('#library-selection-status').textContent =
@@ -515,6 +517,19 @@ $('#library-select-visible').onclick = () => {
 $('#library-clear-selection').onclick = () => {
   librarySelection.clear();
   renderLibrary();
+};
+$('#library-select-recent').onclick = () => {
+  librarySelection.clear();
+  visibleLibrary()
+    .slice(0, Number($('#library-batch-count').value))
+    .forEach((game) => librarySelection.add(game.id));
+  renderLibrary();
+};
+$('#library-analyze-selected').onclick = () => {
+  if (job || playerReport?.running || bulkDeleting || !librarySelection.size) return;
+  setView('analytics');
+  playerReport.useLibrary([...librarySelection]);
+  void playerReport.run();
 };
 async function bulkDelete(all) {
   if (bulkDeleting) return;

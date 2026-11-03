@@ -194,8 +194,14 @@ export async function initPlatform(context) {
       if (busy || !current || current.state.complete) return;
       if (move.promotions.length) {
         current.promotion = move;
+        puzzleBoard.interactive = false;
+        $('#puzzle-promotion')
+          .querySelectorAll('[data-piece]')
+          .forEach((button) => {
+            button.disabled = !move.promotions.includes(button.dataset.piece);
+          });
         $('#puzzle-promotion').hidden = false;
-        $('#puzzle-promotion').showModal();
+        if (!$('#puzzle-promotion').open) $('#puzzle-promotion').showModal();
         return;
       }
       submitMove(move.from + move.to);
@@ -378,7 +384,7 @@ export async function initPlatform(context) {
     if (!current) return;
     $('#flip-puzzle').disabled = false;
     const uci = current.state.lastMove;
-    puzzleBoard.interactive = !busy && !current.state.complete;
+    puzzleBoard.interactive = !busy && !current.state.complete && !current.promotion;
     puzzleBoard.set(current.state.fen, {
       flipped: puzzleFlipped,
       lastMove: uci ? uciMove(uci) : null,
@@ -707,8 +713,10 @@ export async function initPlatform(context) {
     }
   };
   $('#puzzle-promotion').addEventListener('close', () => {
+    if ($('#puzzle-promotion').open) return;
     if (current) current.promotion = null;
     $('#puzzle-promotion').hidden = true;
+    paintPuzzle();
   });
   $('#toggle-sidebar').onclick = () =>
     updatePreferences({ sidebarCollapsed: !preferences.sidebarCollapsed });
