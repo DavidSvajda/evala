@@ -22,10 +22,9 @@
         přezdívku a síťový požadavek. Evala nevyžaduje heslo k šachovému účtu. Samotné zadání
         přezdívky neověřuje vlastnictví profilu.</p
       ><p
-        >Při serverovém rozboru se posílá PGN včetně hlaviček, tahů a případných hodin. Při
-        samostatném výpočtu pozice se posílá FEN, historie a nastavení. Veřejné výpočty používají
-        technickou HttpOnly cookie s platností osm hodin pro frontu a kvóty. Probíhající rozbor
-        vyžaduje otevřenou kartu.</p
+        >Na evala.me běží Stockfish i Maia na zařízení návštěvníka. Serverové enginy jsou vypnuté.
+        Pozice se kvůli výpočtu na server neposílají. U přihlášeného účtu se knihovna synchronizuje
+        do úložiště a výslovně sdílená partie se ukládá jako veřejná kopie.</p
       ><h2>Google účet</h2
       ><p
         >Přihlášení je dobrovolné. Google poskytne potvrzení identity, jméno a e-mail. Evala
@@ -61,6 +60,60 @@
       ><p
         >Obnovovací kopie zůstávají nejvýše sedm dní po smazání nebo přepsání dat. Přístup má pouze
         správce aplikace za účelem obnovy. Smazání účtu okamžitě zneplatní přihlášení.</p
+      ><section data-policy-extra>
+        <h2 data-en="Controller and contact">Správce a kontakt</h2>
+        <p
+          data-en="Controller: David Svajda, the individual operating Evala. Contact: svajdada@gmail.com. Effective 3 November 2026. Evala is currently a free project."
+          >Správcem je David Svajda, fyzická osoba provozující Evalu. Kontakt: svajdada@gmail.com.
+          Účinnost od 3. listopadu 2026. Evala je nyní bezplatný projekt.</p
+        >
+        <h2 data-en="Purposes, legal bases and retention">Účely, právní základy a uchování</h2>
+        <p
+          data-en="Account identity and saved content are processed to provide the account and synchronisation you request (GDPR Article 6(1)(b)), until account deletion. An authorised administrator can view names, emails, registration dates and the most recent successful login for account administration and operational support (Article 6(1)(f), legitimate interest). The login date is overwritten at the next login. It is not a browsing history or a measure of active use. Older accounts may have no login date."
+          >Identitu účtu a uložený obsah zpracováváme pro poskytnutí vyžádaného účtu a synchronizace
+          podle čl. 6 odst. 1 písm. b) GDPR do smazání účtu. Oprávněný správce vidí jméno, e-mail,
+          registraci a poslední úspěšné přihlášení pro správu účtů a provozní podporu podle čl. 6
+          odst. 1 písm. f) GDPR, oprávněný zájem. Datum přihlášení přepisuje další přihlášení. Nejde
+          o historii prohlížení ani měření aktivního používání. Starší účty tento údaj nemusí
+          mít.</p
+        >
+        <p
+          data-en="We retain daily totals of successful application-page loads for 30 days. Totals include refreshes and bots and do not identify unique visitors. No IP address, user agent, referrer, account identifier or URL query is stored with these totals, and no analytics identifier or cookie is created. This is aggregate operational counting, not individual behavioural tracking. Hosting and security services necessarily receive network connection information. Evala's application rate limits use connection addresses temporarily in memory to protect the service."
+          >Po dobu 30 dní ukládáme denní součty úspěšných načtení stránky aplikace. Zahrnují
+          obnovení a roboty, nevyjadřují unikátní návštěvníky. K součtům neukládáme IP, user agent,
+          referrer, účet ani parametry adresy a nevytváříme analytický identifikátor ani cookie. Jde
+          o souhrnné provozní počítání. Hosting a bezpečnostní služby při spojení nezbytně dostávají
+          síťové údaje. Aplikační omezení požadavků používají adresy spojení dočasně v paměti pro
+          ochranu služby.</p
+        >
+        <h2 data-en="Cookies, local storage and sharing">Cookies, místní úložiště a sdílení</h2>
+        <p
+          data-en="evala_login (10 minutes) secures Google login and evala_account (up to 30 days) maintains your requested signed-in session. On HTTPS their names use the __Host- prefix. Local browser storage keeps your chosen language, theme, chess settings, game library and owner tokens for revoking shared links until you clear it. These support features you request. We use no advertising or analytics cookies. Optional tracking, if introduced, will require a separate choice before activation."
+          >evala_login (10 minut) zabezpečuje Google přihlášení a evala_account (nejvýše 30 dní)
+          udržuje vyžádané přihlášení. Na HTTPS mají názvy prefix __Host-. Místní úložiště uchovává
+          zvolený jazyk, vzhled, šachová nastavení, knihovnu a oprávnění pro zrušení sdílených
+          odkazů do vymazání. Slouží vyžádaným funkcím. Reklamní ani analytické cookies nepoužíváme.
+          Případné budoucí volitelné sledování bude vyžadovat samostatnou volbu před zapnutím.</p
+        >
+        <p
+          data-en="Publishing a link explicitly stores a copy readable by anyone with the link. Private notes are excluded. You can revoke it from the browser that created it. Recipients may save independent copies; revocation cannot delete their copies. Account deletion and public-link revocation are separate actions."
+          >Zveřejněním odkazu výslovně uložíš kopii přístupnou komukoli s odkazem, bez soukromých
+          poznámek. Odkaz můžeš zrušit v prohlížeči, kde vznikl. Příjemci si mohou uložit vlastní
+          kopie; zrušení odkazu je neodstraní. Smazání účtu a zrušení veřejného odkazu jsou
+          samostatné akce.</p
+        >
+        <h2 data-en="Recipients and your rights">Příjemci a tvoje práva</h2>
+        <p
+          data-en="Hosting and private account storage use Microsoft Azure. Google provides optional authentication; Chess.com and Lichess receive import requests. Their processing and any international transfers depend on the applicable provider terms and safeguards. Contact svajdada@gmail.com to request access, correction, erasure or restriction, portability where applicable, or to object to legitimate-interest processing. You may complain to the Czech Office for Personal Data Protection (uoou.gov.cz). Providing account data is optional; without it you can use guest mode. We do not make legally significant automated decisions about you."
+          >Hosting a soukromé úložiště používají Microsoft Azure. Google poskytuje volitelné
+          přihlášení, Chess.com a Lichess dostávají požadavky importu. Zpracování a případné předání
+          mimo EHP závisí na příslušných podmínkách a zárukách poskytovatelů. Na svajdada@gmail.com
+          můžeš žádat přístup, opravu, výmaz, omezení a případně přenositelnost nebo vznést námitku
+          proti zpracování na základě oprávněného zájmu. Máš právo podat stížnost ÚOOÚ
+          (uoou.gov.cz). Údaje účtu jsou dobrovolné, bez nich lze použít režim hosta. Neprovádíme o
+          tobě automatizovaná rozhodnutí s právními účinky.</p
+        >
+        <p><a href="terms.html">Podmínky používání / Terms of use</a></p> </section
       ><p><a href="study.html#/account">Zpět do aplikace</a></p></main
     ></body
   ></html

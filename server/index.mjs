@@ -17,6 +17,7 @@ import { createDocumentStore } from './document-store.mjs';
 import { createHumanOpponent } from './human-opponent.mjs';
 import { httpError, sendError, json } from './http.mjs';
 import { createGameShares } from './game-shares.mjs';
+import { createAdmin } from './admin.mjs';
 
 export function createAnalysisServer({
   token = process.env.API_TOKEN || '',
@@ -53,6 +54,7 @@ export function createAnalysisServer({
     store,
   });
   const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
+  const admin = createAdmin({ store, session: identity.session });
   const opponent = localEngineOnly
     ? { dispose() {} }
     : createHumanOpponent({ reports, isOwner: authorized, ...human });
@@ -82,6 +84,8 @@ export function createAnalysisServer({
       throw httpError(400, 'Bad URL');
     }
     guard(req, res, url);
+    if (await admin.handle(req, res, url)) return;
+    admin.recordPageLoad(req, res, url);
     if (await shares(req, res, url)) return;
     if (localEngineOnly && url.pathname === '/api/health') {
       json(res, 200, {

@@ -1,4 +1,8 @@
-const nodes = [...document.querySelectorAll('.privacy-page h1,.privacy-page h2,.privacy-page p')];
+const nodes = [
+  ...document.querySelectorAll('.privacy-page h1,.privacy-page h2,.privacy-page p'),
+].filter((node) => !node.closest('[data-policy-extra]'));
+const extra = [...document.querySelectorAll('[data-policy-extra] [data-en]')];
+const czechExtra = extra.map((node) => node.textContent);
 const originals = nodes.map((node) => node.innerHTML);
 const english = [
   'Privacy in Evala',
@@ -6,7 +10,7 @@ const english = [
   'The small evaluation-bar extension uses local Stockfish. It does not send positions to a server or use an account. The web library and training also work without signing in; guest data stays in this browser. Clearing site data can remove this local library.',
   'Game imports and analysis',
   'Importing public games contacts the Chess.com or Lichess API. That service receives the requested username and network request. Evala does not ask for your chess-account password. Entering a username does not verify ownership of that profile.',
-  'Server analysis sends the PGN, including headers, moves and any clock annotations. Position analysis sends the FEN, move history and settings. Public analysis uses an eight-hour HttpOnly technical cookie for queues and quotas. Keep the tab open while analysis runs.',
+  'On evala.me, Stockfish and Maia run on your device. Server engines are disabled. Positions are not sent to a server for computation. Signed-in libraries synchronise to storage and explicitly shared games are saved as public snapshots.',
   'Google account',
   'Signing in is optional. Google provides proof of identity, your name and email. Evala receives no password or access to Gmail, Drive or other documents. The Google sign-in library loads on the account page. The server verifies the signature, audience, issuer, expiry and one-time nonce.',
   'Signed-in accounts store an account identifier, name, email, configured chess username, game library, analyses, notes, display settings and training history. Production uses private Azure Blob Storage with separate account records. The HttpOnly login cookie lasts at most 30 days; the server stores only a hash of its random value. You can sign out.',
@@ -21,6 +25,9 @@ const english = [
 ];
 let language = localStorage.getItem('evala-language') === 'en' ? 'en' : 'cs';
 function render() {
+  extra.forEach((node, index) => {
+    node.textContent = language === 'en' ? node.dataset.en : czechExtra[index];
+  });
   document.documentElement.lang = language;
   document.title = language === 'en' ? 'Privacy · Evala' : 'Soukromí · Evala';
   nodes.forEach((node, index) => {

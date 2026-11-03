@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { BlobServiceClient } from '@azure/storage-blob';
 
@@ -124,6 +124,46 @@ export function createDocumentStore({
     return promise;
   }
   return {
+    async accountSummaries() {
+      await initialize();
+      const users = [];
+      let scanned = 0,
+        truncated = false;
+      const names = blobs ? blobs.listBlobsFlat() : await readdir(root);
+      for await (const entry of names) {
+        const name = typeof entry === 'string' ? entry : entry.name;
+        if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
+        if (++scanned > 10000) {
+          truncated = true;
+          break;
+        }
+        let value;
+        try {
+          const data = blobs
+            ? await blobs.getBlockBlobClient(name).downloadToBuffer()
+            : await readFile(resolve(root, name));
+          value = JSON.parse(data.toString('utf8'));
+        } catch (e) {
+          if (e.code === 'ENOENT' || e.statusCode === 404) continue;
+          throw e;
+        }
+        if (
+          !value?.deleting &&
+          /^[a-f0-9]{64}$/.test(value?.id || '') &&
+          value?.email &&
+          value?.training &&
+          value?.games
+        ) {
+          users.push({
+            name: value.name,
+            email: value.email,
+            createdAt: value.createdAt,
+            lastLoginAt: value.lastLoginAt || null,
+          });
+        }
+      }
+      return { users: users.sort((a, b) => b.createdAt - a.createdAt), truncated };
+    },
     get,
     put,
     remove,

@@ -21,6 +21,7 @@ export const publicUser = (a) => ({
   email: a.email,
   preferences: a.preferences,
   createdAt: a.createdAt,
+  lastLoginAt: a.lastLoginAt || null,
   generation: a.authEpoch,
 });
 export function createAccountIdentity({
@@ -103,7 +104,7 @@ export function createAccountIdentity({
       const account = await store.transact('account:' + id, (prior) => {
         if (prior?.deleting) throw fail('Účet se právě odstraňuje. Zkus přihlášení znovu.', 409);
         return prior
-          ? { ...prior, authEpoch: prior.authEpoch || randomUUID() }
+          ? { ...prior, authEpoch: prior.authEpoch || randomUUID(), lastLoginAt: Date.now() }
           : {
               id,
               authEpoch: randomUUID(),
@@ -113,6 +114,7 @@ export function createAccountIdentity({
               games: {},
               training: trainingState(),
               createdAt: Date.now(),
+              lastLoginAt: Date.now(),
             };
       });
       const old = cookie(req, 'evala_account');
