@@ -1,4 +1,5 @@
 import { validPosition, terminalScore } from '../core/position.js';
+import { engineTimeout } from './engine-timeout.js';
 
 export function parseStudyInfo(line, turn = 'w') {
   const score = line.match(/\bscore (cp|mate) (-?\d+)/);
@@ -53,7 +54,7 @@ export class StudyEngine {
   boot() {
     if (this.ready) return this.ready;
     this.ready = new Promise((resolve, reject) => {
-      const timer = setTimeout(
+      const timer = engineTimeout(
         () =>
           this.fail(
             new Error('Engine se nenačetl do 45 sekund. Zkontroluj instalaci a volnou paměť.'),
@@ -61,7 +62,7 @@ export class StudyEngine {
         45000,
       );
       this.rejectBoot = (error) => {
-        clearTimeout(timer);
+        timer.cancel();
         reject(error);
       };
       try {
@@ -84,7 +85,7 @@ export class StudyEngine {
               this.barrier = null;
               barrier.resolve();
             } else {
-              clearTimeout(timer);
+              timer.cancel();
               this.rejectBoot = null;
               resolve();
             }
@@ -92,7 +93,7 @@ export class StudyEngine {
         };
         this.worker.postMessage('uci');
       } catch (error) {
-        clearTimeout(timer);
+        timer.cancel();
         reject(error);
       }
     });
@@ -135,17 +136,17 @@ export class StudyEngine {
       const gameKey = request.gameKey ?? request.history?.initialFen ?? request.fen;
       if (this.gameKey !== gameKey || this.gameScope !== scope) {
         await new Promise((resolve, reject) => {
-          const timer = setTimeout(
+          const timer = engineTimeout(
             () => this.fail(new Error('Engine neodpovídá. Spusť rozbor znovu.')),
             10000,
           );
           this.barrier = {
             resolve: () => {
-              clearTimeout(timer);
+              timer.cancel();
               resolve();
             },
             reject: (error) => {
-              clearTimeout(timer);
+              timer.cancel();
               reject(error);
             },
           };
@@ -200,7 +201,7 @@ export class StudyEngine {
             : `position fen ${request.fen}`;
         this.worker.postMessage(position);
         this.worker.postMessage(`go depth ${settings.depth} movetime ${settings.time}`);
-        this.active.watchdog = setTimeout(
+        this.active.watchdog = engineTimeout(
           () => this.fail(new Error('Časový limit enginu byl překročen. Zkus kratší profil.')),
           settings.time + 12000,
         );
@@ -237,7 +238,7 @@ export class StudyEngine {
     if (line.startsWith('bestmove')) {
       this.active = null;
       active.cleanup();
-      clearTimeout(active.watchdog);
+      active.watchdog?.cancel();
       clearTimeout(active.stopTimer);
       if (active.aborted) {
         active.reject(new DOMException('Výpočet byl zrušen.', 'AbortError'));
@@ -271,7 +272,7 @@ export class StudyEngine {
     this.gameScope = undefined;
     if (this.active) {
       this.active.cleanup();
-      clearTimeout(this.active.watchdog);
+      this.active.watchdog?.cancel();
       clearTimeout(this.active.stopTimer);
       this.active.reject(error);
       this.active = null;

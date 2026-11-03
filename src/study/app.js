@@ -728,10 +728,6 @@ $('#review-game').addEventListener('click', async () => {
   job = { controller, game };
   error();
   renderReview();
-  const visibility = () => {
-    if (document.hidden && options.backend === 'local') controller.abort();
-  };
-  document.addEventListener('visibilitychange', visibility);
   try {
     $('#review-progress').hidden = false;
     $('#progress-text').textContent =
@@ -773,7 +769,10 @@ $('#review-game').addEventListener('click', async () => {
         // Progress numbers stay live; rebuilding the board, notation and graph
         // for every fast engine result needlessly blocks the browser thread.
         const now = performance.now();
-        if (!lastReviewPaint || now - lastReviewPaint >= 180 || phase === 'done') {
+        if (
+          !document.hidden &&
+          (!lastReviewPaint || now - lastReviewPaint >= 180 || phase === 'done')
+        ) {
           lastReviewPaint = now;
           renderPosition();
           renderMoves();
@@ -807,7 +806,6 @@ $('#review-game').addEventListener('click', async () => {
     } else error(e.message);
   } finally {
     job = null;
-    document.removeEventListener('visibilitychange', visibility);
     renderReview();
     renderLibrary();
     if (activeView === 'review') focusBoard();
@@ -1677,8 +1675,15 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted) resumeAccount(true);
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) resumeAccount();
-  else flushAccountPreferences({ keepalive: true }).catch(() => {});
+  if (!document.hidden) {
+    resumeAccount();
+    if (selected?.analysis) {
+      renderPosition();
+      renderMoves();
+      renderSummary();
+      renderGraph();
+    }
+  } else flushAccountPreferences({ keepalive: true }).catch(() => {});
 });
 window.addEventListener('pagehide', () => {
   flushAccountPreferences({ keepalive: true }).catch(() => {});

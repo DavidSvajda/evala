@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { engineTimeout } from '../src/study/engine-timeout.js';
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+test('engine watchdog pauses while hidden and rearms on return, then cleans up', async () => {
+  const page = new EventTarget();
+  page.hidden = true;
+  let calls = 0;
+  engineTimeout(() => calls++, 15, page);
+  await wait(40);
+  assert.equal(calls, 0);
+  page.hidden = false;
+  page.dispatchEvent(new Event('visibilitychange'));
+  await wait(40);
+  assert.equal(calls, 1);
+  page.dispatchEvent(new Event('visibilitychange'));
+  await wait(30);
+  assert.equal(calls, 1);
+  const cancelled = engineTimeout(() => calls++, 15, page);
+  cancelled.cancel();
+  page.dispatchEvent(new Event('visibilitychange'));
+  await wait(30);
+  assert.equal(calls, 1);
+});
+test('server watchdog keeps its normal deadline without a browser document', async () => {
+  let calls = 0;
+  engineTimeout(() => calls++, 10, undefined);
+  await wait(30);
+  assert.equal(calls, 1);
+});
