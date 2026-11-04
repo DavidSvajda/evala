@@ -3,6 +3,8 @@
 The web backend uses PostgreSQL when `DATABASE_URL` is set. A failed connection
 never falls back to local files. Browser IndexedDB remains the offline cache.
 Guest libraries stay in the visitor's browser.
+Production also sets `REQUIRE_POSTGRES=true`: a missing database secret stops
+startup rather than silently reopening the retired Blob library.
 
 Production uses Supabase Free, Frankfurt. Its 500 MB database, shared resources
 and possible inactivity pause are limits, not a production availability guarantee.

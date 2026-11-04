@@ -94,7 +94,7 @@ try {
   await context.route('https://www.chess.com/**', (route) =>
     route.fulfill({
       contentType: 'text/html',
-      body: `<!doctype html><html><head><title>Chess.com adapter fixture</title><style>body{background:#302e2b;margin:120px 240px}wc-chess-board{display:block;position:relative;width:560px;height:560px;background:#bbb}.piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><wc-chess-board>${pieces}</wc-chess-board><script>document.querySelector('wc-chess-board').game={getFEN:()=>${JSON.stringify(fen)}};</script></body></html>`,
+      body: `<!doctype html><html><head><title>Chess.com adapter fixture</title><style>body{background:#302e2b;margin:120px 240px}wc-chess-board{display:block;position:relative;width:560px;height:560px;background:#bbb}.piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><wc-chess-board data-fen="${fen}">${pieces}</wc-chess-board><script>document.querySelector('wc-chess-board').game={getFEN:()=>document.querySelector('wc-chess-board').dataset.fen};</script></body></html>`,
     }),
   );
   await page.goto('https://www.chess.com/game/live/123456789');

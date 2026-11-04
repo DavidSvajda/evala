@@ -20,6 +20,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: node scripts/prepare-assets.mjs
       - run: npm run build
       - run: npm run lint
       - run: npm run format:check

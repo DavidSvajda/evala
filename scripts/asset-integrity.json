@@ -1,0 +1,17 @@
+{
+  "LICENSE": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+  "public/engine-source.json": "20faeaaaead694fc94974ee2fa38cf875f2f2ab0f71ce4d81e8b492bb763c6e5",
+  "public/pieces/wK.svg": "09837f1f99dae2d05c2a0bfb5ce0fb9f37a95b124de44f428a08ae18d7b7c557",
+  "public/pieces/wQ.svg": "9c0a960b360e08cea48eedab54e852107145de289b81a82fe27942045e2ab665",
+  "public/pieces/wR.svg": "05746153e11de3ff4a43d6725f704e226e5d5b49c6ff170ed598d3e9883f2cd5",
+  "public/pieces/wB.svg": "8bf4f38cc170686775f81158934301942b07e3f1162e76c6305e76d66aaa0910",
+  "public/pieces/wN.svg": "43d8bed9cd40836335072a20f52d30237e6e2cbe304ffb13e258fa1d576c156a",
+  "public/pieces/wP.svg": "a8bd79f344ea69a577cdd7b11cbab7bbebfc157cce01c6d29b8f2edf1c44068e",
+  "public/pieces/bK.svg": "2dc3caba39a67a707ebc27f4e41b727dd5252f4f49da695fc15cc2589dd92a47",
+  "public/pieces/bQ.svg": "2d0162d1fe776ac5a4d307d4f6e5960804273edc0d3743f1c97a158f5a64c4b1",
+  "public/pieces/bR.svg": "5928b86919ae815f5d35dea8a25f5a84c3f8839468a137e429d42f618185cbcd",
+  "public/pieces/bB.svg": "48ff9dba84dae861b1a81ac58f4647e05cee8a827acad1618bf11beaedcce60d",
+  "public/pieces/bN.svg": "72e1565fbc9024015dcb6ee28d918c876523119f6f552c0a40d3118c13a67e13",
+  "public/pieces/bP.svg": "93e11e46deceff0768211a28df3e39c6d3427aa172bdb5e3928b025bd2858587",
+  "vendor-source/stockfish-0d5dd7944f88c817c07a26bc4fb1905d5f9c46d6.tar.gz": "e5289a920554bf0069a6601c228e81d957c00522bb31c4343588dc5d7d251879"
+}

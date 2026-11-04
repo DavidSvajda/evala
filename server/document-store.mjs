@@ -10,7 +10,10 @@ export function createDocumentStore({
   connectionString = process.env.ACCOUNT_STORAGE_CONNECTION_STRING,
   container = 'evala-accounts',
   databaseUrl = process.env.DATABASE_URL,
+  requirePostgres = process.env.REQUIRE_POSTGRES === 'true',
 } = {}) {
+  if (requirePostgres && !databaseUrl)
+    throw new Error('DATABASE_URL is required. Refusing to fall back to retired storage.');
   if (databaseUrl) return createPostgresStore({ connectionString: databaseUrl });
   const locks = new Map();
   const service = connectionString

@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createAnalysisServer } from '../server/index.mjs';
+import { createDocumentStore } from '../server/document-store.mjs';
+
+test('production SQL mode cannot silently reopen a retired Blob library when its secret is missing', () => {
+  assert.throws(
+    () => createDocumentStore({ databaseUrl: '', requirePostgres: true }),
+    /Refusing to fall back/,
+  );
+  const local = createDocumentStore({
+    databaseUrl: '',
+    requirePostgres: false,
+    connectionString: '',
+  });
+  assert.equal(local.kind, 'local-file');
+});
 
 test('migration maintenance rejects writes before auth, keeps health and config readable', async () => {
   let writes = 0;
