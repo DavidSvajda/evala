@@ -23,7 +23,8 @@ test('performance requires a completed, sufficiently deep and informative game w
   assert.ok(estimateGamePerformance(game, 'w').value);
   const short = analysed();
   short.moves = short.moves.slice(0, 16);
-  assert.equal(estimateGamePerformance(short, 'w').value, null);
+  assert.ok(estimateGamePerformance(short, 'w').value);
+  assert.equal(estimateGamePerformance(short, 'w').basis, 'short-game');
   const missing = analysed();
   delete missing.headers.WhiteElo;
   assert.equal(estimateGamePerformance(missing, 'w').value, null);

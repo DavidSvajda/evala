@@ -2,13 +2,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { BlobServiceClient } from '@azure/storage-blob';
+import { createPostgresStore } from './postgres-store.mjs';
 
 const filename = (key) => createHash('sha256').update(key).digest('hex') + '.json';
 export function createDocumentStore({
   directory = process.env.EVALA_DATA_DIR || '.local-data/accounts',
   connectionString = process.env.ACCOUNT_STORAGE_CONNECTION_STRING,
   container = 'evala-accounts',
+  databaseUrl = process.env.DATABASE_URL,
 } = {}) {
+  if (databaseUrl) return createPostgresStore({ connectionString: databaseUrl });
   const locks = new Map();
   const service = connectionString
     ? BlobServiceClient.fromConnectionString(connectionString, {

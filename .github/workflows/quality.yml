@@ -25,3 +25,48 @@ jobs:
       - run: npm run format:check
       - run: node --test tests/release-version.test.mjs tests/account-preferences.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/security-gates.test.mjs tests/accounts.test.mjs
       - run: npm audit --audit-level=moderate
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_PASSWORD: ci-database-fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Configure isolated PostgreSQL with verified TLS
+        env:
+          PGPASSWORD: ci-database-fixture
+          DATABASE_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' -keyout /tmp/db.key -out /tmp/db.crt
+          docker cp /tmp/db.key "$DATABASE_CONTAINER:/tmp/db.key"
+          docker cp /tmp/db.crt "$DATABASE_CONTAINER:/tmp/db.crt"
+          docker exec -u root "$DATABASE_CONTAINER" sh -c 'chown postgres:postgres /tmp/db.key /tmp/db.crt; chmod 600 /tmp/db.key'
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET ssl='on'"
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET ssl_cert_file='/tmp/db.crt'"
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET ssl_key_file='/tmp/db.key'"
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c 'SELECT pg_reload_conf()'
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon; CREATE ROLE authenticated;'
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -f server/postgres-schema.sql
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE evala_app PASSWORD 'ci-app-fixture'"
+      - name: Verify database transactions, account API and migration guard
+        env:
+          EVALA_TEST_DATABASE_URL: postgresql://evala_app:ci-app-fixture@127.0.0.1:5432/postgres
+        run: |
+          export DATABASE_CA="$(cat /tmp/db.crt)"
+          node --test tests/postgres-store.test.mjs tests/database-maintenance.test.mjs tests/short-game-rating.test.mjs

@@ -369,6 +369,31 @@ export function estimateGamePerformance(game, color) {
     informative.push({ ...classifyMove(move, before, after), depth });
   }
   let result;
+  if (informative.length < 12 && game.moves.length <= 32) {
+    const own = game.moves.filter((m) => m.color === color);
+    const unique = new Set(own.map((m) => m.fenBefore.split(' ').slice(0, 4).join(' ')));
+    const depth = Math.min(...positions.filter((p) => !p.terminal).map((p) => p.depth));
+    const quality = gameAccuracy(game)[color];
+    if (!own.length || unique.size !== own.length || depth < 8 || quality === null)
+      return { value: null, reason: 'Pro odhad chybí spolehlivá hodnocení pozic.' };
+    const { value, expectedQuality } = contextualPerformance(rating, quality);
+    // A short-game grade includes opening play. It is a display of this game's
+    // quality relative to the recorded rating, never evidence of long-term Elo.
+    const reserve = Math.round((500 + 600 / Math.sqrt(own.length)) / 50) * 50;
+    return {
+      value,
+      low: Math.max(100, value - reserve),
+      high: Math.min(3500, value + reserve),
+      sample: own.length,
+      baseline: rating,
+      quality,
+      expectedQuality,
+      provisional: true,
+      basis: 'short-game',
+      method: PERFORMANCE_METHOD,
+      calibrated: false,
+    };
+  }
   if (informative.length < 12 || informative.length < candidates * 0.9)
     result = {
       value: null,
