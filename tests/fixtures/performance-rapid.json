@@ -1,0 +1,553 @@
+{
+  "source": "https://www.chess.com/game/live/186535260616",
+  "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"2026.11.04\"]\n[Round \"?\"]\n[White \"vellis85\"]\n[Black \"Schweits\"]\n[Result \"0-1\"]\n[WhiteElo \"1697\"]\n[BlackElo \"1714\"]\n[ECO \"A00\"]\n\n1. e3 e5 2. g3 d5 3. d3 Nc6 4. Nc3 Be6 5. Nf3 f6 6. Nh4 Qd7 7. Bg2 O-O-O 8. Bd2 g5\n9. Nf3 h5 10. h3 Nge7 11. Qe2 Kb8 12. O-O-O Nc8 13. e4 d4 14. Nb1 Bxa2 15. c3 Bb3\n16. Rde1 dxc3 17. Nxc3 Nd4 18. Nxd4 exd4 19. Nd1 Qa4 20. Nc3 dxc3 21. Bxc3 Nb6 22. Bxf6 Bb4\n23. Bxh8 Qa2 24. Bc3 Bxc3 25. bxc3 Qa1+ 26. Kd2 Nc4# 0-1",
+  "engine": "Stockfish 19 Full NNUE, single thread, depth 14 / 300ms, MultiPV 3",
+  "comparison": {
+    "note": "User-supplied Chess.com screenshot, not ground truth or calibration data",
+    "white": 1800,
+    "black": 2350
+  },
+  "analysis": {
+    "complete": true,
+    "engine": "full",
+    "positions": [
+      {
+        "kind": "cp",
+        "value": 26,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": 11,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": 23,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -50,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -38,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": -77,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -60,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": -62,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -60,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -93,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": -79,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -150,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -155,
+        "depth": 10
+      },
+      {
+        "kind": "cp",
+        "value": -159,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -149,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -192,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": -184,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -185,
+        "depth": 9
+      },
+      {
+        "kind": "cp",
+        "value": -178,
+        "depth": 8
+      },
+      {
+        "kind": "cp",
+        "value": -210,
+        "depth": 10
+      },
+      {
+        "kind": "cp",
+        "value": -221,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -209,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -201,
+        "depth": 10
+      },
+      {
+        "kind": "cp",
+        "value": -210,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -191,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -297,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -297,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -673,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -648,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -790,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -739,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -751,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -729,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -804,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -750,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -722,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -724,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -949,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -999,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -1178,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -1007,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -1017,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -1022,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -1864,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -1589,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -968,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -2,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -4,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -2,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 0,
+        "terminal": true
+      }
+    ]
+  },
+  "balanced": {
+    "engine": "Stockfish 19 Full NNUE, single thread, depth 20 / 500ms, MultiPV 3",
+    "positions": [
+      {
+        "kind": "cp",
+        "value": 24,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": 9,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": 15,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -50,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -47,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -73,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -56,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -74,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -62,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -69,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -59,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -153,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -160,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -161,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -149,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -185,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -171,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -175,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -172,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -213,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -185,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -233,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -217,
+        "depth": 11
+      },
+      {
+        "kind": "cp",
+        "value": -266,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -187,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -264,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -266,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -686,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -653,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -742,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -735,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -755,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -719,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -761,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -693,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -724,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -690,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -935,
+        "depth": 12
+      },
+      {
+        "kind": "cp",
+        "value": -937,
+        "depth": 15
+      },
+      {
+        "kind": "cp",
+        "value": -984,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -1028,
+        "depth": 17
+      },
+      {
+        "kind": "cp",
+        "value": -1058,
+        "depth": 14
+      },
+      {
+        "kind": "cp",
+        "value": -1021,
+        "depth": 13
+      },
+      {
+        "kind": "cp",
+        "value": -2412,
+        "depth": 14
+      },
+      {
+        "kind": "mate",
+        "value": -5,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 20
+      },
+      {
+        "kind": "cp",
+        "value": -936,
+        "depth": 15
+      },
+      {
+        "kind": "mate",
+        "value": -2,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -3,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -2,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 20
+      },
+      {
+        "kind": "mate",
+        "value": -1,
+        "depth": 0,
+        "terminal": true
+      }
+    ]
+  }
+}

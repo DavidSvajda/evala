@@ -31,7 +31,7 @@ test('performance requires a completed, sufficiently deep and informative game w
   incomplete.analysis.complete = false;
   assert.equal(estimateGamePerformance(incomplete, 'w').value, null);
   const shallow = analysed();
-  shallow.analysis.positions.forEach((p) => (p.depth = 8));
+  shallow.analysis.positions.forEach((p) => (p.depth = 4));
   assert.equal(estimateGamePerformance(shallow, 'w').value, null);
   const won = analysed();
   won.analysis.positions.forEach((p) => (p.value = 3000));
