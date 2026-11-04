@@ -76,6 +76,23 @@ try {
   }, game);
   await page.goto(base + '?game=' + game.id + '#/analysis');
   await page.locator('#review-game').waitFor();
+  await page.waitForFunction(() => window.fixtureWorkers === 1);
+  assert.equal(
+    await page.evaluate(() => window.fixtureSearches),
+    0,
+    'preparation must not analyse moves',
+  );
+  await page.locator('#toggle-settings').click();
+  await page.locator('#profile').selectOption('deep');
+  await page.waitForTimeout(350);
+  await page.locator('#profile').selectOption('quick');
+  await page.waitForTimeout(350);
+  assert.equal(
+    await page.evaluate(() => window.fixtureWorkers),
+    1,
+    'changing presets must retain the prepared model',
+  );
+  await page.locator('#close-settings').click();
   await page.locator('#review-game').click();
   await page.waitForFunction(() => window.fixtureCompleted >= 2);
   await page.locator('#review-game').click();

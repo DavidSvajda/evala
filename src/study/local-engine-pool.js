@@ -7,8 +7,14 @@ export class LocalEnginePool {
   constructor(
     makeWorker,
     options = {},
-    { device, createEngine = (factory) => new StudyEngine(factory), idleMs = 30000 } = {},
+    {
+      device = globalThis.navigator || {},
+      createEngine = (factory) => new StudyEngine(factory),
+      idleMs = 30000,
+      primaryIdleMs = 180000,
+    } = {},
   ) {
+    this.device = device;
     this.plan = localPerformancePlan(options, device);
     this.slots = Array.from({ length: this.plan.workers }, () => ({
       engine: null,
@@ -17,6 +23,9 @@ export class LocalEnginePool {
     }));
     this.makeEngine = () => createEngine(makeWorker);
     this.idleMs = idleMs;
+    const mobile =
+      device.userAgentData?.mobile ?? /Android|iPhone|iPad/i.test(device.userAgent || '');
+    this.primaryIdleMs = mobile ? Math.min(primaryIdleMs, 60000) : primaryIdleMs;
     this.completed = 0;
     this.nodes = 0;
     this.disposed = false;
@@ -24,10 +33,69 @@ export class LocalEnginePool {
   get parallelism() {
     return this.slots.filter((s) => !s.disabled).length;
   }
+  clearIdle() {
+    clearTimeout(this.idleTimer);
+    clearTimeout(this.primaryTimer);
+  }
+  configure(options) {
+    if (this.disposed) return;
+    if (this.slots.some((s) => s.pending || s.warming)) {
+      this.nextOptions = options;
+      return;
+    }
+    this.nextOptions = null;
+    const plan = localPerformancePlan(options, this.device);
+    for (const s of this.slots.slice(plan.workers)) s.engine?.dispose();
+    this.slots.length = Math.min(this.slots.length, plan.workers);
+    while (this.slots.length < plan.workers)
+      this.slots.push({ engine: null, pending: 0, disabled: false });
+    if (plan.mode !== this.plan.mode) for (const s of this.slots) s.disabled = false;
+    this.plan = plan;
+  }
+  armIdle() {
+    if (this.disposed || this.slots.some((s) => s.pending || s.warming)) return;
+    if (this.nextOptions) this.configure(this.nextOptions);
+    this.clearIdle();
+    this.idleTimer = setTimeout(() => {
+      for (const s of this.slots.slice(1)) {
+        s.engine?.dispose();
+        s.engine = null;
+      }
+    }, this.idleMs);
+    this.primaryTimer = setTimeout(
+      () => {
+        this.slots[0].engine?.dispose();
+        this.slots[0].engine = null;
+      },
+      this.plan.mode === 'eco' ? this.idleMs : this.primaryIdleMs,
+    );
+    this.idleTimer.unref?.();
+    this.primaryTimer.unref?.();
+  }
+  async warm() {
+    if (this.disposed) throw new DOMException('Výpočet byl zrušen.', 'AbortError');
+    this.clearIdle();
+    const slot = this.slots[0];
+    slot.engine ||= this.makeEngine();
+    const instance = slot.engine;
+    slot.warming = (slot.warming || 0) + 1;
+    try {
+      await instance.boot();
+    } catch (error) {
+      if (slot.engine === instance) {
+        instance.dispose();
+        slot.engine = null;
+      }
+      throw error;
+    } finally {
+      slot.warming--;
+      this.armIdle();
+    }
+  }
   async search(request, options = {}) {
     if (this.disposed || options.signal?.aborted)
       throw new DOMException('Výpočet byl zrušen.', 'AbortError');
-    clearTimeout(this.idleTimer);
+    this.clearIdle();
     const slot = this.slots
       .filter((s) => !s.disabled)
       .reduce((a, b) => (a.pending <= b.pending ? a : b));
@@ -51,20 +119,12 @@ export class LocalEnginePool {
       throw error;
     } finally {
       slot.pending--;
-      if (!this.disposed && this.slots.every((s) => s.pending === 0)) {
-        this.idleTimer = setTimeout(() => {
-          for (const s of this.slots) {
-            s.engine?.dispose();
-            s.engine = null;
-          }
-        }, this.idleMs);
-        this.idleTimer.unref?.();
-      }
+      this.armIdle();
     }
   }
   dispose() {
     this.disposed = true;
-    clearTimeout(this.idleTimer);
+    this.clearIdle();
     for (const slot of this.slots) {
       slot.engine?.dispose();
       slot.engine = null;

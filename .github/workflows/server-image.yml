@@ -173,7 +173,7 @@ jobs:
           npm run format:check
           node --test tests/performance.test.mjs tests/short-game-rating.test.mjs tests/game-performance-model.test.mjs tests/accuracy.test.mjs tests/release-version.test.mjs tests/accounts.test.mjs tests/admin.test.mjs
           node tests/game-performance-smoke.mjs
-          node --test tests/local-parallel.test.mjs tests/review-roundtrip.test.mjs tests/postgres-store.test.mjs tests/analysis-speed.test.mjs tests/background-review.test.mjs
+          node --test tests/engine-startup.test.mjs tests/local-parallel.test.mjs tests/review-roundtrip.test.mjs tests/postgres-store.test.mjs tests/analysis-speed.test.mjs tests/background-review.test.mjs
           node tests/local-parallel-browser.mjs
       - name: Build browser-only web host
         if: inputs.validation == 'local-only' || inputs.validation == 'sharing' || inputs.validation == 'performance'
