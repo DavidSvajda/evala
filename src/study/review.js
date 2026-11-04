@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
 import { gameAccuracy } from '../core/game-accuracy.js';
+import { contextualPerformance, PERFORMANCE_METHOD } from '../core/game-performance.js';
 
 export const REVIEW_VERSION = 5;
 export const SACRIFICE_VERSION = 3;
@@ -314,8 +315,23 @@ export function estimateGamePerformance(game, color) {
   const rating = Number(game.headers[color === 'w' ? 'WhiteElo' : 'BlackElo']);
   if (!Number.isFinite(rating) || rating < 100 || rating > 3500)
     return { value: null, reason: 'V PGN chybí Elo hráče.' };
+  const positions = Array.from(
+    { length: game.moves.length + 1 },
+    (_, i) => game.analysis.positions?.[i],
+  );
+  if (
+    positions.some(
+      (p) =>
+        !p ||
+        !['cp', 'mate'].includes(p.kind) ||
+        !Number.isFinite(p.value) ||
+        (!p.terminal && !(p.depth >= 1)),
+    )
+  )
+    return { value: null, reason: 'Pro odhad chybí spolehlivá hodnocení pozic.' };
   const informative = [],
     seen = new Set();
+  let candidates = 0;
   for (let i = 8; i < game.moves.length; i++) {
     const move = game.moves[i],
       before = game.analysis.positions?.[i],
@@ -327,7 +343,7 @@ export function estimateGamePerformance(game, color) {
           p &&
           ['cp', 'mate'].includes(p.kind) &&
           Number.isFinite(p.value) &&
-          (p.terminal || (Number.isFinite(p.depth) && p.depth >= 12)),
+          (p.terminal || (Number.isFinite(p.depth) && p.depth >= 1)),
       )
     )
       continue;
@@ -342,27 +358,58 @@ export function estimateGamePerformance(game, color) {
     const position = move.fenBefore.split(' ').slice(0, 4).join(' ');
     if (seen.has(position)) continue;
     seen.add(position);
+    candidates++;
+    const depth = Math.min(
+      before.depth || 0,
+      after.terminal ? before.depth || 0 : after.depth || 0,
+    );
+    if (depth < 8) continue;
     // Recompute from the actual scores: old saved classification versions and
     // refined positions must not silently change the meaning of the estimate.
-    informative.push(classifyMove(move, before, after));
+    informative.push({ ...classifyMove(move, before, after), depth });
   }
   let result;
-  if (informative.length < 12)
+  if (informative.length < 12 || informative.length < candidates * 0.9)
     result = {
       value: null,
-      reason: `Málo podkladů (${informative.length}/12 rozhodnutí).`,
+      reason:
+        informative.length < 12
+          ? `Málo podkladů (${informative.length}/12 rozhodnutí).`
+          : 'Nízká hloubka příliš mnoha rozhodnutí.',
       sample: informative.length,
     };
   else {
-    // An explicit, uncalibrated per-game heuristic, anchored to the PGN rating.
-    // Its range is an indication of uncertainty, not a statistical confidence interval.
-    const quality = informative.reduce((n, m) => n + m.accuracy, 0) / informative.length;
-    const expectedQuality = clamp(55 + rating * 0.015, 60, 95);
-    const reliability = informative.length / (informative.length + 15);
-    const value =
-      Math.round(clamp(rating + (quality - expectedQuality) * 24 * reliability, 100, 3500) / 50) *
-      50;
-    const reserve = Math.max(250, Math.round((600 - informative.length * 5) / 50) * 50);
+    // A harmonic component prevents a bad decision being washed out by many
+    // routine accurate moves. Recompute evidence rather than trusting old labels.
+    const mean = informative.reduce((n, m) => n + m.accuracy, 0) / informative.length;
+    const harmonic =
+      informative.length / informative.reduce((n, m) => n + 1 / Math.max(1, m.accuracy), 0);
+    const quality = (mean + harmonic) / 2;
+    const { value, expectedQuality } = contextualPerformance(rating, quality);
+    const depths = informative.map((m) => m.depth).sort((a, b) => a - b);
+    const medianDepth = depths[Math.floor(depths.length / 2)];
+    const shallowFraction = informative.filter((m) => m.depth < 12).length / informative.length;
+    const provisional =
+      shallowFraction > 0 || informative.length !== candidates || game.analysis.engine === 'lite';
+    const opponent = Number(game.headers[color === 'w' ? 'BlackElo' : 'WhiteElo']);
+    const gapReserve =
+      Number.isFinite(opponent) && opponent >= 100
+        ? Math.min(150, Math.max(0, Math.abs(rating - opponent) - 400) * 0.15)
+        : 0;
+    // Small/shallow samples widen the uncertainty allowance; they no longer
+    // silently flatten the point estimate towards the player's recorded rating.
+    const reserve =
+      Math.round(
+        Math.max(
+          250,
+          100 +
+            800 / Math.sqrt(informative.length) +
+            Math.max(0, 14 - medianDepth) * 35 +
+            shallowFraction * 100 +
+            gapReserve +
+            (game.analysis.engine === 'lite' ? 100 : 0),
+        ) / 50,
+      ) * 50;
     result = {
       value,
       low: Math.max(100, value - reserve),
@@ -370,7 +417,10 @@ export function estimateGamePerformance(game, color) {
       sample: informative.length,
       baseline: rating,
       quality,
-      method: 'evala-game-strength-v2',
+      expectedQuality,
+      provisional,
+      medianDepth,
+      method: PERFORMANCE_METHOD,
       calibrated: false,
     };
   }

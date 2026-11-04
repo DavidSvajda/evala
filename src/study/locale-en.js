@@ -1,4 +1,11 @@
 export const EN = {
+  'Předběžný odhad': 'Provisional estimate',
+  'Pro odhad chybí spolehlivá hodnocení pozic.':
+    'Reliable position evaluations are missing for this estimate.',
+  'Nízká hloubka příliš mnoha rozhodnutí.':
+    'Too many decisions were analysed at insufficient depth.',
+  'Výchozím bodem je rating hráče z PGN. Nelineární úprava porovnává kvalitu alespoň 12 nevynucených rozhodnutí po prvních čtyřech tazích s očekáváním pro tento rating. Mnoho snadných tahů nevymaže závažnou chybu. Pozice s malou vypovídací hodnotou, například vynucené tahy a jednoznačně vyhrané pozice, vynecháváme. Rychlý rozbor s hloubkou 8–11 zahrneme jako předběžný; nízká hloubka a malý vzorek rozšíří rozmezí. Výkon je orientační heuristika konkrétní partie, nikoli měření skutečného Elo nebo kopie Chess.com. Rozmezí není statistický interval a model zatím není empiricky kalibrovaný. Samotná vysoká přesnost ani nastavená úroveň botu neprokazují sílu hráče.':
+    'The starting point is the player rating recorded in the PGN. A nonlinear adjustment compares the quality of at least 12 non-forced decisions after the first four moves with the expectation for that rating. Many easy moves do not erase a serious error. We exclude low-information positions, such as forced moves and clearly decided positions. Fast analysis at depth 8–11 is included provisionally; shallow analysis and small samples widen the range. This is a heuristic for one game, not a measurement of true Elo or a copy of Chess.com. The range is not a statistical interval and the model has not been empirically calibrated. High accuracy or a configured bot level alone does not establish playing strength.',
   'Počet partií pro výběr': 'Number of games to select',
   Sdílet: 'Share',
   'Sdílet partii': 'Share game',
