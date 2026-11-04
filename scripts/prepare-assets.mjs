@@ -11,9 +11,9 @@ for (const [path, expected] of Object.entries(manifest)) {
     )
   )
     throw new Error('Unexpected vendored asset path');
-  const actual = createHash('sha256')
-    .update(await readFile(path))
-    .digest('hex');
+  const bytes = await readFile(path);
+  const content = path.endsWith('.tar.gz') ? bytes : bytes.toString('utf8').replace(/\r\n/g, '\n');
+  const actual = createHash('sha256').update(content).digest('hex');
   if (actual !== expected) throw new Error('Vendored asset checksum mismatch: ' + path);
 }
 console.log('Verified vendored chess assets and engine provenance without network access.');
