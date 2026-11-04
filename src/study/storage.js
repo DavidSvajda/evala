@@ -238,6 +238,7 @@ export async function migrateGuestGames() {
 }
 
 export const STUDY_DEFAULTS = {
+  computeMode: 'auto',
   engine: 'full',
   depth: 18,
   time: 750,

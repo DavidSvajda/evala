@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { scheduleDatabaseBackup } from './database-backup.mjs';
+import { httpError } from './http.mjs';
 
 export function postgresPool(connectionString, ca = process.env.DATABASE_CA) {
   const url = new URL(connectionString);
@@ -36,11 +37,44 @@ const tableFor = (key) =>
           : 'app_state';
 const conflict = () => Object.assign(new Error('Data changed. Retry.'), { statusCode: 412 });
 
-export function createPostgresStore({ connectionString = process.env.DATABASE_URL, pool } = {}) {
+export function createPostgresStore({
+  connectionString = process.env.DATABASE_URL,
+  pool,
+  softLimitMB = Number(process.env.DATABASE_SOFT_LIMIT_MB || 0),
+} = {}) {
+  if (!Number.isFinite(softLimitMB) || softLimitMB < 0)
+    throw new Error('DATABASE_SOFT_LIMIT_MB must be a non-negative number');
   pool ||= postgresPool(connectionString);
   const stopBackup = scheduleDatabaseBackup(pool);
   const context = new AsyncLocalStorage();
   const query = (sql, args) => (context.getStore() || pool).query(sql, args);
+  let capacityAt = 0,
+    capacityBytes = 0,
+    capacityReserved = 0,
+    capacityCheck = null;
+  async function checkCapacity(value) {
+    if (!(softLimitMB > 0)) return;
+    if (Date.now() - capacityAt > 5000) {
+      capacityCheck ||= (async () => {
+        const { rows } = await query('SELECT pg_database_size(current_database())::text AS bytes');
+        capacityBytes = Number(rows[0].bytes);
+        if (!Number.isFinite(capacityBytes) || capacityBytes < 0)
+          throw new Error('Database capacity could not be measured');
+        capacityReserved = 0;
+        capacityAt = Date.now();
+      })().finally(() => {
+        capacityCheck = null;
+      });
+      await capacityCheck;
+    }
+    const estimated = Math.max(8192, Buffer.byteLength(JSON.stringify(value)) * 3);
+    if (capacityBytes + capacityReserved + estimated >= softLimitMB * 1024 * 1024)
+      throw httpError(
+        507,
+        'Úložiště služby se blíží limitu. Rozbor zůstává v tomto zařízení; exportuj jej nebo to zkus později.',
+      );
+    capacityReserved += estimated;
+  }
   const cleanup = async () => {
     try {
       await pool.query(
@@ -158,6 +192,7 @@ export function createPostgresStore({ connectionString = process.env.DATABASE_UR
         return;
       }
       const table = tableFor(key);
+      if (table === 'game_versions') await checkCapacity(value);
       let columns = '',
         placeholders = '',
         extra = [];

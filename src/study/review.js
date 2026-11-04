@@ -478,6 +478,7 @@ export function summarize(game) {
 }
 
 export async function reviewGame(game, engine, options, { signal, onUpdate } = {}) {
+  if (signal?.aborted) throw new DOMException('Rozbor byl pozastaven.', 'AbortError');
   const key = JSON.stringify({
     version: REVIEW_VERSION,
     pipeline: 2,
@@ -530,25 +531,56 @@ export async function reviewGame(game, engine, options, { signal, onUpdate } = {
       }
     onUpdate?.({ phase, index, total, processed, elapsed: performance.now() - start, report });
   };
-  for (let i = 0; i < game.fens.length; i++) {
-    if (signal?.aborted) throw new DOMException('Rozbor byl pozastaven.', 'AbortError');
-    if (report.positions[i]) {
-      publish('positions', i + 1, game.fens.length);
-      continue;
+  const missing = game.fens.map((_, i) => i).filter((i) => !report.positions[i]);
+  const positionController = new AbortController();
+  const abortPositions = () => positionController.abort();
+  signal?.addEventListener('abort', abortPositions, { once: true });
+  let cursor = 0,
+    readyPositions = game.fens.length - missing.length;
+  if (signal?.aborted) positionController.abort();
+  const lane = async () => {
+    while (cursor < missing.length) {
+      if (positionController.signal.aborted)
+        throw new DOMException('Rozbor byl pozastaven.', 'AbortError');
+      const i = missing[cursor++];
+      const history = {
+        initialFen: game.initialFen,
+        moves: game.moves.slice(0, i).map((m) => m.uci),
+      };
+      setPosition(
+        i,
+        await engine.search(
+          {
+            cacheScope: options.cacheScope,
+            gameKey,
+            fen: game.fens[i],
+            history,
+            settings: options,
+          },
+          { signal: positionController.signal },
+        ),
+      );
+      processed++;
+      publish('positions', ++readyPositions, game.fens.length);
     }
-    const history = {
-      initialFen: game.initialFen,
-      moves: game.moves.slice(0, i).map((m) => m.uci),
-    };
-    setPosition(
-      i,
-      await engine.search(
-        { cacheScope: options.cacheScope, gameKey, fen: game.fens[i], history, settings: options },
-        { signal },
-      ),
+  };
+  try {
+    publish('positions', readyPositions, game.fens.length);
+    const lanes = Array.from(
+      { length: Math.min(missing.length, Math.max(1, Math.min(4, engine.parallelism || 1))) },
+      () =>
+        lane().catch((error) => {
+          positionController.abort();
+          throw error;
+        }),
     );
-    processed++;
-    publish('positions', i + 1, game.fens.length);
+    const results = await Promise.allSettled(lanes);
+    const failed =
+      results.find((r) => r.status === 'rejected' && r.reason.name !== 'AbortError') ||
+      results.find((r) => r.status === 'rejected');
+    if (failed) throw failed.reason;
+  } finally {
+    signal?.removeEventListener('abort', abortPositions);
   }
   // Recheck only critical positions, bounded to avoid hours of extra work.
   const critical = report.moves
