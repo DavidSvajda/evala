@@ -34,9 +34,9 @@
       ><p
         >U přihlášeného účtu se na serveru ukládají identifikátor účtu, jméno, e-mail, přezdívka z
         nastavení, knihovna partií, rozbory, poznámky, nastavení vzhledu a historie tréninku.
-        Produkční uložiště je soukromý Azure Blob Storage. Každý účet má oddělené záznamy.
-        Přihlašovací cookie je HttpOnly a platí nejvýše 30 dní; server ukládá pouze hash její
-        náhodné hodnoty. Uživatel se může odhlásit.</p
+        Produkční úložiště je PostgreSQL u Supabase ve Frankfurtu (EU). Každý účet má oddělené
+        záznamy. Přihlašovací cookie je HttpOnly a platí nejvýše 30 dní; server ukládá pouze hash
+        její náhodné hodnoty. Uživatel se může odhlásit.</p
       ><p
         >Hostovská knihovna a knihovny jednotlivých účtů jsou v prohlížeči oddělené. Převzetí
         místních partií do účtu je výslovná akce. Při výpadku připojení zůstane místní kopie;
@@ -58,8 +58,8 @@
         služby. Úlohy Lichess jsou otevřená data CC0; odkazy na původní partie se zobrazují po
         vyřešení.</p
       ><p
-        >Obnovovací kopie zůstávají nejvýše sedm dní po smazání nebo přepsání dat. Přístup má pouze
-        správce aplikace za účelem obnovy. Smazání účtu okamžitě zneplatní přihlášení.</p
+        >Obnovovací kopie zůstávají nejvýše čtrnáct dní po smazání nebo přepsání dat. Přístup má
+        pouze správce aplikace za účelem obnovy. Smazání účtu okamžitě zneplatní přihlášení.</p
       ><section data-policy-extra>
         <h2 data-en="Controller and contact">Správce a kontakt</h2>
         <p
@@ -104,14 +104,15 @@
         >
         <h2 data-en="Recipients and your rights">Příjemci a tvoje práva</h2>
         <p
-          data-en="Hosting and private account storage use Microsoft Azure. Google provides optional authentication; Chess.com and Lichess receive import requests. Their processing and any international transfers depend on the applicable provider terms and safeguards. Contact svajdada@gmail.com to request access, correction, erasure or restriction, portability where applicable, or to object to legitimate-interest processing. You may complain to the Czech Office for Personal Data Protection (uoou.gov.cz). Providing account data is optional; without it you can use guest mode. We do not make legally significant automated decisions about you."
-          >Hosting a soukromé úložiště používají Microsoft Azure. Google poskytuje volitelné
-          přihlášení, Chess.com a Lichess dostávají požadavky importu. Zpracování a případné předání
-          mimo EHP závisí na příslušných podmínkách a zárukách poskytovatelů. Na svajdada@gmail.com
-          můžeš žádat přístup, opravu, výmaz, omezení a případně přenositelnost nebo vznést námitku
-          proti zpracování na základě oprávněného zájmu. Máš právo podat stížnost ÚOOÚ
-          (uoou.gov.cz). Údaje účtu jsou dobrovolné, bez nich lze použít režim hosta. Neprovádíme o
-          tobě automatizovaná rozhodnutí s právními účinky.</p
+          data-en="Hosting and private recovery backups use Microsoft Azure; account data is stored by Supabase in Frankfurt (EU). Google provides optional authentication; Chess.com and Lichess receive import requests. Their processing and any international transfers depend on the applicable provider terms and safeguards. Contact svajdada@gmail.com to request access, correction, erasure or restriction, portability where applicable, or to object to legitimate-interest processing. You may complain to the Czech Office for Personal Data Protection (uoou.gov.cz). Providing account data is optional; without it you can use guest mode. We do not make legally significant automated decisions about you."
+          >Hosting a soukromé zálohy používají Microsoft Azure; data účtů ukládá Supabase ve
+          Frankfurtu (EU). Google poskytuje volitelné přihlášení, Chess.com a Lichess dostávají
+          požadavky importu. Zpracování a případné předání mimo EHP závisí na příslušných podmínkách
+          a zárukách poskytovatelů. Na svajdada@gmail.com můžeš žádat přístup, opravu, výmaz,
+          omezení a případně přenositelnost nebo vznést námitku proti zpracování na základě
+          oprávněného zájmu. Máš právo podat stížnost ÚOOÚ (uoou.gov.cz). Údaje účtu jsou
+          dobrovolné, bez nich lze použít režim hosta. Neprovádíme o tobě automatizovaná rozhodnutí
+          s právními účinky.</p
         >
         <p><a href="terms.html">Podmínky používání / Terms of use</a></p> </section
       ><p><a href="study.html#/account">Zpět do aplikace</a></p></main

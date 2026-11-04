@@ -20,3 +20,4 @@ __pycache__/
 .azure-cli-venv/
 
 .gitnexus/
+/supabase/.temp/

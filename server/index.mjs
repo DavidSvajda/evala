@@ -30,6 +30,7 @@ export function createAnalysisServer({
   root = resolve('dist'),
   accounts = {},
   human = {},
+  dataMaintenance = process.env.DATA_MAINTENANCE === 'true',
 } = {}) {
   const limit = Math.max(1, Math.min(4, Math.floor(concurrency) || 1));
   const slots = Array.from({ length: localEngineOnly ? 0 : limit }, () => ({
@@ -84,10 +85,19 @@ export function createAnalysisServer({
       throw httpError(400, 'Bad URL');
     }
     guard(req, res, url);
+    if (
+      dataMaintenance &&
+      url.pathname.startsWith('/api/') &&
+      !['GET', 'HEAD'].includes(req.method)
+    ) {
+      res.setHeader('Retry-After', '120');
+      throw httpError(503, 'Probíhá údržba úložiště. Zkus to za dvě minuty.');
+    }
     if (await admin.handle(req, res, url)) return;
-    admin.recordPageLoad(req, res, url);
+    if (!dataMaintenance) admin.recordPageLoad(req, res, url);
     if (await shares(req, res, url)) return;
     if (localEngineOnly && url.pathname === '/api/health') {
+      await store.ready?.();
       json(res, 200, {
         ok: true,
         engine: 'browser',
@@ -95,6 +105,7 @@ export function createAnalysisServer({
         slots: 0,
         busy: 0,
         publicReports: false,
+        storage: store.kind,
       });
       return;
     }
@@ -127,6 +138,7 @@ export function createAnalysisServer({
   server.on('close', () => {
     slots.forEach((s) => s.engine.dispose());
     opponent.dispose();
+    store.close?.().catch(() => {});
   });
   return server;
 }
