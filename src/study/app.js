@@ -1702,6 +1702,10 @@ window.addEventListener('pagehide', () => {
   importController?.abort();
   reviewer?.dispose();
   inspector?.dispose();
+  // pagehide may enter the back/forward cache rather than destroy the document.
+  // Restored pages must create live engines instead of retaining disposed pools.
+  reviewer = inspector = null;
+  reviewerKey = inspectorKey = '';
 });
 // Shared links restore only after library and routing have initialized.
 sharing = createSharing({

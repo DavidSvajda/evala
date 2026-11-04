@@ -107,6 +107,20 @@ try {
     { timeout: 15000 },
   );
   assert.equal(await page.evaluate(() => window.fixtureSearches), game.fens.length - done);
+  const workersBeforeCache = await page.evaluate(() => window.fixtureWorkers);
+  await page.evaluate(() =>
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })),
+  );
+  await page.locator('#review-game').click();
+  await page.waitForFunction(
+    () => document.querySelector('#review-state').textContent === 'Saved',
+    {},
+    { timeout: 15000 },
+  );
+  assert.ok(
+    (await page.evaluate(() => window.fixtureWorkers)) > workersBeforeCache,
+    'back/forward cache restoration creates live engines',
+  );
   await page.locator('#toggle-settings').click();
   await page.locator('#compute-mode').selectOption('eco');
   await page.waitForFunction(() =>
