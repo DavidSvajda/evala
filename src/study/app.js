@@ -248,8 +248,6 @@ function engineKey() {
     options.backend,
     options.backend === 'server' ? options.serverUrl : options.engine,
     $('#server-token').value,
-    options.computeMode || 'auto',
-    options.hash,
   ]);
 }
 function engine(role) {
@@ -279,8 +277,31 @@ function engine(role) {
       inspectorKey = key;
     }
   }
+  if (role === 'review' && value instanceof LocalEnginePool) value.configure(options);
   return value;
 }
+let warmupTimer;
+function scheduleReviewWarmup(forSettings = false) {
+  clearTimeout(warmupTimer);
+  warmupTimer = setTimeout(() => {
+    if (
+      document.hidden ||
+      document.body.dataset.page !== 'analysis' ||
+      !selected ||
+      (!forSettings && selected.analysis?.complete) ||
+      blind() ||
+      options.backend !== 'local' ||
+      navigator.connection?.saveData
+    )
+      return;
+    // Prepare one engine, without searching or changing saved analysis.
+    // An actual search still reports any startup error and can retry.
+    void engine('review')
+      .warm()
+      .catch(() => {});
+  }, 200);
+}
+document.addEventListener('evala:page', () => scheduleReviewWarmup());
 function syncSettings() {
   if (localOnly) {
     options.backend = 'local';
@@ -326,6 +347,7 @@ for (const [id, key] of Object.entries(settingsFields))
     syncSettings();
     renderPosition();
     renderReview();
+    scheduleReviewWarmup(true);
   });
 $('#server-token').value = sessionStorage.getItem('evala-server-token') || '';
 $('#server-token').addEventListener('change', () => {
@@ -1695,6 +1717,7 @@ document.addEventListener('visibilitychange', () => {
   } else flushAccountPreferences({ keepalive: true }).catch(() => {});
 });
 window.addEventListener('pagehide', () => {
+  clearTimeout(warmupTimer);
   flushAccountPreferences({ keepalive: true }).catch(() => {});
   playerReport.controller?.abort();
   job?.controller.abort();

@@ -22,9 +22,16 @@ is parallelised; critical-move and sacrifice verification follows it. Search
 budgets are unchanged. Different transposition-table histories can change
 time-limited engine output; concurrency is not a promise of identical scores.
 
-Additional engine failures fall back to the primary engine. Idle workers are
-disposed after 30 seconds to release their NNUE/Hash memory. Timings in the UI
-account for the configured base-pass parallelism; refinement adds work.
+Additional engine failures fall back to the primary engine. Opening an unfinished
+game review prepares one engine without analysing moves. Changing presets, Hash
+or compute mode keeps that model instance; changing the model replaces it.
+Preparation is skipped in blind review, hidden tabs and Save-Data mode, and does
+not run on the library page. Additional idle workers are released after 30 seconds;
+the primary stays ready for three minutes on desktop, at most one minute on mobile,
+or 30 seconds in Save resources mode. Leaving the page releases the engines.
+This avoids repeated startup without holding several NNUE heaps indefinitely.
+The first uncached Full model download is still required. Timings in the UI account
+for the configured base-pass parallelism; refinement adds work.
 
 Progress writes are coalesced: IndexedDB about every 1.2 seconds, optional
 account checkpoints about every 15 seconds, and a final flush on completion
