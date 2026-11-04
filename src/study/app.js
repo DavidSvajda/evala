@@ -15,6 +15,9 @@ import {
 } from './gm-coach.js';
 import { Chess } from 'chess.js';
 import { StudyEngine, searchSettings } from './uci.js';
+import { LocalEnginePool } from './local-engine-pool.js';
+import { localPerformancePlan } from './local-performance.js';
+import { reviewCheckpoint } from './review-checkpoint.js';
 import { RemoteEngine, serverAddress, remoteReview, connectPublicServer } from './remote.js';
 import { parsePgnCollection, parseFenGame, DEMO_PGN, lineToSan, annotatedPgn } from './game.js';
 import { reviewGame, summarize } from './review.js';
@@ -95,7 +98,6 @@ let reviewer = null,
   inspector = null,
   reviewerKey = '',
   inspectorKey = '',
-  saveAt = 0,
   renderQueued = false;
 if (account.user?.preferences.chessUsername) {
   options.lastUsername = account.user.preferences.chessUsername;
@@ -198,6 +200,7 @@ const profiles = {
   deep: { time: 2000, depth: 22, hash: 128 },
 };
 const settingsFields = {
+  'compute-mode': 'computeMode',
   'engine-choice': 'engine',
   profile: 'profile',
   'study-depth': 'depth',
@@ -245,6 +248,8 @@ function engineKey() {
     options.backend,
     options.backend === 'server' ? options.serverUrl : options.engine,
     $('#server-token').value,
+    options.computeMode || 'auto',
+    options.hash,
   ]);
 }
 function engine(role) {
@@ -256,7 +261,7 @@ function engine(role) {
     value =
       options.backend === 'server'
         ? new RemoteEngine(options.serverUrl, $('#server-token').value)
-        : new StudyEngine(
+        : new (role === 'review' ? LocalEnginePool : StudyEngine)(
             () =>
               new Worker(
                 new URL(
@@ -264,6 +269,7 @@ function engine(role) {
                   location.href,
                 ),
               ),
+            options,
           );
     if (role === 'review') {
       reviewer = value;
@@ -290,6 +296,10 @@ function syncSettings() {
   $('#engine-choice').disabled = options.backend === 'server';
   $('#engine-badge').textContent =
     `Stockfish 19 · ${options.backend === 'server' ? 'server Full NNUE' : options.engine === 'lite' ? 'Lite' : 'Full NNUE'}`;
+  $('#compute-mode').disabled = options.backend === 'server';
+  const plan = localPerformancePlan(options);
+  $('#local-performance').textContent =
+    `Současné výpočty: ${plan.workers}. Průběh se ukládá automaticky.`;
 }
 for (const [id, key] of Object.entries(settingsFields))
   $('#' + id).addEventListener('change', () => {
@@ -702,7 +712,8 @@ function renderReview() {
   if (!running) $('#review-progress').hidden = true;
   if (selected) {
     const positions = selected.fens.length,
-      seconds = Math.ceil((positions * options.time) / 1000);
+      workers = options.backend === 'server' ? 1 : localPerformancePlan(options).workers,
+      seconds = Math.ceil((positions * options.time) / workers / 1000);
     $('#review-estimate').textContent = selected.analysis?.complete
       ? `${selected.moves.length} vyhodnocených tahů · ${selected.analysis.engine === 'lite' ? 'Lite' : 'Full NNUE'}`
       : `${positions} pozic · přibližně ${seconds < 60 ? seconds + ' s' : Math.ceil(seconds / 60) + ' min'} + ověření kritických tahů`;
@@ -726,6 +737,7 @@ $('#review-game').addEventListener('click', async () => {
   if (game.analysis?.complete) game.analysis = null;
   const controller = new AbortController();
   job = { controller, game };
+  const checkpoint = reviewCheckpoint(game, store);
   error();
   renderReview();
   try {
@@ -780,10 +792,7 @@ $('#review-game').addEventListener('click', async () => {
           renderGraph();
         }
       }
-      if (performance.now() - saveAt > 1500) {
-        saveAt = performance.now();
-        store(game);
-      }
+      checkpoint.update();
     };
     if (options.backend === 'server') {
       if (publicServer) await publicConnection;
@@ -795,10 +804,10 @@ $('#review-game').addEventListener('click', async () => {
       renderAll();
     } else
       await reviewGame(game, engine('review'), settings(), { signal: controller.signal, onUpdate });
-    await store(game);
+    await checkpoint.flush();
     renderLibrary();
   } catch (e) {
-    await store(game);
+    await checkpoint.flush();
     if (e.name === 'AbortError') {
       if (selected?.id === game.id)
         $('#review-estimate').textContent =

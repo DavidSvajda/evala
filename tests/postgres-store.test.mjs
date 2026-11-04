@@ -5,6 +5,62 @@ import { createAnalysisServer } from '../server/index.mjs';
 import { exportPostgres, streamPostgres, digest } from '../server/database-snapshot.mjs';
 import { createPostgresStore, postgresPool } from '../server/postgres-store.mjs';
 
+test('capacity checks reserve estimated burst growth between measurements', async () => {
+  let measurements = 0;
+  const client = {
+    release() {},
+    async query(sql) {
+      if (sql.includes('pg_database_size')) {
+        measurements++;
+        return { rows: [{ bytes: '0' }] };
+      }
+      return { rows: [] };
+    },
+  };
+  const store = createPostgresStore({
+    softLimitMB: 0.02,
+    pool: { query: (...a) => client.query(...a), connect: async () => client, end: async () => {} },
+  });
+  try {
+    const r = await Promise.allSettled(
+      [0, 1, 2].map((i) => store.put('game:owner:id:v' + i, { pgn: 'fixture' })),
+    );
+    assert.equal(r.filter((x) => x.status === 'fulfilled').length, 2);
+    assert.equal(r.find((x) => x.status === 'rejected').reason.status, 507);
+    assert.equal(measurements, 1);
+  } finally {
+    await store.close();
+  }
+});
+
+test('database capacity reserve rejects growing game revisions while keeping deletions available', async () => {
+  const queries = [];
+  const client = {
+    release() {},
+    async query(sql) {
+      queries.push(sql);
+      return {
+        rows: sql.includes('pg_database_size') ? [{ bytes: String(20 * 1024 * 1024) }] : [],
+      };
+    },
+  };
+  const store = createPostgresStore({
+    softLimitMB: 10,
+    pool: { query: (...a) => client.query(...a), connect: async () => client, end: async () => {} },
+  });
+  try {
+    await assert.rejects(
+      store.put('game:owner:id:version', { pgn: 'fixture' }),
+      (e) => e.status === 507,
+    );
+    await store.remove('game:owner:id:version');
+    assert.ok(queries.some((s) => s.startsWith('DELETE FROM')));
+    assert.ok(!queries.some((s) => s.startsWith('INSERT INTO')));
+  } finally {
+    await store.close();
+  }
+});
+
 test(
   'PostgreSQL preserves libraries, training and atomic nested writes with a restricted role',
   {
@@ -174,6 +230,58 @@ test(
       if (nonce) await store.remove('login:' + createHash('sha256').update(nonce).digest('hex'));
       server.closeAllConnections();
       await new Promise((r) => server.close(r));
+    }
+  },
+);
+
+test(
+  'six SQL accounts can write the same game concurrently without crossing ownership',
+  { skip: !process.env.EVALA_TEST_DATABASE_URL },
+  async () => {
+    const pool = postgresPool(process.env.EVALA_TEST_DATABASE_URL);
+    const store = createPostgresStore({ pool });
+    const ids = Array.from({ length: 6 }, () =>
+      createHash('sha256').update(randomUUID()).digest('hex'),
+    );
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          store.put('account:' + id, {
+            id,
+            name: 'Concurrent fixture',
+            email: 'concurrent@example.invalid',
+            authEpoch: 'fixture',
+            createdAt: Date.now(),
+            games: {},
+            training: { rating: 1200, history: {} },
+          }),
+        ),
+      );
+      for (let round = 0; round < 3; round++)
+        await Promise.all(
+          ids.map((id) =>
+            store.transact('account:' + id, async (a) => {
+              const version = 'round-' + round;
+              await store.put('game:' + id + ':same-id:' + version, { notes: id, round });
+              a.games['same-id'] = {
+                id: 'same-id',
+                version,
+                white: 'Fixture',
+                black: 'Opponent',
+                result: '*',
+              };
+              return a;
+            }),
+          ),
+        );
+      for (const id of ids) {
+        const account = (await store.get('account:' + id)).value;
+        assert.equal(account.games['same-id'].version, 'round-2');
+        assert.equal((await store.get('game:' + id + ':same-id:round-2')).value.notes, id);
+      }
+    } finally {
+      for (const id of ids) await store.remove('account:' + id);
+      await store.close();
     }
   },
 );

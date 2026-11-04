@@ -4,6 +4,8 @@ import { parsePgnCollection } from './game.js';
 import { remoteReview, connectPublicServer } from './remote.js';
 import { reviewGame, currentReview, specialReviewBudget } from './review.js';
 import { REVIEW_PROFILES } from './review-profiles.js';
+import { reviewCheckpoint } from './review-checkpoint.js';
+import { localPerformancePlan } from './local-performance.js';
 
 const $ = (selector) => document.querySelector(selector);
 export class PlayerReport {
@@ -136,8 +138,11 @@ export class PlayerReport {
     const profile = $('#report-profile').value,
       pending = this.games.filter((g) => this.checked.has(g.id) && !currentReview(g, profile));
     const profileOptions = REVIEW_PROFILES[profile] || REVIEW_PROFILES.quick;
+    const settings = this.settings();
+    const workers = settings.backend === 'server' ? 1 : localPerformancePlan(settings).workers;
     const seconds = Math.ceil(
-      ((pending.reduce((n, g) => n + g.fens.length, 0) * profileOptions.time) / 1000) * 1.4 +
+      ((pending.reduce((n, g) => n + g.fens.length, 0) * profileOptions.time) / workers / 1000) *
+        1.4 +
         pending.length * specialReviewBudget(profileOptions),
     );
     $('#report-estimate').textContent = pending.length
@@ -159,7 +164,8 @@ export class PlayerReport {
     $('#report-progress').hidden = false;
     $('#report-cancel').hidden = false;
     $('#load-report').disabled = true;
-    let completed = 0;
+    let completed = 0,
+      checkpoint;
     try {
       const settings = this.settings(),
         profile = $('#report-profile').value;
@@ -167,7 +173,9 @@ export class PlayerReport {
         await connectPublicServer(settings.serverUrl, { signal: controller.signal });
       for (const game of games) {
         if (controller.signal.aborted) throw new DOMException('Zrušeno', 'AbortError');
+        checkpoint = reviewCheckpoint(game, (g, o) => this.save(g, o));
         const update = ({ phase, index, total }) => {
+          checkpoint.update();
           const fraction =
             phase === 'positions'
               ? (index / total) * 0.85
@@ -198,7 +206,7 @@ export class PlayerReport {
               { signal: controller.signal, onUpdate: update },
             );
           game.analysis.profile = profile;
-          await this.save(game);
+          await checkpoint.flush();
         }
         completed++;
         $('#report-meter').value = (completed / games.length) * 100;
@@ -209,6 +217,11 @@ export class PlayerReport {
       $('#report-selection-details').open = false;
       this.compact();
     } catch (e) {
+      try {
+        await checkpoint?.flush();
+      } catch (saveError) {
+        e = saveError;
+      }
       $('#report-progress-text').textContent =
         e.name === 'AbortError'
           ? `Pozastaveno · ${completed}/${games.length} hotovo. Dokončené rozbory jsou uložené.`

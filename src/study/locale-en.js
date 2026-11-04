@@ -1,4 +1,10 @@
 export const EN = {
+  'Úložiště služby se blíží limitu. Rozbor zůstává v tomto zařízení; exportuj jej nebo to zkus později.':
+    'The service storage is near capacity. Your analysis remains on this device; export it or try again later.',
+  'Výkon zařízení': 'Device performance',
+  Automaticky: 'Automatic',
+  Úsporně: 'Save resources',
+  Rychleji: 'Faster',
   'Předběžný odhad': 'Provisional estimate',
   'Pro odhad chybí spolehlivá hodnocení pozic.':
     'Reliable position evaluations are missing for this estimate.',
@@ -716,6 +722,10 @@ export const EN = {
 };
 
 export const patterns = [
+  [
+    /^Současné výpočty: (\d+)\. Průběh se ukládá automaticky\.$/,
+    'Simultaneous calculations: $1. Progress is saved automatically.',
+  ],
   [
     /^V (\d+) chybách engine ukazuje materiální ztrátu nejméně 2 bodů v prvních dvou půltazích varianty\. Před tahem zkontroluj soupeřova braní a možnost dobrat zpět\.$/,
     'In $1 mistakes, the engine line loses at least 2 material points within two plies. Before moving, check the opponent’s captures and your recaptures.',

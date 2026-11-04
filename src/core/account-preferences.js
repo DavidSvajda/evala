@@ -6,6 +6,7 @@ export function portableStudySettings(input = {}) {
     profile: ['quick', 'balanced', 'deep', 'custom'],
     lastPlatform: ['chesscom', 'lichess'],
     reportProfile: ['quick', 'balanced'],
+    computeMode: ['auto', 'eco', 'fast'],
   }))
     if (choices.includes(input[key])) result[key] = input[key];
   for (const [key, min, max] of [

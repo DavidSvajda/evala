@@ -3,6 +3,7 @@ import { parseServerPgn } from './pgn-parser.mjs';
 import { classifyMove, normalizeReview, SACRIFICE_VERSION } from '../src/study/review.js';
 import { cleanLearning } from '../src/training/practice.js';
 import { checkedResult } from '../src/core/engine-result.js';
+import { reviewState } from './review-state.mjs';
 import { json, readJsonBody, httpError } from './http.mjs';
 const fail = (message, status = 400) => httpError(status, message);
 const body = (req, limit = 2_500_000) => readJsonBody(req, { limit });
@@ -82,16 +83,21 @@ export async function handleLibrary(req, res, url, { store, s, account, mutateAc
           throw fail('Neplatné hodnocení pozice.');
         }
         game.analysis = {
+          ...reviewState(a, game.fens.length),
           key: String(a.key || '').slice(0, 1000),
           version: Number(a.version) || 3,
           engine: a.engine === 'lite' ? 'lite' : 'full',
           positions,
-          complete: positions.length === game.fens.length && positions.every(Boolean),
+          complete:
+            a.complete === true &&
+            positions.length === game.fens.length &&
+            positions.every(Boolean),
           moves: game.moves.map((m, i) =>
             classifyMove(m, positions[i], positions[i + 1], { previous: positions[i - 1] }),
           ),
           finishedAt: Math.min(Date.now(), Number(a.finishedAt) || Date.now()),
         };
+        if (!game.analysis.complete) delete game.analysis.finishedAt;
         // Recheck the certificate; never trust a client-supplied badge.
         for (let i = 0; i < game.analysis.moves.length; i++) {
           const source = a.moves?.[i],
