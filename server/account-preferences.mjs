@@ -1,14 +1,26 @@
 import { httpError } from './http.mjs';
 import { portableStudySettings } from '../src/core/account-preferences.js';
 import { cleanStudyKit } from '../src/training/study-kit.js';
+import { STUDY_KIT_BYTES, jsonBytes } from '../src/training/study-kit-sync.js';
 export function preferences(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw httpError(400, 'Neplatné nastavení.');
   const p = {};
   if (input.studyKit && typeof input.studyKit === 'object' && !Array.isArray(input.studyKit)) {
-    if (new TextEncoder().encode(JSON.stringify(input.studyKit)).length > 45000)
+    if (jsonBytes(input.studyKit) > STUDY_KIT_BYTES)
       throw httpError(413, 'Studijní prostor je příliš velký.');
     p.studyKit = cleanStudyKit(input.studyKit);
+    if (input.studyKitBase !== undefined) {
+      if (
+        !input.studyKitBase ||
+        typeof input.studyKitBase !== 'object' ||
+        Array.isArray(input.studyKitBase)
+      )
+        throw httpError(400, 'Neplatný základ studijního prostoru.');
+      if (jsonBytes(input.studyKitBase) > STUDY_KIT_BYTES)
+        throw httpError(413, 'Studijní prostor je příliš velký.');
+      p.studyKitBase = cleanStudyKit(input.studyKitBase);
+    }
   }
   if (input.study && typeof input.study === 'object' && !Array.isArray(input.study))
     p.study = portableStudySettings(input.study);

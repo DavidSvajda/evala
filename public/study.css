@@ -816,6 +816,7 @@ progress::-webkit-progress-value {
 }
 .library-select-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   min-width: 0;
@@ -829,6 +830,37 @@ progress::-webkit-progress-value {
 .library-select-row .game-item {
   flex: 1;
   min-width: 0;
+}
+.game-conflict-button {
+  margin-left: auto;
+}
+.sync-conflict-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.sync-conflict-dialog::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+.sync-conflict-versions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 20px;
+  margin-block: 20px;
+}
+.sync-conflict-versions p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.sync-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .library-actions {
   display: flex;

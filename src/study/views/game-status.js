@@ -20,5 +20,5 @@ export function gameStatusMarkup(game) {
   const status = game.analysis?.complete ? 'complete' : partial ? 'partial' : 'pending';
   const label =
     status === 'complete' ? 'Rozebráno' : status === 'partial' ? 'Částečně' : 'Bez rozboru';
-  return `<span class="game-state status-group">${playedToday(game) ? '<span class="game-status status-today">Dnes</span>' : ''}<span class="game-status status-${status}"><svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><circle cx="6" cy="6" r="3" fill="currentColor"/></svg>${esc(label)}</span></span>`;
+  return `<span class="game-state status-group">${game._syncConflict ? '<span class="game-status status-partial">Konflikt verzí</span>' : ''}${playedToday(game) ? '<span class="game-status status-today">Dnes</span>' : ''}<span class="game-status status-${status}"><svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><circle cx="6" cy="6" r="3" fill="currentColor"/></svg>${esc(label)}</span></span>`;
 }

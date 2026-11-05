@@ -15,6 +15,7 @@ import {
 import { weaknessEvidence } from '../training/practice.js';
 import { trainedThemeRecurrence } from '../training/study-progress.js';
 import { localDay } from '../training/journey.js';
+import { STUDY_KIT_BYTES } from '../training/study-kit-sync.js';
 
 const t = (cs, en) => (language() === 'en' ? en : cs);
 const identity = () => `${account.user?.id || 'guest'}:${account.user?.generation || ''}`;
@@ -47,7 +48,7 @@ export function createStudyKit(context) {
   function save(next) {
     const data = cleanStudyKit(next),
       json = JSON.stringify(data);
-    if (new TextEncoder().encode(json).length > 44000)
+    if (new TextEncoder().encode(json).length > STUDY_KIT_BYTES)
       throw Error(
         t(
           'Studijní prostor je plný. Nejdřív exportuj a odeber starší variantu nebo úkol.',

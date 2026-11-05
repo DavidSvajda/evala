@@ -7,7 +7,7 @@
       433,
       443
     ],
-    "sha256": "d90443d0127be45faf6f79859261bd01902208b82a321bbb2b1734f8c57ab0e9",
+    "sha256": "9e0bf479540795d5e3ea23c2023e45f7350cab9d4bec5a939ad88fc3085e6e6b",
     "expires": "2027-02-04",
     "reason": "Reviewed source is the public CC0 puzzle fixture public/data/puzzles.json. Only puzzle IDs and legal moves are posted to a test HTTP server bound to 127.0.0.1; no private file content or remote destination. Re-review is required whenever this source file changes."
   },

@@ -532,3 +532,58 @@ test('sign out all devices revokes other sessions and stale sessions cannot dele
     await running.close();
   }
 });
+
+test('profile sync accepts the client study budget and preserves independent device changes', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'evala-study-sync-')),
+    running = await serverFor(directory);
+  try {
+    const user = await login(running.base, 'study-sync'),
+      url = running.base + '/api/account/profile';
+    const patch = async (preferences) => {
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: user.headers,
+        body: JSON.stringify({ preferences }),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    const { cleanStudyKit } = await import('../src/training/study-kit.js');
+    const base = cleanStudyKit(),
+      tasks = Array.from({ length: 30 }, (_, i) => ({
+        id: 'task_' + i,
+        title: 'Task',
+        fen: parsePgn('1. e4 *').fens[0],
+        prompt: 'a'.repeat(900),
+      }));
+    const large = cleanStudyKit({ tasks });
+    assert.ok(Buffer.byteLength(JSON.stringify(large)) > 24000);
+    const first = await patch({ studyKitBase: base, studyKit: large });
+    assert.equal(first.status, 200);
+    const phone = cleanStudyKit({
+      lines: [{ id: 'phone', title: 'Phone line', pgn: '1. d4 d5 *' }],
+    });
+    const second = await patch({ studyKitBase: base, studyKit: phone, sound: false });
+    assert.equal(second.status, 200);
+    assert.equal(second.body.user.preferences.studyKit.lines.length, 1);
+    assert.equal(second.body.user.preferences.studyKit.tasks.length, 30);
+    assert.equal(Object.hasOwn(second.body.user.preferences, 'studyKitBase'), false);
+    const deletion = await patch({
+      studyKitBase: large,
+      studyKit: { ...large, tasks: large.tasks.slice(1) },
+    });
+    assert.equal(deletion.status, 200);
+    assert.equal(deletion.body.user.preferences.studyKit.lines.length, 1);
+    assert.equal(deletion.body.user.preferences.studyKit.tasks.length, 29);
+    assert.equal(
+      (
+        await patch({
+          studyKit: { ...large, tasks: tasks.map((t) => ({ ...t, prompt: '棋'.repeat(900) })) },
+        })
+      ).status,
+      413,
+    );
+    assert.equal((await patch({ unknown: 'a'.repeat(112001) })).status, 413);
+  } finally {
+    await running.close();
+  }
+});

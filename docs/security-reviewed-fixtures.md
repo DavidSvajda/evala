@@ -21,3 +21,10 @@ tests cover this behaviour. There is no global test-directory or rule exclusion.
 
 Review expiry is 4 February 2027. Review these exact data flows again before
 renewing it; do not regenerate hashes just to make CI pass.
+
+On 5 November 2026, the account fixture was reviewed again after appending the
+profile-sync regression. The three existing source locations and data flows are
+unchanged: the source remains public CC0 puzzle data, and the destination remains
+the dynamically allocated loopback test server. The added regression sends only
+constructed PGN/task fixtures to that same loopback server. Only this file's
+reviewed source hash was renewed; rules, locations and expiry remain unchanged.

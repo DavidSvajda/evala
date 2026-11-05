@@ -9,6 +9,7 @@ import { finishAccountDeletion } from './account-deletion.mjs';
 import { json, readJsonBody, httpError, sendError } from './http.mjs';
 import { cookie, setCookie } from './security.mjs';
 import { mergeAccountPreferences } from '../src/core/account-preferences.js';
+import { ACCOUNT_PROFILE_BYTES } from '../src/training/study-kit-sync.js';
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (message, status = 400) => httpError(status, message);
 export function createAccounts({
@@ -35,9 +36,17 @@ export function createAccounts({
         });
       if (!account) throw fail('Účet nebyl nalezen.', 401);
       if (url.pathname === '/api/account/profile' && req.method === 'PATCH') {
-        const data = await body(req, 24000);
+        const data = await body(req, ACCOUNT_PROFILE_BYTES);
+        const patch = preferences(data.preferences);
+        let studyKitCopies = 0;
         const updated = await mutateAccount((a) => {
-          a.preferences = mergeAccountPreferences(a.preferences, preferences(data.preferences));
+          studyKitCopies = 0;
+          try {
+            a.preferences = mergeAccountPreferences(a.preferences, patch, () => studyKitCopies++);
+          } catch (error) {
+            if (error.status === 413) throw fail(error.message, 413);
+            throw error;
+          }
           if (data.startingRating !== undefined) {
             if (
               a.training.attempted ||
@@ -48,7 +57,7 @@ export function createAccounts({
           }
           return a;
         });
-        json(res, 200, { user: publicUser(updated), training: updated.training });
+        json(res, 200, { user: publicUser(updated), training: updated.training, studyKitCopies });
         return true;
       }
       if (await handleLibrary(req, res, url, { store, s, account, mutateAccount })) return true;

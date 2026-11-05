@@ -1,3 +1,5 @@
+import { mergeStudyKits } from '../training/study-kit-sync.js';
+
 export function portableStudySettings(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
   const result = {};
@@ -31,8 +33,16 @@ export function portableStudySettings(input = {}) {
   return result;
 }
 
-export function mergeAccountPreferences(prior = {}, patch = {}) {
+export function mergeAccountPreferences(prior = {}, patch = {}, onStudyCopy) {
   const result = { ...prior, ...patch };
+  delete result.studyKitBase;
+  if (patch.studyKit)
+    result.studyKit = mergeStudyKits(
+      prior.studyKit,
+      patch.studyKit,
+      patch.studyKitBase,
+      onStudyCopy,
+    );
   if (patch.study) result.study = { ...prior.study, ...patch.study };
   if (
     prior.lesson &&
@@ -48,9 +58,10 @@ export function mergeAccountPreferences(prior = {}, patch = {}) {
 }
 
 // Remove only acknowledged fields; edits made while a request is in flight remain pending.
-export function remainingPreferencePatch(pending, sent) {
+export function remainingPreferencePatch(pending, sent, acknowledged = {}) {
   const result = { ...pending };
   for (const key of Object.keys(sent)) {
+    if (key === 'studyKitBase') continue;
     if (key === 'study' && result.study) {
       const study = { ...result.study };
       for (const field of Object.keys(sent.study))
@@ -59,5 +70,26 @@ export function remainingPreferencePatch(pending, sent) {
       else delete result.study;
     } else if (JSON.stringify(result[key]) === JSON.stringify(sent[key])) delete result[key];
   }
+  if (!result.studyKit) delete result.studyKitBase;
+  else if (sent.studyKit) {
+    result.studyKit = mergeStudyKits(
+      acknowledged.studyKit || sent.studyKit,
+      result.studyKit,
+      sent.studyKit,
+    );
+    result.studyKitBase = acknowledged.studyKit || sent.studyKit;
+  }
+  return result;
+}
+
+export function combinePreferencePatches(prior, patch) {
+  const result = { ...prior, ...patch };
+  if (patch.study) result.study = { ...prior.study, ...patch.study };
+  if (patch.lesson)
+    result.lesson = mergeAccountPreferences(
+      { lesson: prior.lesson },
+      { lesson: patch.lesson },
+    ).lesson;
+  if (patch.studyKit && prior.studyKit) result.studyKitBase = prior.studyKitBase;
   return result;
 }

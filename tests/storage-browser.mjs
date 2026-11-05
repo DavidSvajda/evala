@@ -11,7 +11,7 @@ const root = await mkdtemp(join(tmpdir(), 'evala-storage-browser-'));
 await build({
   stdin: {
     contents:
-      "export {account,accountRequest} from './src/study/account.js';export * from './src/study/storage.js';",
+      "export {account,accountRequest} from './src/study/account.js';export * from './src/study/storage.js';export {showGameConflict} from './src/study/sync-conflict-ui.js';",
     resolveDir: process.cwd(),
   },
   bundle: true,
@@ -104,6 +104,29 @@ try {
     await page.evaluate(async () => (await window.EvalaFixture.loadLibrary()).length),
     1,
   );
+  await page.evaluate(() => {
+    const f = window.EvalaFixture;
+    const game = { id: 'dialog-fixture', _syncConflict: {} };
+    window.conflictChoice = f.showGameConflict(game, {
+      local: { notes: '<script>not executable</script>' },
+      remote: { notes: 'Cloud notes' },
+    });
+  });
+  await page.locator('dialog[open]').waitFor();
+  assert.equal(await page.locator('dialog script').count(), 0);
+  assert.ok(
+    (await page.locator('dialog').textContent()).includes('<script>not executable</script>'),
+  );
+  await page.getByRole('button', { name: 'Použít toto zařízení', exact: true }).click();
+  assert.equal(await page.evaluate(() => window.conflictChoice), 'local');
+  await page.evaluate(() => {
+    window.conflictChoice = window.EvalaFixture.showGameConflict(
+      { id: 'second' },
+      { local: {}, remote: {} },
+    );
+    document.dispatchEvent(new CustomEvent('evala:identity'));
+  });
+  assert.equal(await page.evaluate(() => window.conflictChoice), null);
   assert.deepEqual(errors, []);
   console.log(
     'PASS: recreated account clears pending data/preferences, stale saves and late responses are rejected, guest data is preserved.',

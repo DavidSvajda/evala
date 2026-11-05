@@ -130,7 +130,7 @@ try {
   }
   const retry = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('evala-study', 1);
+      const request = indexedDB.open('evala-study');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
