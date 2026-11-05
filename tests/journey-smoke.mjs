@@ -65,7 +65,7 @@ try {
       }),
     );
     const db = await new Promise((res, rej) => {
-      const r = indexedDB.open('evala-study', 1);
+      const r = indexedDB.open('evala-study');
       r.onupgradeneeded = () => r.result.createObjectStore('games', { keyPath: 'id' });
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);

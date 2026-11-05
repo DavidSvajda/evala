@@ -75,7 +75,7 @@ try {
     );
     localStorage.setItem('evala-study-options', JSON.stringify({ lastUsername: 'Schweits' }));
     const db = await new Promise((r, j) => {
-      const q = indexedDB.open('evala-study', 1);
+      const q = indexedDB.open('evala-study');
       q.onupgradeneeded = () => q.result.createObjectStore('games', { keyPath: 'id' });
       q.onsuccess = () => r(q.result);
       q.onerror = j;

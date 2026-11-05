@@ -1,4 +1,5 @@
 import { gameStatusMarkup } from './views/game-status.js';
+import { showGameConflict } from './sync-conflict-ui.js';
 import { createLibraryRefresh } from './library-refresh.js';
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
@@ -30,6 +31,8 @@ import {
   getPreferences,
   savePreferences,
   setStorageIdentity,
+  gameConflictBackup,
+  resolveGameConflict,
 } from './storage.js';
 import {
   account,
@@ -451,9 +454,12 @@ $('#toggle-library').addEventListener('click', () => {
 
 async function store(game, options) {
   try {
-    await saveGame(game, options);
+    const result = await saveGame(game, options);
+    if (result?.status === 'conflict') renderLibrary();
+    return result;
   } catch (e) {
     error(e.message);
+    return { status: 'error', error: e };
   }
 }
 const librarySelection = new Set();
@@ -518,6 +524,43 @@ function renderLibrary() {
       renderLibrarySelection();
     };
     row.append(check, button);
+    if (game._syncConflict || game._hasSyncBackup) {
+      const resolveButton = document.createElement('button');
+      resolveButton.type = 'button';
+      resolveButton.className = 'quiet-button game-conflict-button';
+      resolveButton.textContent = game._syncConflict
+        ? language() === 'en'
+          ? 'Resolve conflict'
+          : 'Vyřešit konflikt'
+        : language() === 'en'
+          ? 'Version backup'
+          : 'Záloha verzí';
+      resolveButton.onclick = async () => {
+        if (job || playerReport?.running) {
+          error(
+            language() === 'en'
+              ? 'Stop the analysis before choosing a version.'
+              : 'Před výběrem verze zastav rozbor.',
+          );
+          return;
+        }
+        resolveButton.disabled = true;
+        try {
+          const backup = game._syncConflict
+            ? { id: game.id, local: game, remote: game._syncConflict.remote }
+            : await gameConflictBackup(game.id);
+          if (!backup) return;
+          const choice = await showGameConflict(game, backup);
+          if (choice) await resolveGameConflict(game, choice);
+          await reloadLibrary();
+        } catch (e) {
+          error(e.message);
+        } finally {
+          resolveButton.disabled = false;
+        }
+      };
+      row.append(resolveButton);
+    }
     fragment.append(row);
   }
   if (!visible.length) {
@@ -727,11 +770,15 @@ function renderReview() {
     `${running ? 'Pozastavit rozbor' : selected?.analysis?.complete ? 'Znovu rozebrat' : selected?.analysis ? 'Pokračovat v rozboru' : 'Rozebrat partii'}<span>${running ? icons.pause : icons.arrow}</span>`;
   $('#review-state').textContent = running
     ? 'Probíhá'
-    : selected?.analysis?.complete
-      ? 'Uloženo'
-      : selected?.analysis
-        ? 'Částečný rozbor'
-        : 'Připraveno';
+    : selected?._syncConflict
+      ? 'Konflikt verzí'
+      : selected?._syncPending
+        ? 'Uloženo v tomto zařízení'
+        : selected?.analysis?.complete
+          ? 'Uloženo'
+          : selected?.analysis
+            ? 'Částečný rozbor'
+            : 'Připraveno';
   if (!running) $('#review-progress').hidden = true;
   if (selected) {
     const positions = selected.fens.length,
@@ -1613,7 +1660,7 @@ learningUI = initLearning({
   },
   render: renderAll,
   navigate,
-  save: (game) => saveGame(game, { syncPartial: true }),
+  save: (game) => store(game, { syncPartial: true }),
   playLine: (index, line) => {
     navigate(index);
     startBranch(line);

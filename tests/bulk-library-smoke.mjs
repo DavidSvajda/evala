@@ -31,7 +31,7 @@ try {
   await page.locator('#library-sort').waitFor();
   await page.evaluate(async (games) => {
     const db = await new Promise((r) => {
-      const q = indexedDB.open('evala-study', 1);
+      const q = indexedDB.open('evala-study');
       q.onsuccess = () => r(q.result);
     });
     await new Promise((r) => {

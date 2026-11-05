@@ -175,3 +175,27 @@ test('weekly goals are bounded and themed recurrence excludes earlier games and 
   assert.equal(rows[0].decisions, 2);
   assert.equal(rows[0].errors, 2);
 });
+
+test('recurrence includes a later same-day game only with a valid UTC timestamp', () => {
+  const make = (date, time) => {
+    const game = parsePgn(
+      `[White "Player"]\n[Black "Other"]\n[UTCDate "${date}"]\n[UTCTime "${time}"]\n[TimeControl "600"]\n\n1. e4 e5 2. Nf3 Nc6 *`,
+    );
+    game.analysis = {
+      complete: true,
+      positions: [],
+      moves: game.moves.map(() => ({ loss: 15, depth: 18 })),
+    };
+    return game;
+  };
+  const source = make('2026.11.04', '09:00:00');
+  source.learning = { attempts: [{ ply: 0, at: Date.parse('2026-11-05T12:00:00Z') }] };
+  const count = (date, time) =>
+    trainedThemeRecurrence([source, make(date, time)], 'Player')[0].games;
+  assert.equal(count('2026.11.05', '18:00:00'), 1);
+  assert.equal(count('2026.11.05', '10:00:00'), 0);
+  assert.equal(count('2026.11.05', ''), 0);
+  assert.equal(count('2026.11.05', '25:00:00'), 0);
+  assert.equal(count('2026.11.06', ''), 1);
+  assert.equal(count('2026.11.31', '18:00:00'), 0);
+});
