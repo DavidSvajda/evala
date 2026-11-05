@@ -73,6 +73,10 @@ test('terminal positions distinguish checkmate, stalemate and normal play', () =
 });
 
 test('settings from storage or messages cannot create unbounded UCI commands', () => {
+  assert.equal(sanitizeSettings({ humanElo: 800 }).humanElo, 800);
+  assert.equal(sanitizeSettings({ engine: 'maia', humanElo: 2800 }).humanElo, 2800);
+  assert.equal(sanitizeSettings({ humanElo: 99999 }).humanElo, 2800);
+  assert.equal(sanitizeSettings({ humanElo: -1 }).humanElo, 800);
   assert.equal(sanitizeSettings({ engine: 'full' }).engine, 'full');
   assert.equal(sanitizeSettings({ engine: '../bad-worker.js' }).engine, 'lite');
   assert.equal(sanitizeSettings({ hash: 999999 }).hash, 256);

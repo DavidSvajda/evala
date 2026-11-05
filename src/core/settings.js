@@ -30,7 +30,7 @@ export function sanitizeSettings(input = {}) {
     ['hash', 16, 256],
     ['width', 26, 48],
     ['gap', 4, 48],
-    ['humanElo', 800, 2400],
+    ['humanElo', 800, 2800],
   ]) {
     if (Number.isFinite(input[key]))
       settings[key] = Math.max(min, Math.min(max, Math.round(input[key])));
