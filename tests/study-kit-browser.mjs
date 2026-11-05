@@ -61,6 +61,11 @@ try {
   await page.waitForFunction(() =>
     document.querySelector('#kit-feedback').textContent.includes('Your move · 1/12'),
   );
+  const studyBounds = await page.locator('#kit-board').boundingBox();
+  assert.ok(
+    studyBounds.y >= 0 && studyBounds.y + studyBounds.height <= 721,
+    JSON.stringify(studyBounds),
+  );
   await page.getByRole('button', { name: 'Close exercise', exact: true }).click();
   await page.reload();
   await page.locator('#workshop-study-tab').click();
