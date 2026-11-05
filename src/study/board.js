@@ -3,6 +3,7 @@ import { moveIcon } from '../ui/move-icons.js';
 import { language } from './i18n.js';
 import { fitBoard } from './board-fit.js';
 import { createBoardMotion } from './board-motion.js';
+import { createPieceImage } from '../ui/pieces.js';
 const names = { p: 'pěšec', n: 'jezdec', b: 'střelec', r: 'věž', q: 'dáma', k: 'král' };
 const englishNames = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 export class StudyBoard {
@@ -94,11 +95,8 @@ export class StudyBoard {
       if (!ghost && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 7) return;
       if (!ghost) {
         this.grid.setPointerCapture(pointer);
-        ghost = document.createElement('img');
+        ghost = createPieceImage(piece);
         ghost.className = 'piece-drag-ghost';
-        ghost.src = `pieces/${piece.color}${piece.type.toUpperCase()}.svg`;
-        ghost.alt = '';
-        ghost.draggable = false;
         ghost.style.width = ghost.style.height = width + 'px';
         document.body.append(ghost);
         this.dragSquare = square;
@@ -205,10 +203,7 @@ export class StudyBoard {
         if (piece) {
           if (this.interactive && piece.color === this.chess.turn())
             button.classList.add('movable');
-          const image = document.createElement('img');
-          image.src = `pieces/${piece.color}${piece.type.toUpperCase()}.svg`;
-          image.alt = '';
-          image.draggable = false;
+          const image = createPieceImage(piece);
           button.append(image);
           const letter = document.createElement('span');
           letter.className = 'piece-letter ' + (piece.color === 'b' ? 'black' : 'white');
@@ -304,18 +299,32 @@ export class StudyBoard {
       len = Math.hypot(dx, dy),
       ux = dx / len,
       uy = dy / len;
+    const group = document.createElementNS(this.arrows.namespaceURI, 'g');
+    const solid = document.createElementNS(this.arrows.namespaceURI, 'path');
+    solid.classList.add('solid-board-arrow');
+    solid.setAttribute(
+      'transform',
+      `translate(${x1} ${y1}) rotate(${(Math.atan2(dy, dx) * 180) / Math.PI})`,
+    );
+    solid.setAttribute(
+      'd',
+      `M10 -7H${len - 42}V-23L${len - 6} 0L${len - 42} 23V7H10Q3 7 3 0Q3 -7 10 -7Z`,
+    );
+    solid.setAttribute('fill', stroke);
     const line = document.createElementNS(this.arrows.namespaceURI, 'path');
+    line.classList.add('rounded-board-arrow');
     line.setAttribute(
       'd',
       `M${x1},${y1}L${x2 - ux * 20},${y2 - uy * 20}M${x2 - ux * 40 - uy * 20},${y2 - uy * 40 + ux * 20}L${x2},${y2}L${x2 - ux * 40 + uy * 20},${y2 - uy * 40 - ux * 20}`,
     );
     line.setAttribute('fill', 'none');
     line.setAttribute('stroke', stroke);
-    line.setAttribute('stroke-width', '16');
+    line.setAttribute('stroke-width', '12');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('stroke-linejoin', 'round');
-    line.setAttribute('opacity', '.84');
-    this.arrows.append(line);
+    group.setAttribute('opacity', '.88');
+    group.append(solid, line);
+    this.arrows.append(group);
   }
   click(square) {
     if (!this.interactive) return;

@@ -1,0 +1,2 @@
+Merida chess pieces — Armando Hernandez Marroquin. GPL version 2 or any later version.
+Attribution: https://github.com/lichess-org/lila/blob/4eea97abce686a1cc6b07abe54cce9e10c223227/COPYING.md

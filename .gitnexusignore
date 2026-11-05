@@ -6,4 +6,5 @@ dist-bar/
 release/
 test-results/
 vendor-source/
+public/pieces/
 .gitnexus/

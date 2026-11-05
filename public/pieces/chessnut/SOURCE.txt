@@ -1,0 +1,3 @@
+https://raw.githubusercontent.com/LexLuengas/chessnut-pieces/2b8eaf14a31edad7e9deb53b1473e1d4857868a9
+Pinned revision: 2b8eaf14a31edad7e9deb53b1473e1d4857868a9
+Unmodified upstream artwork.

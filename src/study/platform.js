@@ -1,6 +1,7 @@
 import { playMoveSound, setMoveSoundEnabled } from './audio.js';
 import { gameRows } from './views/library.js';
 import { miniBoard } from '../ui/chess-preview.js';
+import { applyPieceStyle, createPieceImage } from '../ui/pieces.js';
 import { createAccountPanel } from './account-panel.js';
 import { initializeIcons as icons } from '../ui/platform-icons.js';
 import { escapeHtml as esc } from '../ui/dom.js';
@@ -33,6 +34,8 @@ const $ = (s) => document.querySelector(s);
 const PREFERENCES = {
   boardTheme: 'sage',
   pieceStyle: 'classic',
+  boardMotion: 'smooth',
+  arrowStyle: 'solid',
   coordinates: true,
   legalMoves: true,
   sound: true,
@@ -146,7 +149,9 @@ export async function initPlatform(context) {
     $('#toggle-language').textContent = preferences.language === 'en' ? 'CS' : 'EN';
     setLanguage(preferences.language);
     document.body.dataset.boardTheme = preferences.boardTheme;
-    document.body.dataset.pieceStyle = preferences.pieceStyle;
+    applyPieceStyle(preferences.pieceStyle);
+    document.body.dataset.boardMotion = preferences.boardMotion;
+    document.body.dataset.arrowStyle = preferences.arrowStyle;
     document.body.dataset.coordinates = String(preferences.coordinates);
     document.body.dataset.legalMoves = String(preferences.legalMoves);
     document.body.dataset.skill = preferences.skill;
@@ -157,6 +162,8 @@ export async function initPlatform(context) {
       );
     for (const [id, key] of Object.entries({
       'piece-style': 'pieceStyle',
+      'board-motion': 'boardMotion',
+      'arrow-style': 'arrowStyle',
       'show-coordinates': 'coordinates',
       'show-legal': 'legalMoves',
       'move-sound': 'sound',
@@ -199,6 +206,10 @@ export async function initPlatform(context) {
           .querySelectorAll('[data-piece]')
           .forEach((button) => {
             button.disabled = !move.promotions.includes(button.dataset.piece);
+            button.querySelector('img')?.remove();
+            button.prepend(
+              createPieceImage({ color: current.state.color, type: button.dataset.piece }),
+            );
           });
         $('#puzzle-promotion').hidden = false;
         if (!$('#puzzle-promotion').open) $('#puzzle-promotion').showModal();
@@ -848,6 +859,8 @@ export async function initPlatform(context) {
     .forEach((b) => (b.onclick = () => updatePreferences({ boardTheme: b.dataset.boardTheme })));
   for (const [id, key] of Object.entries({
     'piece-style': 'pieceStyle',
+    'board-motion': 'boardMotion',
+    'arrow-style': 'arrowStyle',
     'show-coordinates': 'coordinates',
     'show-legal': 'legalMoves',
     'move-sound': 'sound',

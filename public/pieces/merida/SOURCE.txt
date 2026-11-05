@@ -1,0 +1,3 @@
+https://raw.githubusercontent.com/lichess-org/lila/4eea97abce686a1cc6b07abe54cce9e10c223227/public/piece/merida
+Pinned revision: 4eea97abce686a1cc6b07abe54cce9e10c223227
+Unmodified upstream artwork.

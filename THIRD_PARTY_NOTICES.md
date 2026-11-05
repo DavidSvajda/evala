@@ -9,6 +9,15 @@ Evala is distributed under GPL-3.0-or-later. See LICENSE. The original applicati
 
 Build tools are development dependencies and are not shipped as application runtime code. Evala is an independent project and is not affiliated with Chess.com or Lichess.
 
+## Additional selectable chess pieces
+
+- Merida by Armando Hernandez Marroquin, GPL-2.0-or-later. Unmodified SVGs from
+  lichess-org/lila revision `4eea97abce686a1cc6b07abe54cce9e10c223227`.
+  Source, attribution and full license are shipped in `pieces/merida/`.
+- Chessnut by Alexis Luengas, Apache-2.0. Unmodified SVGs from
+  LexLuengas/chessnut-pieces revision `2b8eaf14a31edad7e9deb53b1473e1d4857868a9`.
+  Source, copyright and full license are shipped in `pieces/chessnut/`.
+
 Move accuracy uses the published per-move transformation described at https://lichess.org/page/accuracy . Evala reports a simple mean of analyzed move scores, not Lichess's volatility-weighted whole-game accuracy and not Chess.com's proprietary accuracy. Brilliant/sacrifice labels are original conservative heuristics and must not be presented as official platform labels.
 # Native server distribution
 
