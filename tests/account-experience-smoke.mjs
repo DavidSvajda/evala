@@ -84,6 +84,7 @@ try {
   });
   assert.ok(upload.ok());
   await pc.addInitScript(() => {
+    if (!localStorage.getItem('evala-language')) localStorage.setItem('evala-language', 'cs');
     window.moveSoundCount = 0;
     const Native = window.AudioContext;
     window.AudioContext = class extends Native {
