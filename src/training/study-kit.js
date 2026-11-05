@@ -152,7 +152,8 @@ export function encodeTask(task) {
     .replace(/=+$/, '');
 }
 export function decodeTask(value) {
-  if (typeof value !== 'string' || value.length > 7000 || !/^[a-zA-Z0-9_-]+$/.test(value))
+  // The bounded text fields can expand in UTF-8, JSON escaping and base64.
+  if (typeof value !== 'string' || value.length > 24000 || !/^[a-zA-Z0-9_-]+$/.test(value))
     throw Error('Invalid exercise link');
   const binary = atob(value.replaceAll('-', '+').replaceAll('_', '/'));
   const raw = JSON.parse(

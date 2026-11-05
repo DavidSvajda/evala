@@ -91,7 +91,18 @@ test('exercise links round-trip Czech text and lawful lines without trusting aut
   };
   assert.deepEqual(decodeTask(encodeTask(task)), cleanStudyKit({ tasks: [task] }).tasks[0]);
   assert.throws(() => decodeTask('!'));
-  assert.throws(() => decodeTask('a'.repeat(7001)));
+  assert.throws(() => decodeTask('a'.repeat(24001)));
+  for (const character of ['ř', '棋', '\u0000']) {
+    const maximum = {
+      ...task,
+      title: character.repeat(80),
+      prompt: character.repeat(1200),
+      answer: character.repeat(1200),
+    };
+    const encoded = encodeTask(maximum);
+    assert.ok(encoded.length <= 24000);
+    assert.deepEqual(decodeTask(encoded), cleanStudyKit({ tasks: [maximum] }).tasks[0]);
+  }
   assert.equal(cleanStudyKit({ tasks: [{ ...task, solution: ['e2e5'] }] }).tasks.length, 0);
 });
 
