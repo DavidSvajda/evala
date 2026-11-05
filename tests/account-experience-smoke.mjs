@@ -132,6 +132,7 @@ try {
   await pc.goto(base + '/study.html#/analysis');
   await pc.locator('#toggle-settings').click();
   await pc.locator('#profile').selectOption('deep');
+  await pc.locator('#study-settings .advanced-settings > summary').click();
   await pc.locator('#study-lines').selectOption('2');
   await pc.locator('#close-settings').click();
   await pc.locator('#next-move').click();
