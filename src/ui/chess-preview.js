@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { createPieceImage } from './pieces.js';
 export function miniBoard(root, fen) {
   const chess = new Chess(fen);
   root.replaceChildren();
@@ -8,9 +9,7 @@ export function miniBoard(root, fen) {
       cell.className = 'mini-square ' + ((file + rank) % 2 ? 'light' : 'dark');
       const piece = chess.get(letter + rank);
       if (piece) {
-        const image = document.createElement('img');
-        image.src = `pieces/${piece.color}${piece.type.toUpperCase()}.svg`;
-        image.alt = '';
+        const image = createPieceImage(piece);
         cell.append(image);
         const letter = document.createElement('span');
         letter.className = 'piece-letter ' + (piece.color === 'b' ? 'black' : 'white');

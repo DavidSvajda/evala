@@ -6,6 +6,17 @@ import {
   remainingPreferencePatch,
 } from '../src/core/account-preferences.js';
 
+test('appearance preferences sync only known piece sets, arrows and animation modes', () => {
+  assert.deepEqual(
+    preferences({ pieceStyle: 'chessnut', boardMotion: 'smooth', arrowStyle: 'solid' }),
+    { pieceStyle: 'chessnut', boardMotion: 'smooth', arrowStyle: 'solid' },
+  );
+  assert.deepEqual(
+    preferences({ pieceStyle: '../../private', boardMotion: 'infinite', arrowStyle: '<svg>' }),
+    {},
+  );
+});
+
 test('portable settings retain chess preferences without syncing credentials or device endpoints', () => {
   const result = preferences({
     sound: true,

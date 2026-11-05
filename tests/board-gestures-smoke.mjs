@@ -49,10 +49,13 @@ try {
   const drawings = page.locator('#study-board .user-drawing');
   await drag('e2', 'e4', 'right');
   assert.equal(await drawings.count(), 1);
-  const originalPath = await drawings.first().getAttribute('d');
+  const originalPath = await drawings.locator('.solid-board-arrow').getAttribute('transform');
   await page.locator('#flip-board').click();
   assert.equal(await drawings.count(), 1);
-  assert.notEqual(await drawings.first().getAttribute('d'), originalPath);
+  assert.notEqual(
+    await drawings.locator('.solid-board-arrow').getAttribute('transform'),
+    originalPath,
+  );
   await drag('e2', 'e4', 'right');
   assert.equal(await drawings.count(), 0);
   await square('e4').click({ button: 'right' });

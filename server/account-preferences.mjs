@@ -28,7 +28,9 @@ export function preferences(input = {}) {
     };
   for (const [key, options] of Object.entries({
     boardTheme: ['sage', 'walnut', 'blue', 'slate'],
-    pieceStyle: ['classic', 'letters'],
+    pieceStyle: ['classic', 'merida', 'chessnut', 'letters'],
+    boardMotion: ['none', 'quick', 'smooth'],
+    arrowStyle: ['solid', 'rounded'],
     skill: ['beginner', 'club', 'advanced'],
     difficulty: ['easy', 'normal', 'hard'],
     language: ['cs', 'en'],

@@ -916,8 +916,29 @@
                 ><span>Figury</span
                 ><select id="piece-style"
                   ><option value="classic">Klasické</option
+                  ><option value="merida">Merida</option
+                  ><option value="chessnut">Chessnut</option
                   ><option value="letters">Písmena</option></select
                 ></label
+              >
+              <div id="piece-preview" class="piece-preview" aria-hidden="true"></div>
+              <label class="setting-line"
+                ><span>Pohyb figurek</span
+                ><select id="board-motion"
+                  ><option value="smooth">Plynulý</option
+                  ><option value="quick">Rychlý</option
+                  ><option value="none">Bez animace</option></select
+                ></label
+              >
+              <label class="setting-line"
+                ><span>Šipky na šachovnici</span
+                ><select id="arrow-style"
+                  ><option value="solid">Plné</option
+                  ><option value="rounded">Zaoblené</option></select
+                ></label
+              >
+              <p class="hint"
+                >Vzhled platí pro rozbor, úlohy i cvičebnu. Omezení pohybu v systému má přednost.</p
               ><label class="setting-line"
                 ><span>Souřadnice polí</span
                 ><input id="show-coordinates" type="checkbox" checked /></label

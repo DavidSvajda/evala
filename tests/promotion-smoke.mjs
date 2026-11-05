@@ -19,7 +19,7 @@ try {
     await page.addInitScript(() =>
       localStorage.setItem(
         'evala-display:guest',
-        JSON.stringify({ onboardingComplete: true, autoNext: false }),
+        JSON.stringify({ onboardingComplete: true, autoNext: false, pieceStyle: 'chessnut' }),
       ),
     );
     await page.route('**/data/puzzles.json', (route) =>
@@ -51,6 +51,12 @@ try {
       await page.locator('#puzzle-board [data-square="a8"]').click();
     }
     await page.locator('#puzzle-promotion[open]').waitFor();
+    assert.equal(await page.locator('#puzzle-promotion img').count(), 4);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#puzzle-promotion img')].every(
+        (img) => img.complete && img.naturalWidth > 0 && img.src.includes('/chessnut/'),
+      ),
+    );
     const box = await page.locator('#puzzle-promotion').boundingBox();
     assert.ok(
       box.y >= 0 && box.y + box.height <= 844,

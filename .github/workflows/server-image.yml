@@ -93,6 +93,11 @@ jobs:
           npm run format:check
           node --test tests/release-version.test.mjs tests/account-preferences.test.mjs
           node tests/theme-locale-smoke.mjs
+          node tests/board-appearance-smoke.mjs
+          node tests/board-motion-smoke.mjs
+          node tests/promotion-smoke.mjs
+          node tests/board-gestures-smoke.mjs
+          node tests/coach-review-smoke.mjs
       - name: Verify game accuracy display
         if: inputs.validation == 'accuracy'
         run: node tests/accuracy-smoke.mjs

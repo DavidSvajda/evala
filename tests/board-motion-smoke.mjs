@@ -46,6 +46,21 @@ try {
   assert.equal(await page.locator('.board-motion-piece').count(), 1);
   await page.waitForFunction(() => !document.querySelector('.board-motion-piece'));
   assert.equal(await page.locator('.motion-destination').count(), 0);
+  await page.evaluate(() => (document.body.dataset.boardMotion = 'none'));
+  await move('Nf3');
+  assert.equal(await page.locator('.board-motion-piece').count(), 0);
+  await page.evaluate(() => (document.body.dataset.boardMotion = 'quick'));
+  await move('Nc6');
+  const quick = await page
+    .locator('.board-motion-piece')
+    .evaluate((el) => el.getAnimations()[0].effect.getTiming().duration);
+  assert.ok(quick <= 150);
+  await page.evaluate(() => (document.body.dataset.boardMotion = 'smooth'));
+  await move('Bb5');
+  const smooth = await page
+    .locator('.board-motion-piece')
+    .evaluate((el) => el.getAnimations()[0].effect.getTiming().duration);
+  assert.ok(smooth > quick && smooth <= 280);
   for (const viewport of [
     { width: 1366, height: 900 },
     { width: 390, height: 844 },

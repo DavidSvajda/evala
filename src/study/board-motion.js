@@ -26,6 +26,7 @@ export function createBoardMotion(grid) {
   }
   reduced.addEventListener('change', clear);
   function paint(flipped, skip = false) {
+    const motion = document.body.dataset.boardMotion || 'smooth';
     const current = new Map(
       [...grid.querySelectorAll('[data-piece]')].map((el) => [el.dataset.square, el.dataset.piece]),
     );
@@ -39,10 +40,11 @@ export function createBoardMotion(grid) {
         rank = Number(square[1]) - 1;
       return { x: (flipped ? 7 - file : file) * size, y: (flipped ? rank : 7 - rank) * size };
     };
-    if (changed || orientation !== flipped || reduced.matches) {
+    if (changed || orientation !== flipped || reduced.matches || motion === 'none') {
       clear();
       if (
         !skip &&
+        motion !== 'none' &&
         !reduced.matches &&
         orientation === flipped &&
         removed.length <= 3 &&
@@ -82,10 +84,12 @@ export function createBoardMotion(grid) {
             ],
             {
               duration: Math.min(
-                230,
-                150 + (Math.hypot(start.x - end.x, start.y - end.y) / size) * 14,
+                motion === 'quick' ? 150 : 280,
+                (motion === 'quick' ? 90 : 180) +
+                  (Math.hypot(start.x - end.x, start.y - end.y) / size) *
+                    (motion === 'quick' ? 9 : 18),
               ),
-              easing: 'cubic-bezier(0.22, 0.8, 0.25, 1)',
+              easing: 'cubic-bezier(0.2, 0.75, 0.2, 1)',
             },
           );
           active.set(to, { image, animation });

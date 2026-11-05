@@ -2,7 +2,7 @@
    width accounts for either sidebar state and for browser zoom. */
 @container study-content (min-width: 780px) {
   .workspace {
-    grid-template-columns: minmax(0, 1fr) clamp(285px, 29cqi, 340px);
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 32cqi, 380px);
     gap: clamp(16px, 2cqi, 28px);
     padding: 20px;
   }
@@ -19,7 +19,91 @@
     overflow: auto;
     width: auto;
     min-width: 0;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
   }
+  .workspace .analysis-panel .analysis-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--surface);
+  }
+}
+.analysis-panel .analysis-tabs {
+  gap: 4px;
+}
+.analysis-panel .analysis-tabs button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 4px;
+}
+.coach-journey .section-title {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.coach-journey #coach-color {
+  max-width: 160px;
+}
+.coach-journey #coach-range {
+  max-width: none;
+}
+#coach-progress {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: var(--raised);
+  font-variant-numeric: tabular-nums;
+}
+#coach-progress:empty {
+  display: none;
+}
+.analysis-panel .gm-coach-text {
+  font-size: 13px;
+  line-height: 1.75;
+}
+.piece-preview {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  max-width: 360px;
+  margin: 8px 0 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.piece-preview .mini-square {
+  aspect-ratio: 1;
+}
+.piece-preview img {
+  width: 90%;
+  height: 90%;
+}
+body:not([data-arrow-style='rounded']) .rounded-board-arrow,
+body[data-arrow-style='rounded'] .solid-board-arrow {
+  display: none;
+}
+#puzzle-promotion[open] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: clamp(12px, 4vw, 20px);
+}
+#puzzle-promotion > span,
+#puzzle-promotion [data-cancel-promotion] {
+  grid-column: 1 / -1;
+}
+#puzzle-promotion [data-piece] {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  min-width: 56px;
+}
+#puzzle-promotion img {
+  width: 42px;
+  height: 42px;
 }
 .advanced-settings {
   margin-top: 16px;
