@@ -2,7 +2,8 @@ import { gameStatusMarkup } from './views/game-status.js';
 import { createLibraryRefresh } from './library-refresh.js';
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
-import { reviewMoments, legalContinuation, judgeRetry } from './coach-review.js';
+import { legalContinuation, judgeRetry } from './coach-review.js';
+import { reviewEpisodes } from './coach-evidence.js';
 import { cleanLearning } from '../training/practice.js';
 import { escapeHtml as esc } from '../ui/dom.js';
 import { initLearning } from './learning-ui.js';
@@ -738,7 +739,9 @@ function renderReview() {
       seconds = Math.ceil((positions * options.time) / workers / 1000);
     $('#review-estimate').textContent = selected.analysis?.complete
       ? `${selected.moves.length} vyhodnocených tahů · ${selected.analysis.engine === 'lite' ? 'Lite' : 'Full NNUE'}`
-      : `${positions} pozic · přibližně ${seconds < 60 ? seconds + ' s' : Math.ceil(seconds / 60) + ' min'} + ověření kritických tahů`;
+      : language() === 'en'
+        ? `${positions} positions · about ${seconds < 60 ? seconds + ' s' : Math.ceil(seconds / 60) + ' min'} + critical-move verification`
+        : `${positions} pozic · přibližně ${seconds < 60 ? seconds + ' s' : Math.ceil(seconds / 60) + ' min'} + ověření kritických tahů`;
   }
 }
 $('#review-game').addEventListener('click', async () => {
@@ -972,7 +975,13 @@ function renderCoach(fen, result, last, mark) {
 }
 function renderCoachJourney() {
   const en = language() === 'en',
-    moments = blind() ? [] : reviewMoments(selected, $('#coach-color').value);
+    moments = blind()
+      ? []
+      : reviewEpisodes(
+          selected,
+          $('#coach-color').value,
+          $('#coach-range').value === 'key' ? 3 : Infinity,
+        );
   const index = moments.findIndex((m) => m.ply === ply);
   $('#coach-progress').textContent = blind()
     ? en
@@ -999,10 +1008,18 @@ function renderCoachJourney() {
               : `Rozhodnutí ${index + 1} z ${moments.length}`;
   $('#coach-previous').disabled = !moments.length || !!retryTarget;
   $('#coach-next').disabled = !moments.length || !!retryTarget;
+  if (index >= 0 && moments[index].related.length)
+    $('#coach-progress').textContent += en
+      ? ` · ${moments[index].related.length} nearby same-theme moments grouped here.`
+      : ` · ${moments[index].related.length} blízkých momentů stejného tématu v této skupině.`;
   $('#retry-cancel').hidden = !retryTarget;
 }
 function coachStep(direction) {
-  const moments = reviewMoments(selected, $('#coach-color').value);
+  const moments = reviewEpisodes(
+    selected,
+    $('#coach-color').value,
+    $('#coach-range').value === 'key' ? 3 : Infinity,
+  );
   const next =
     direction > 0
       ? moments.find((m) => m.ply > ply) || moments[0]
@@ -1010,6 +1027,7 @@ function coachStep(direction) {
   if (next) navigate(next.ply);
 }
 $('#coach-color').addEventListener('change', renderCoachJourney);
+$('#coach-range').addEventListener('change', renderCoachJourney);
 $('#coach-next').addEventListener('click', () => coachStep(1));
 $('#coach-previous').addEventListener('click', () => coachStep(-1));
 $('#coach-best').addEventListener('click', () => {

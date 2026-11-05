@@ -285,7 +285,7 @@ export async function initPlatform(context) {
       username,
       plan: preferences.lesson,
       today: localDay(),
-      onImport: () => go('insights'),
+      onImport: () => go('games'),
       onReview: (id, ply) => {
         openGame(id, ply);
         $('#analysis-coach-tab').click();
@@ -355,7 +355,7 @@ export async function initPlatform(context) {
   }
   function go(next) {
     next = pageNames[next] ? next : 'home';
-    if (location.hash !== '#/' + next) history.pushState(null, '', '#/' + next);
+    if (location.hash.split('?')[0] !== '#/' + next) history.pushState(null, '', '#/' + next);
     const changed = page !== next;
     page = next;
     document.body.dataset.page = next;
@@ -933,7 +933,7 @@ export async function initPlatform(context) {
   });
   const fromUrl = () =>
     go(
-      location.hash.replace(/^#\/?/, '') ||
+      location.hash.split('?')[0].replace(/^#\/?/, '') ||
         (new URLSearchParams(location.search).get('view') === 'review' ? 'analysis' : 'home'),
     );
   window.addEventListener('hashchange', fromUrl);
