@@ -22,7 +22,7 @@
     ></script
     ><link rel="stylesheet" href="learning.css" /><link
       rel="stylesheet"
-      href="color-modes.css" /></head
+      href="study-kit.css" /><link rel="stylesheet" href="color-modes.css" /></head
   ><body>
     <a class="skip-link" href="#page-content">Přejít na obsah</a>
     <aside class="app-sidebar"
@@ -462,60 +462,63 @@
                 ><option value="balanced">Vyvážený · 0,75 s / pozici</option
                 ><option value="deep">Důkladný · 2 s / pozici</option
                 ><option value="custom">Vlastní nastavení</option></select
-              ><div class="option-row"
-                ><label for="study-depth">Max. hloubka</label
-                ><input id="study-depth" type="number" min="6" max="30" value="18" /></div
-              ><div class="option-row"
-                ><label for="study-time">Čas na pozici (ms)</label
-                ><input
-                  id="study-time"
-                  type="number"
-                  min="100"
-                  max="10000"
-                  step="100"
-                  value="750" /></div
-              ><div class="option-row"
-                ><label for="study-lines">Počet variant</label
-                ><select id="study-lines"
-                  ><option>1</option
-                  ><option>2</option
-                  ><option selected>3</option
-                  ><option>4</option
-                  ><option>5</option></select
-                ></div
-              ><div class="option-row"
-                ><label for="study-hash">Paměť Hash (MB)</label
-                ><select id="study-hash"
-                  ><option>16</option
-                  ><option>32</option
-                  ><option selected>64</option
-                  ><option>128</option
-                  ><option>256</option></select
-                ></div
-              ><label class="check-row"
-                ><span>Šipka nejlepšího tahu</span
-                ><input id="study-arrows" type="checkbox" checked /></label
-              ><div class="section-rule"></div><label for="backend">Kde počítat</label
-              ><select id="backend"
-                ><option value="local">V tomto prohlížeči · zdarma</option
-                ><option value="server">Na vlastním serveru</option></select
-              ><div id="server-fields" hidden
-                ><label for="server-url">HTTPS adresa serveru</label
-                ><input id="server-url" type="url" placeholder="https://evala.example.cz" /><label
-                  for="server-token"
-                  >API token · jen pro tuto kartu</label
-                ><input id="server-token" type="password" autocomplete="off" /><button
-                  id="test-server"
-                  class="secondary-button"
-                  >Ověřit spojení</button
-                ><p id="server-status" class="inline-status" role="status"></p
+              ><details class="advanced-settings"
+                ><summary>Pokročilé nastavení</summary
+                ><div class="option-row"
+                  ><label for="study-depth">Max. hloubka</label
+                  ><input id="study-depth" type="number" min="6" max="30" value="18" /></div
+                ><div class="option-row"
+                  ><label for="study-time">Čas na pozici (ms)</label
+                  ><input
+                    id="study-time"
+                    type="number"
+                    min="100"
+                    max="10000"
+                    step="100"
+                    value="750" /></div
+                ><div class="option-row"
+                  ><label for="study-lines">Počet variant</label
+                  ><select id="study-lines"
+                    ><option>1</option
+                    ><option>2</option
+                    ><option selected>3</option
+                    ><option>4</option
+                    ><option>5</option></select
+                  ></div
+                ><div class="option-row"
+                  ><label for="study-hash">Paměť Hash (MB)</label
+                  ><select id="study-hash"
+                    ><option>16</option
+                    ><option>32</option
+                    ><option selected>64</option
+                    ><option>128</option
+                    ><option>256</option></select
+                  ></div
+                ><label class="check-row"
+                  ><span>Šipka nejlepšího tahu</span
+                  ><input id="study-arrows" type="checkbox" checked /></label
+                ><div class="section-rule"></div><label for="backend">Kde počítat</label
+                ><select id="backend"
+                  ><option value="local">V tomto prohlížeči · zdarma</option
+                  ><option value="server">Na vlastním serveru</option></select
+                ><div id="server-fields" hidden
+                  ><label for="server-url">HTTPS adresa serveru</label
+                  ><input id="server-url" type="url" placeholder="https://evala.example.cz" /><label
+                    for="server-token"
+                    >API token · jen pro tuto kartu</label
+                  ><input id="server-token" type="password" autocomplete="off" /><button
+                    id="test-server"
+                    class="secondary-button"
+                    >Ověřit spojení</button
+                  ><p id="server-status" class="inline-status" role="status"></p
+                  ><p class="hint"
+                    >Serveru odešleš pozice a tahy. Knihovna zůstává v prohlížeči. Server vždy
+                    používá plný engine.</p
+                  ></div
                 ><p class="hint"
-                  >Serveru odešleš pozice a tahy. Knihovna zůstává v prohlížeči. Server vždy používá
-                  plný engine.</p
-                ></div
-              ><p class="hint"
-                >Hloubka i čas jsou horní limity. Více variant zpomalí prohledávání. Rozbor
-                kritických tahů přidá krátký druhý průchod.</p
+                  >Hloubka i čas jsou horní limity. Více variant zpomalí prohledávání. Rozbor
+                  kritických tahů přidá krátký druhý průchod.</p
+                ></details
               ></section
             >
             <section class="review-controls"
@@ -572,6 +575,11 @@
                 ></div
               >
               <p id="coach-progress" data-i18n-ignore role="status"></p>
+              <label class="coach-range-label" for="coach-range">Rozsah rozboru</label
+              ><select id="coach-range"
+                ><option value="key">Tři důležité momenty</option
+                ><option value="all">Všechny skupiny momentů</option></select
+              >
               <div class="coach-navigation"
                 ><button id="coach-previous" class="quiet-button">Předchozí moment</button
                 ><button id="coach-next" class="primary-button">Další moment</button></div

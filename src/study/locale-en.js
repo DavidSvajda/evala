@@ -1,4 +1,9 @@
 export const EN = {
+  'Pokročilé nastavení': 'Advanced settings',
+  'Rozsah rozboru': 'Review scope',
+  'Tři důležité momenty': 'Three key moments',
+  'Všechny skupiny momentů': 'All grouped moments',
+  'Graf hodnocení. Kliknutím přejdeš na tah.': 'Evaluation graph. Click to jump to a move.',
   'Úložiště služby se blíží limitu. Rozbor zůstává v tomto zařízení; exportuj jej nebo to zkus později.':
     'The service storage is near capacity. Your analysis remains on this device; export it or try again later.',
   'Výkon zařízení': 'Device performance',

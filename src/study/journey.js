@@ -53,7 +53,7 @@ export function renderJourney(
               'V dostupném rozboru nemáme dost podkladů pro konkrétní slabinu. Začni smíšenou lekcí.',
               'The available analysis does not support a specific weakness. Start a mixed lesson.',
             );
-  root.innerHTML = `<div class="journey-main"><h2>${esc(heading)}</h2><p>${esc(description)}</p><button class="primary-button" id="journey-primary">${needsImport ? t('Načíst moje partie', 'Import my games') : needsReview ? t('Otevřít partii k rozboru', 'Open a game to review') : completed ? t('Prohlédnout vlastní pozice', 'Review my positions') : done ? t('Pokračovat v lekci', 'Continue lesson') : t('Procvičit téma · 6 pozic', 'Practise focus · 6 positions')}</button>${total ? `<p class="journey-progress" role="status">${t('Dnešní lekce', 'Today’s lesson')}: ${done}/${total}</p>` : ''}</div><div class="journey-evidence"><h3>${t('Na čem doporučení stojí', 'What the recommendation is based on')}</h3><p>${t(`${data.reviewed} rozebraných z ${data.imported} vlastních partií · ${data.decisions} vyhodnocených rozhodnutí`, `${data.reviewed} reviewed of ${data.imported} own games · ${data.decisions} evaluated decisions`)}</p>${
+  root.innerHTML = `<div class="journey-main"><p class="journey-steps">${t('Načti partie → Projdi momenty → Procvič téma', 'Import games → Review moments → Practise a focus')}</p><h2>${esc(heading)}</h2><p>${esc(description)}</p><button class="primary-button" id="journey-primary">${needsImport ? t('Načíst moje partie', 'Import my games') : needsReview ? t('Otevřít partii k rozboru', 'Open a game to review') : completed ? t('Prohlédnout vlastní pozice', 'Review my positions') : done ? t('Pokračovat v lekci', 'Continue lesson') : t('Procvičit téma · 6 pozic', 'Practise focus · 6 positions')}</button>${total ? `<p class="journey-progress" role="status">${t('Dnešní lekce', 'Today’s lesson')}: ${done}/${total}</p>` : ''}</div><details class="journey-evidence"><summary>${t('Na čem doporučení stojí', 'What the recommendation is based on')}</summary><p>${t(`${data.reviewed} rozebraných z ${data.imported} vlastních partií · ${data.decisions} vyhodnocených rozhodnutí`, `${data.reviewed} reviewed of ${data.imported} own games · ${data.decisions} evaluated decisions`)}</p>${
     focus
       ? focus.examples
           .slice(0, 3)
@@ -63,7 +63,7 @@ export function renderJourney(
           )
           .join('')
       : `<p>${t('Rozebírají se jen tvoje tahy pod zadanou přezdívkou.', 'Only your moves under the selected username are considered.')}</p>`
-  }<p class="hint">${t('Výsledek rozboru popisuje tahy, ne důvod, proč jsi je zahrál.', 'Analysis describes your moves, not why you chose them.')}${data.due ? ' ' + t(`${data.due} pozic čeká na opakování.`, `${data.due} positions are due for review.`) : ''}</p></div>`;
+  }<p class="hint">${t('Výsledek rozboru popisuje tahy, ne důvod, proč jsi je zahrál.', 'Analysis describes your moves, not why you chose them.')}${data.due ? ' ' + t(`${data.due} pozic čeká na opakování.`, `${data.due} positions are due for review.`) : ''}</p></details>`;
   root.querySelector('#journey-primary').onclick = () =>
     needsImport
       ? onImport()

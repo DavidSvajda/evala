@@ -14,6 +14,7 @@ import {
 } from '../training/practice.js';
 import { scoreText } from '../core/evaluation.js';
 import { createHumanPlay } from './human-play.js';
+import { createStudyKit } from './study-kit-ui.js';
 
 const $ = (s) => document.querySelector(s);
 const t = (cs, en) => (language() === 'en' ? en : cs);
@@ -29,6 +30,7 @@ function download(text, name) {
 
 export function initLearning(context) {
   const human = createHumanPlay(context);
+  const studyKit = createStudyKit(context);
   let workshopTab = 'drills';
   const panel = document.createElement('section');
   panel.id = 'learning-notes';
@@ -367,7 +369,7 @@ export function initLearning(context) {
     const tabs = document.createElement('div');
     tabs.className = 'analysis-tabs';
     tabs.setAttribute('role', 'tablist');
-    tabs.innerHTML = `<button role="tab" id="workshop-drills-tab">${t('Z mých partií', 'From my games')}</button><button role="tab" id="workshop-human-tab">${t('Hrát s Maiou', 'Play Maia')}</button>`;
+    tabs.innerHTML = `<button role="tab" id="workshop-drills-tab">${t('Z mých partií', 'From my games')}</button><button role="tab" id="workshop-study-tab">${t('Moje studium', 'My study')}</button><button role="tab" id="workshop-human-tab">${t('Hrát s Maiou', 'Play Maia')}</button>`;
     heading.after(tabs);
     const humanRoot = document.createElement('section');
     humanRoot.id = 'human-play';
@@ -376,6 +378,11 @@ export function initLearning(context) {
     drills.setAttribute('role', 'tabpanel');
     drills.setAttribute('aria-labelledby', 'workshop-drills-tab');
     root.append(humanRoot);
+    const studyRoot = document.createElement('section');
+    studyRoot.id = 'study-kit';
+    studyRoot.setAttribute('role', 'tabpanel');
+    studyRoot.setAttribute('aria-labelledby', 'workshop-study-tab');
+    root.append(studyRoot);
     const choose = (tab) => {
       workshopTab = tab;
       heading.querySelector('p').textContent =
@@ -384,42 +391,57 @@ export function initLearning(context) {
               'Tréninkový soupeř a rozbor vlastní partie.',
               'A practice opponent and review of your game.',
             )
-          : t(
-              'Rozhodování z vlastních partií. Bez tréninkového Elo.',
-              'Decisions from your own games. No puzzle rating at stake.',
-            );
+          : tab === 'study'
+            ? t(
+                'Vlastní repertoár, koncovky a úkoly s trenérem.',
+                'Your repertoire, endgames and coach exercises.',
+              )
+            : t(
+                'Rozhodování z vlastních partií. Bez tréninkového Elo.',
+                'Decisions from your own games. No puzzle rating at stake.',
+              );
       cancel();
       human.cancel();
+      studyKit.cancel();
       drills.hidden = tab !== 'drills';
       humanRoot.hidden = tab !== 'human';
+      studyRoot.hidden = tab !== 'study';
       tabs
         .querySelector('#workshop-drills-tab')
         .setAttribute('aria-selected', String(tab === 'drills'));
       tabs
         .querySelector('#workshop-human-tab')
         .setAttribute('aria-selected', String(tab === 'human'));
+      tabs
+        .querySelector('#workshop-study-tab')
+        .setAttribute('aria-selected', String(tab === 'study'));
       if (tab === 'human') human.mount(humanRoot);
+      if (tab === 'study') studyKit.mount(studyRoot);
       tabs.querySelectorAll('[role=tab]').forEach((button) => {
         button.tabIndex = button.getAttribute('aria-selected') === 'true' ? 0 : -1;
       });
     };
     tabs.querySelector('#workshop-drills-tab').onclick = () => choose('drills');
     tabs.querySelector('#workshop-human-tab').onclick = () => choose('human');
+    tabs.querySelector('#workshop-study-tab').onclick = () => choose('study');
     tabs.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
+      const order = ['drills', 'study', 'human'];
       choose(
         event.key === 'Home'
-          ? 'drills'
+          ? order[0]
           : event.key === 'End'
-            ? 'human'
-            : workshopTab === 'human'
-              ? 'drills'
-              : 'human',
+            ? order[2]
+            : order[(order.indexOf(workshopTab) + (event.key === 'ArrowRight' ? 1 : 2)) % 3],
       );
       tabs.querySelector('[aria-selected=true]').focus();
     });
-    choose(workshopTab);
+    choose(
+      new URLSearchParams(location.hash.split('?')[1] || '').has('exercise')
+        ? 'study'
+        : workshopTab,
+    );
   }
   function renderFamilies() {
     const root = $('#practice-families');
@@ -767,6 +789,7 @@ export function initLearning(context) {
     else {
       cancel();
       human.cancel();
+      studyKit.cancel();
     }
   });
   document.addEventListener('evala:identity', () => {
@@ -779,7 +802,7 @@ export function initLearning(context) {
     if (document.body.dataset.page === 'practice') renderWorkshop();
   });
   document.addEventListener('evala:library', () => {
-    if (document.body.dataset.page === 'practice' && workshopTab !== 'human') renderWorkshop();
+    if (document.body.dataset.page === 'practice' && workshopTab === 'drills') renderWorkshop();
   });
   document.addEventListener('evala:language', () => {
     noteKey = '';

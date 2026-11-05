@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { lineToSan } from './game.js';
+import { coachPrinciple } from './coach-evidence.js';
 
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
@@ -273,8 +274,8 @@ export function generateGmAdvice(
   const loss = Number.isFinite(mark.loss) ? Math.round(mark.loss) : null;
   if (['blunder', 'mistake', 'inaccuracy', 'miss'].includes(mark.kind))
     return en
-      ? `${move.san} reduced the position’s engine score.${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Expected-score loss: ' + loss + ' percentage points.' : ''}`
-      : `${move.san} zhoršil hodnocení pozice.${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Ztráta očekávaného skóre: ' + loss + ' procentních bodů.' : ''}`;
+      ? `${coachPrinciple(fenAfter, after, lang) || 'Compare what your move allows with the stronger alternative.'}${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Expected-score loss: ' + loss + ' percentage points.' : ''}`
+      : `${coachPrinciple(fenAfter, after, lang) || 'Porovnej, co tvůj tah dovoluje soupeři, se silnější variantou.'}${continuations(fenBefore, fenAfter, before, after, en, bestSan)}${loss !== null ? ' Ztráta očekávaného skóre: ' + loss + ' procentních bodů.' : ''}`;
   return en
     ? `${move.san} keeps most of the position’s engine evaluation.`
     : `${move.san} zachovává většinu hodnocení pozice.`;

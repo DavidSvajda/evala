@@ -1,0 +1,177 @@
+/* Keep the working board and review together on a normal laptop. The content
+   width accounts for either sidebar state and for browser zoom. */
+@container study-content (min-width: 780px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) clamp(285px, 29cqi, 340px);
+    gap: clamp(16px, 2cqi, 28px);
+    padding: 20px;
+  }
+  .workspace .position-workspace {
+    display: block;
+    max-width: min(100%, var(--board-fit, 960px));
+  }
+  .workspace .analysis-panel {
+    position: sticky;
+    top: 82px;
+    border-left: 1px solid var(--line);
+    padding-left: 18px;
+    max-height: calc(100dvh - 105px);
+    overflow: auto;
+    width: auto;
+    min-width: 0;
+  }
+}
+.advanced-settings {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.advanced-settings summary,
+.kit-editor summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  font-weight: 650;
+}
+.advanced-settings select,
+.advanced-settings input,
+.advanced-settings .option-row {
+  max-width: 100%;
+}
+.coach-range-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 12px;
+}
+#coach-range {
+  width: 100%;
+  min-height: 44px;
+  margin-block: 4px 12px;
+}
+.kit-heading,
+.kit-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.kit-heading p,
+.kit-list p {
+  color: var(--muted);
+  margin-top: 6px;
+}
+.kit-library {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 20px;
+}
+.kit-library > section {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.kit-library h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.kit-list article {
+  padding-block: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.kit-list article > div:first-child {
+  flex: 1;
+  min-width: 160px;
+  overflow-wrap: anywhere;
+}
+.kit-editor form,
+.kit-editor label,
+#kit-session-actions label {
+  display: grid;
+  gap: 8px;
+}
+.kit-editor form {
+  gap: 16px;
+}
+.kit-editor input,
+.kit-editor textarea,
+.kit-editor select,
+#kit-answer {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  padding: 10px 12px;
+}
+.kit-lessons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+#study-kit button {
+  min-height: 44px;
+  white-space: normal;
+}
+.kit-session,
+.kit-incoming {
+  scroll-margin-top: 96px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  margin-block: 20px;
+  background: var(--raised);
+}
+.kit-session[hidden] {
+  display: none;
+}
+.kit-play {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+.kit-play > * {
+  min-width: 0;
+}
+#kit-board {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: min(100%, var(--board-fit, 640px));
+  overflow: hidden;
+  touch-action: none;
+}
+#kit-session-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+#kit-feedback,
+[data-kit-status],
+.kit-incoming p,
+#kit-progress p {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.kit-incoming p {
+  margin-block: 12px;
+}
+@media (max-width: 800px) {
+  .kit-library,
+  .kit-play {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .kit-session,
+  .kit-incoming {
+    padding: 14px;
+    scroll-margin-top: 160px;
+  }
+}

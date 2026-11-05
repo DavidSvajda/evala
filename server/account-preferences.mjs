@@ -1,9 +1,15 @@
 import { httpError } from './http.mjs';
 import { portableStudySettings } from '../src/core/account-preferences.js';
+import { cleanStudyKit } from '../src/training/study-kit.js';
 export function preferences(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw httpError(400, 'Neplatné nastavení.');
   const p = {};
+  if (input.studyKit && typeof input.studyKit === 'object' && !Array.isArray(input.studyKit)) {
+    if (new TextEncoder().encode(JSON.stringify(input.studyKit)).length > 45000)
+      throw httpError(413, 'Studijní prostor je příliš velký.');
+    p.studyKit = cleanStudyKit(input.studyKit);
+  }
   if (input.study && typeof input.study === 'object' && !Array.isArray(input.study))
     p.study = portableStudySettings(input.study);
   if (input.soundVersion === 1) p.soundVersion = 1;
