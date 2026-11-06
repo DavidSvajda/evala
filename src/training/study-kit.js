@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 const key = (fen) => fen.split(' ').slice(0, 4).join(' ');
-export const STUDY_LIMITS = { lines: 24, tasks: 40, moves: 80, reviews: 600 };
+export const STUDY_LIMITS = { lines: 128, tasks: 128, moves: 80, reviews: 4096 };
 
 export function repertoireLine(pgn, side = 'w') {
   if (typeof pgn !== 'string' || pgn.length > 12000) throw Error('Invalid PGN');

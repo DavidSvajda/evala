@@ -54,7 +54,7 @@ self.onmessage = async (event) => {
     for (let s = 0; s < 64; s++)
       for (let h = 0; h < 8; h++)
         input.set(history[h].subarray(s * 12, s * 12 + 12), s * 97 + h * 12);
-    const elo = Math.max(800, Math.min(2400, Math.round(data.elo || 1400)));
+    const elo = Math.max(800, Math.min(2800, Math.round(data.elo || 1400)));
     const result = await model.run({
       tokens: new ort.Tensor('float32', input, [1, 64, 97]),
       self_elo: new ort.Tensor('int64', BigInt64Array.of(BigInt(elo)), [1]),

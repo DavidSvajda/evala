@@ -1,6 +1,7 @@
 .analysis-tabs {
   display: flex;
   gap: 22px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--line);
   margin-top: 20px;
 }
@@ -21,8 +22,81 @@
 .analysis-panel[data-tab='summary'] [data-panel-section]:not([data-panel-section='summary']),
 .analysis-panel[data-tab='coach'] [data-panel-section]:not([data-panel-section='coach']),
 .analysis-panel[data-tab='moves'] [data-panel-section]:not([data-panel-section='moves']),
-.analysis-panel[data-tab='lines'] [data-panel-section]:not([data-panel-section='lines']) {
+.analysis-panel[data-tab='lines'] [data-panel-section]:not([data-panel-section='lines']),
+.analysis-panel[data-tab='preparation']
+  [data-panel-section]:not([data-panel-section='preparation']) {
   display: none !important;
+}
+.preparation {
+  min-width: 0;
+  font-size: 13px;
+}
+.preparation > details {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.preparation summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.preparation label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  min-width: 0;
+}
+.preparation input,
+.preparation select,
+.preparation textarea {
+  width: 100%;
+  min-width: 0;
+}
+.preparation-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+.preparation p {
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.preparation-move,
+.preparation-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.preparation-move strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.preparation-move span {
+  flex: 0 0 auto;
+  max-width: 60%;
+  font-size: 12px;
+  text-align: right;
+}
+.preparation-line {
+  display: block;
+  max-height: 6.5em;
+  overflow: auto;
+}
+#prep-pgn-tree,
+#prep-table-results,
+#prep-opponent-results {
+  max-height: 360px;
+  overflow: auto;
 }
 .coach-journey {
   padding-top: 20px;

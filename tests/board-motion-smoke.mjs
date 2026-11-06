@@ -40,10 +40,31 @@ try {
     }, san);
   await move('e4');
   assert.equal(await page.locator('.board-motion-piece').count(), 1);
-  await page.evaluate(() => window.motionBoard.paint());
+  await page.evaluate(() => {
+    window.originalSquare = window.motionBoard.grid.querySelector('[data-square="a1"]');
+    window.originalPiece = window.originalSquare.querySelector('img');
+    window.originalAnimation = document.querySelector('.board-motion-piece');
+    window.originalAnimation.getAnimations()[0].pause();
+    window.motionBoard.selected = 'g1';
+    window.motionBoard.set(window.motionBoard.chess.fen(), { arrow: 'g1f3' });
+  });
+  assert.equal(
+    await page.evaluate(() => {
+      const b = window.motionBoard;
+      return (
+        b.grid.querySelector('[data-square="a1"]') === window.originalSquare &&
+        window.originalSquare.querySelector('img') === window.originalPiece &&
+        b.selected === 'g1' &&
+        window.originalAnimation.isConnected
+      );
+    }),
+    true,
+    'engine feedback preserves squares, images, selection and the running move',
+  );
   assert.equal(await page.locator('.motion-destination').count(), 1);
   await move('e5');
-  assert.equal(await page.locator('.board-motion-piece').count(), 1);
+  assert.equal(await page.locator('.board-motion-piece').count(), 2);
+  await page.evaluate(() => window.originalAnimation.getAnimations()[0].play());
   await page.waitForFunction(() => !document.querySelector('.board-motion-piece'));
   assert.equal(await page.locator('.motion-destination').count(), 0);
   await page.evaluate(() => (document.body.dataset.boardMotion = 'none'));
@@ -53,12 +74,14 @@ try {
   await move('Nc6');
   const quick = await page
     .locator('.board-motion-piece')
+    .last()
     .evaluate((el) => el.getAnimations()[0].effect.getTiming().duration);
   assert.ok(quick <= 150);
   await page.evaluate(() => (document.body.dataset.boardMotion = 'smooth'));
   await move('Bb5');
   const smooth = await page
     .locator('.board-motion-piece')
+    .last()
     .evaluate((el) => el.getAnimations()[0].effect.getTiming().duration);
   assert.ok(smooth > quick && smooth <= 280);
   for (const viewport of [
@@ -84,6 +107,27 @@ try {
   await page.waitForFunction(() => !document.querySelector('.board-motion-piece'));
   await move('Kg7');
   assert.equal(await page.locator('.board-motion-piece').count(), 0);
+  await page.goto(`http://127.0.0.1:${server.address().port}/study.html#/analysis`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#study-board .square').first().waitFor();
+  await page.waitForFunction(
+    () => !document.querySelector('.position-workspace').style.getPropertyValue('--board-fit'),
+  );
+  const width = await page
+    .locator('#study-board')
+    .evaluate((el) => el.getBoundingClientRect().width);
+  await page.evaluate(() => window.scrollTo(0, 180));
+  await page.setViewportSize({ width: 390, height: 730 });
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  assert.ok(
+    Math.abs(
+      (await page.locator('#study-board').evaluate((el) => el.getBoundingClientRect().width)) -
+        width,
+    ) < 1,
+    'mobile scroll and address-bar height changes must not resize the board',
+  );
   console.log(
     'PASS move continuity, repaint, interruption, castling, promotion, desktop/mobile and reduced motion',
   );

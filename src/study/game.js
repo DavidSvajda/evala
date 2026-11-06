@@ -1,5 +1,11 @@
 import { Chess } from 'chess.js';
 import { validPosition } from '../core/position.js';
+import {
+  hasPgnVariations,
+  parsePgnTree,
+  exportPgnTree,
+  mergePgnAnnotations,
+} from '../core/pgn-tree.js';
 
 export const DEMO_PGN = `[Event "Ukázková partie"]
 [White "Bílý"]
@@ -74,7 +80,7 @@ export function parsePgn(pgn) {
   }
   return {
     id: fingerprint(canonical),
-    pgn: chess.pgn(),
+    pgn: hasPgnVariations(pgn) ? exportPgnTree(parsePgnTree(pgn)) : chess.pgn(),
     headers,
     initialFen,
     moves,
@@ -210,5 +216,6 @@ export function annotatedPgn(game, { engine = true, plies = null } = {}) {
       ),
     );
   }
-  return chess.pgn({ maxWidth: 90 });
+  const annotated = chess.pgn({ maxWidth: 90 });
+  return hasPgnVariations(game.pgn) ? mergePgnAnnotations(game.pgn, annotated) : annotated;
 }

@@ -23,6 +23,7 @@ on:
           - sharing
           - performance
           - sync
+          - preparation
 permissions:
   contents: read
   packages: write
@@ -190,14 +191,20 @@ jobs:
           node --test tests/study-kit-sync.test.mjs tests/sync-storage.test.mjs tests/study-kit.test.mjs tests/account-preferences.test.mjs tests/accounts.test.mjs tests/release-version.test.mjs
           node tests/storage-browser.mjs
           node tests/account-experience-smoke.mjs
+      - name: Verify board and preparation flows
+        if: inputs.validation == 'preparation'
+        run: |
+          node --test tests/preparation.test.mjs tests/study-kit-sync.test.mjs tests/release-version.test.mjs
+          node tests/board-motion-smoke.mjs
+          node tests/preparation-smoke.mjs
       - name: Build browser-only web host
-        if: inputs.validation == 'local-only' || inputs.validation == 'sharing' || inputs.validation == 'performance' || inputs.validation == 'sync'
+        if: inputs.validation == 'local-only' || inputs.validation == 'sharing' || inputs.validation == 'performance' || inputs.validation == 'sync' || inputs.validation == 'preparation'
         run: docker build --platform linux/amd64 --file Dockerfile.web --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Build and verify native engine
-        if: inputs.validation != 'local-only' && inputs.validation != 'sharing' && inputs.validation != 'performance' && inputs.validation != 'sync'
+        if: inputs.validation != 'local-only' && inputs.validation != 'sharing' && inputs.validation != 'performance' && inputs.validation != 'sync' && inputs.validation != 'preparation'
         run: docker build --platform linux/amd64 --file Dockerfile.azure --build-arg GITHUB_SHA="$GITHUB_SHA" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:server" .
       - name: Smoke test the container
-        if: inputs.validation != 'local-only' && inputs.validation != 'sharing' && inputs.validation != 'performance' && inputs.validation != 'sync'
+        if: inputs.validation != 'local-only' && inputs.validation != 'sharing' && inputs.validation != 'performance' && inputs.validation != 'sync' && inputs.validation != 'preparation'
         shell: bash
         run: |
           set -euo pipefail
