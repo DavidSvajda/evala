@@ -3,7 +3,7 @@
 const boards = new Set();
 // Safari's address bar and keyboard change the visual height while scrolling.
 // On narrow screens size the board by available width, as a normal document.
-const narrow = matchMedia('(max-width: 760px)');
+const widthFitted = matchMedia('(max-width: 760px), (pointer: coarse)');
 let scheduled = false,
   started = false,
   observer;
@@ -23,7 +23,7 @@ function schedule() {
       const wrapper = analysis
         ? element.closest('.position-workspace')
         : element.closest('.puzzle-board-area') || element.parentElement;
-      if (narrow.matches && !document.fullscreenElement) {
+      if (widthFitted.matches && !document.fullscreenElement) {
         wrapper.style.removeProperty('--board-fit');
         continue;
       }

@@ -826,6 +826,7 @@ export function initLearning(context) {
   refresh();
   return {
     refresh,
+    importRepertoire: studyKit.importPgn,
     invalidate: () => {
       noteKey = '';
       refresh();

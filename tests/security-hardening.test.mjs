@@ -112,6 +112,8 @@ test('public API rejects simple-content CSRF, compression and foreign origins be
       "'self'",
       'https://api.chess.com',
       'https://lichess.org',
+      'https://explorer.lichess.org',
+      'https://tablebase.lichess.ovh',
       'https://accounts.google.com',
     ]);
     assert.ok(!csp.includes("connect-src 'self' https:" + ' '));

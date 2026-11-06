@@ -549,14 +549,14 @@ test('profile sync accepts the client study budget and preserves independent dev
     };
     const { cleanStudyKit } = await import('../src/training/study-kit.js');
     const base = cleanStudyKit(),
-      tasks = Array.from({ length: 30 }, (_, i) => ({
+      tasks = Array.from({ length: 80 }, (_, i) => ({
         id: 'task_' + i,
         title: 'Task',
         fen: parsePgn('1. e4 *').fens[0],
         prompt: 'a'.repeat(900),
       }));
     const large = cleanStudyKit({ tasks });
-    assert.ok(Buffer.byteLength(JSON.stringify(large)) > 24000);
+    assert.ok(Buffer.byteLength(JSON.stringify(large)) > 44000);
     const first = await patch({ studyKitBase: base, studyKit: large });
     assert.equal(first.status, 200);
     const phone = cleanStudyKit({
@@ -565,7 +565,7 @@ test('profile sync accepts the client study budget and preserves independent dev
     const second = await patch({ studyKitBase: base, studyKit: phone, sound: false });
     assert.equal(second.status, 200);
     assert.equal(second.body.user.preferences.studyKit.lines.length, 1);
-    assert.equal(second.body.user.preferences.studyKit.tasks.length, 30);
+    assert.equal(second.body.user.preferences.studyKit.tasks.length, tasks.length);
     assert.equal(Object.hasOwn(second.body.user.preferences, 'studyKitBase'), false);
     const deletion = await patch({
       studyKitBase: large,
@@ -573,16 +573,42 @@ test('profile sync accepts the client study budget and preserves independent dev
     });
     assert.equal(deletion.status, 200);
     assert.equal(deletion.body.user.preferences.studyKit.lines.length, 1);
-    assert.equal(deletion.body.user.preferences.studyKit.tasks.length, 29);
+    assert.equal(deletion.body.user.preferences.studyKit.tasks.length, tasks.length - 1);
     assert.equal(
       (
         await patch({
-          studyKit: { ...large, tasks: tasks.map((t) => ({ ...t, prompt: '棋'.repeat(900) })) },
+          studyKit: {
+            ...large,
+            tasks: Array.from({ length: 128 }, (_, i) => ({
+              ...tasks[i % tasks.length],
+              id: 'large-' + i,
+              prompt: '棋'.repeat(1200),
+            })),
+          },
         })
       ).status,
       413,
     );
-    assert.equal((await patch({ unknown: 'a'.repeat(112001) })).status, 413);
+    // The server rejects an oversized declared body immediately. Don't race
+    // the 413 response against a half-megabyte upload on a closing socket.
+    const { request } = await import('node:http');
+    const { ACCOUNT_PROFILE_BYTES } = await import('../src/training/study-kit-sync.js');
+    const oversizedStatus = await new Promise((resolve, reject) => {
+      const req = request(
+        url,
+        {
+          method: 'PATCH',
+          headers: { ...user.headers, 'content-length': ACCOUNT_PROFILE_BYTES + 1 },
+        },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode);
+        },
+      );
+      req.on('error', reject);
+      req.end();
+    });
+    assert.equal(oversizedStatus, 413);
   } finally {
     await running.close();
   }

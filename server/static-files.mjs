@@ -38,7 +38,7 @@ export function createStaticFiles({
   const policy = publicReports
     ? localPolicy.replace(
         "connect-src 'self' https: http://127.0.0.1:* http://localhost:*",
-        "connect-src 'self' https://api.chess.com https://lichess.org https://accounts.google.com",
+        "connect-src 'self' https://api.chess.com https://lichess.org https://explorer.lichess.org https://tablebase.lichess.ovh https://accounts.google.com",
       )
     : localPolicy;
   const absoluteRoot = resolve(root);

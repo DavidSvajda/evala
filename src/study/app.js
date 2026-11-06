@@ -55,6 +55,7 @@ import { moveIcon } from '../ui/move-icons.js';
 import { initializeLanguage, language, translate } from './i18n.js';
 import { initializeFullscreen } from './fullscreen.js';
 import { createSharing } from './sharing.js';
+import { createPreparation } from './preparation-ui.js';
 import {
   readSettings as readBarSettings,
   writeSettings as writeBarSettings,
@@ -62,6 +63,7 @@ import {
 
 const $ = (selector) => document.querySelector(selector);
 let sharing = null;
+let preparationUI = null;
 initializeLanguage();
 const stroke = (path) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -969,6 +971,7 @@ function renderPosition() {
   renderCoach(fen, result, last, mark);
   renderCoachJourney();
   renderLines(result, fen);
+  preparationUI?.update();
 }
 function coachThreat(fen) {
   const key = language() + ':' + fen;
@@ -1678,6 +1681,26 @@ learningUI = initLearning({
       { signal },
     );
   },
+});
+preparationUI = createPreparation({
+  fen: activeFen,
+  selected: () => selected,
+  library: () => library,
+  busy: () => !!job || !!playerReport?.running,
+  tab: setAnalysisTab,
+  playMove: (uci) => startBranch([uci]),
+  openLine: (line) => {
+    navigate(0);
+    startBranch(line);
+    if (branch) branch.index = branch.moves.length;
+    renderAll();
+  },
+  importGame: async (pgn) => {
+    await addPgn(pgn);
+    setView('review');
+  },
+  save: (game) => store(game, { syncPartial: true }),
+  importRepertoire: learningUI.importRepertoire,
 });
 await initPlatform({
   library: () => library,

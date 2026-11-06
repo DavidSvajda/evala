@@ -73,7 +73,7 @@ test('offline outbox retains its first base, rebases edits made in flight and st
 });
 
 test('merging cannot silently truncate at task or UTF-8 byte limits', () => {
-  const full = kit(...Array.from({ length: 40 }, (_, i) => task('t' + i)));
+  const full = kit(...Array.from({ length: 128 }, (_, i) => task('t' + i)));
   assert.throws(() => mergeStudyKits(full, kit(task('extra')), kit()), { status: 413 });
   const large = kit(...Array.from({ length: 30 }, (_, i) => task('t' + i, 'a'.repeat(900))));
   assert.ok(jsonBytes(large) > 24000 && jsonBytes(large) <= STUDY_KIT_BYTES);
@@ -82,7 +82,7 @@ test('merging cannot silently truncate at task or UTF-8 byte limits', () => {
     () =>
       mergeStudyKits(
         {},
-        kit(...Array.from({ length: 30 }, (_, i) => task('t' + i, '棋'.repeat(900)))),
+        kit(...Array.from({ length: 128 }, (_, i) => task('t' + i, '棋'.repeat(1200)))),
         {},
       ),
     { status: 413 },

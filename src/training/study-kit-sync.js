@@ -1,8 +1,8 @@
 import { cleanStudyKit, STUDY_LIMITS } from './study-kit.js';
 
-export const STUDY_KIT_BYTES = 44000;
+export const STUDY_KIT_BYTES = 256000;
 // Two bounded snapshots plus the rest of the portable settings and JSON envelope.
-export const ACCOUNT_PROFILE_BYTES = 112000;
+export const ACCOUNT_PROFILE_BYTES = 544000;
 export const jsonBytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const full = () =>

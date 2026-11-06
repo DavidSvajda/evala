@@ -75,7 +75,7 @@ test('private SQL preferences validate study data, reject oversized inputs and i
   );
   assert.equal(cleanStudyKit({ tasks: [{ id: 'missing-fen' }] }).tasks.length, 0);
   assert.throws(
-    () => preferences({ studyKit: { junk: 'x'.repeat(46000) } }),
+    () => preferences({ studyKit: { junk: 'x'.repeat(256001) } }),
     (e) => e.status === 413,
   );
 });
