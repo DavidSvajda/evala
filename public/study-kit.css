@@ -227,7 +227,7 @@ body[data-arrow-style='rounded'] .solid-board-arrow {
   position: relative;
   aspect-ratio: 1;
   width: 100%;
-  max-width: min(100%, var(--board-fit, 640px), clamp(220px, calc(100dvh - 240px), 640px));
+  max-width: min(100%, var(--board-fit, 640px), clamp(220px, calc(100svh - 240px), 640px));
   overflow: hidden;
   touch-action: none;
 }

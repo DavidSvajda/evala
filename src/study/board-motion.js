@@ -40,8 +40,17 @@ export function createBoardMotion(grid) {
         rank = Number(square[1]) - 1;
       return { x: (flipped ? 7 - file : file) * size, y: (flipped ? rank : 7 - rank) * size };
     };
-    if (changed || orientation !== flipped || reduced.matches || motion === 'none') {
-      clear();
+    if (changed || orientation !== flipped || reduced.matches || motion === 'none' || skip) {
+      if (orientation !== flipped || reduced.matches || motion === 'none' || skip) clear();
+      else {
+        for (const [square, value] of active) {
+          if (current.get(square) === value.piece) continue;
+          value.animation.cancel();
+          value.image.remove();
+          active.delete(square);
+          grid.querySelector(`[data-square="${square}"]`)?.classList.remove('motion-destination');
+        }
+      }
       if (
         !skip &&
         motion !== 'none' &&
@@ -92,9 +101,11 @@ export function createBoardMotion(grid) {
               easing: 'cubic-bezier(0.2, 0.75, 0.2, 1)',
             },
           );
-          active.set(to, { image, animation });
+          const entry = { image, animation, piece };
+          active.set(to, entry);
           animation.onfinish = () => {
             image.remove();
+            if (active.get(to) !== entry) return;
             active.delete(to);
             grid.querySelector(`[data-square="${to}"]`)?.classList.remove('motion-destination');
           };
@@ -102,7 +113,7 @@ export function createBoardMotion(grid) {
       }
     } else {
       // Selection and engine feedback repaint without restarting an in-flight move.
-      for (const { image } of active.values()) grid.append(image);
+      for (const { image } of active.values()) if (image.parentElement !== grid) grid.append(image);
     }
     for (const square of active.keys())
       grid.querySelector(`[data-square="${square}"]`)?.classList.add('motion-destination');

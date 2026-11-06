@@ -153,16 +153,17 @@ export class StudyBoard {
     fen,
     { lastMove = null, arrow = null, threatArrow = null, mark = null, flipped = this.flipped } = {},
   ) {
-    const changed = this.chess?.fen() !== fen;
+    const changed = this.currentFen !== fen;
     if (changed || this.flipped !== flipped) this.cancelGesture?.();
     if (changed) this.drawings.clear();
-    this.chess = new Chess(fen);
+    if (this.chess?.fen() !== fen) this.chess = new Chess(fen);
+    this.currentFen = fen;
     this.flipped = flipped;
     this.lastMove = lastMove;
     this.arrow = arrow;
     this.threatArrow = threatArrow;
     this.mark = mark;
-    this.selected = this.dragSquare || null;
+    if (changed) this.selected = this.dragSquare || null;
     this.paint();
   }
   paint() {
@@ -178,17 +179,30 @@ export class StudyBoard {
         : 'Figurky přesouvej kliknutím nebo tažením. Pravým tlačítkem táhni šipky, pravým kliknutím označ pole. Opakováním značku odebereš, levým kliknutím vše smažeš.',
     );
     const legal = this.selected ? this.chess.moves({ square: this.selected, verbose: true }) : [];
-    const fragment = document.createDocumentFragment();
+    this.motion.beforePaint();
+    this.squares ??= new Map();
     for (let y = 0; y < 8; y++)
       for (let x = 0; x < 8; x++) {
         const file = this.flipped ? 7 - x : x,
           rank = this.flipped ? y : 7 - y,
           square = 'abcdefgh'[file] + (rank + 1),
           piece = this.chess.get(square);
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.square = square;
-        if (piece) button.dataset.piece = piece.color + piece.type;
+        let button = this.squares.get(square);
+        if (!button) {
+          button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.square = square;
+          this.squares.set(square, button);
+          this.grid.append(button);
+        }
+        button.style.order = y * 8 + x;
+        const pieceKey = piece ? piece.color + piece.type : null;
+        const pieceChanged = (button.dataset.piece || null) !== pieceKey;
+        if (pieceChanged) {
+          button.querySelectorAll('img,.piece-letter').forEach((node) => node.remove());
+          if (pieceKey) button.dataset.piece = pieceKey;
+          else delete button.dataset.piece;
+        }
         button.className = 'square ' + ((file + rank) % 2 ? 'light' : 'dark');
         if (this.dragSquare === square) button.classList.add('drag-source');
         if (this.lastMove && (this.lastMove.from === square || this.lastMove.to === square))
@@ -203,51 +217,54 @@ export class StudyBoard {
         if (piece) {
           if (this.interactive && piece.color === this.chess.turn())
             button.classList.add('movable');
-          const image = createPieceImage(piece);
-          button.append(image);
-          const letter = document.createElement('span');
-          letter.className = 'piece-letter ' + (piece.color === 'b' ? 'black' : 'white');
-          letter.textContent = piece.type.toUpperCase();
-          letter.setAttribute('aria-hidden', 'true');
-          button.append(letter);
+          if (pieceChanged) {
+            const image = createPieceImage(piece);
+            button.append(image);
+            const letter = document.createElement('span');
+            letter.className = 'piece-letter ' + (piece.color === 'b' ? 'black' : 'white');
+            letter.textContent = piece.type.toUpperCase();
+            letter.setAttribute('aria-hidden', 'true');
+            button.append(letter);
+          }
         }
+        let badge = button.querySelector('.board-mark');
         if (this.mark && this.lastMove?.to === square) {
-          const badge = document.createElement('span');
+          if (!badge) {
+            badge = document.createElement('span');
+            button.append(badge);
+          }
+          if (!badge.classList.contains(this.mark.kind)) badge.innerHTML = moveIcon(this.mark.kind);
           badge.className = 'board-mark ' + this.mark.kind;
-          badge.innerHTML = moveIcon(this.mark.kind);
           badge.title = this.mark.label;
           badge.setAttribute('aria-label', this.mark.label);
-          button.append(badge);
           button.classList.add('marked-square');
           button.setAttribute(
             'aria-label',
             button.getAttribute('aria-label') + ' · ' + this.mark.label,
           );
-        }
+        } else badge?.remove();
+        let fileLabel = button.querySelector('.file-label');
         if (y === 7) {
-          const label = document.createElement('span');
-          label.className = 'file-label';
-          label.textContent = square[0];
-          button.append(label);
-        }
+          if (!fileLabel) {
+            fileLabel = document.createElement('span');
+            fileLabel.className = 'file-label';
+            button.append(fileLabel);
+          }
+          fileLabel.textContent = square[0];
+        } else fileLabel?.remove();
+        let rankLabel = button.querySelector('.rank-label');
         if (x === 7) {
-          const label = document.createElement('span');
-          label.className = 'rank-label';
-          label.textContent = square[1];
-          button.append(label);
-        }
-        fragment.append(button);
+          if (!rankLabel) {
+            rankLabel = document.createElement('span');
+            rankLabel.className = 'rank-label';
+            button.append(rankLabel);
+          }
+          rankLabel.textContent = square[1];
+        } else rankLabel?.remove();
       }
-    const focused = this.grid.contains(document.activeElement)
-      ? document.activeElement.dataset.square
-      : null;
-    this.motion.beforePaint();
-    this.grid.replaceChildren(fragment);
     this.motion.paint(this.flipped, this.skipMotion);
     this.skipMotion = false;
     this.paintArrow();
-    if (focused)
-      this.grid.querySelector(`[data-square="${focused}"]`)?.focus({ preventScroll: true });
   }
   coords(square) {
     let x = 'abcdefgh'.indexOf(square[0]),
