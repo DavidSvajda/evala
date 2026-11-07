@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Přehled provozu · Evala</title>
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/admin.css" />
+    <script src="/admin.js" defer></script>
+  </head>
+  <body>
+    <nav class="admin-nav" aria-label="Správa Evaly">
+      <a href="/study.html#/home" class="admin-brand">evala.</a>
+      <a href="/study.html#/account">Můj účet</a>
+    </nav>
+    <main class="admin-page">
+      <header class="admin-heading">
+        <div><h1>Přehled provozu</h1><p>Registrace, používání a návštěvnost Evaly.</p></div>
+        <button id="reload-admin" type="button">Obnovit</button>
+      </header>
+      <p id="admin-status" role="status">Načítání…</p>
+      <section id="admin-data" hidden aria-label="Provozní údaje">
+        <dl class="admin-metrics">
+          <div><dt>Účty celkem</dt><dd id="count-accounts">—</dd></div>
+          <div><dt>Registrace za 7 dní</dt><dd id="count-new">—</dd></div>
+          <div><dt>Aktivní za 7 dní</dt><dd id="count-active">—</dd></div>
+          <div><dt>Uložené rozbory</dt><dd id="count-reviews">—</dd></div>
+        </dl>
+        <section class="admin-section" aria-labelledby="admin-accounts-heading">
+          <h2 id="admin-accounts-heading">Účty</h2>
+          <p
+            >Aktivita vychází z posledního uložení partie nebo výsledku úlohy. Přihlášení uvádíme
+            zvlášť.</p
+          >
+          <div class="admin-table" tabindex="0" role="region" aria-label="Seznam účtů">
+            <table>
+              <thead
+                ><tr
+                  ><th scope="col">Účet</th><th scope="col">Registrace</th
+                  ><th scope="col">Přihlášení</th><th scope="col">Poslední aktivita</th
+                  ><th scope="col">Rozbory</th><th scope="col">Úlohy</th></tr
+                ></thead
+              >
+              <tbody id="admin-users"></tbody>
+            </table>
+          </div>
+          <div class="admin-pagination">
+            <span id="admin-page-range" role="status"></span>
+            <div
+              ><button id="admin-previous" type="button">Předchozí</button
+              ><button id="admin-next" type="button">Další</button></div
+            >
+          </div>
+        </section>
+        <section class="admin-section" aria-labelledby="admin-traffic-heading">
+          <h2 id="admin-traffic-heading">Načtení aplikace · 30 dní</h2>
+          <p id="admin-traffic-summary"></p>
+          <svg
+            id="admin-traffic-chart"
+            viewBox="0 0 600 100"
+            role="img"
+            aria-labelledby="admin-traffic-heading admin-traffic-summary"
+          ></svg>
+          <details>
+            <summary>Počty po dnech (UTC)</summary>
+            <div class="admin-table"
+              ><table
+                ><thead
+                  ><tr><th scope="col">Den (UTC)</th><th scope="col">Načtení</th></tr></thead
+                ><tbody id="admin-days"></tbody></table
+            ></div>
+          </details>
+        </section>
+      </section>
+      <footer class="admin-footer"><a href="/privacy.html">Soukromí a cookies</a></footer>
+    </main>
+  </body>
+</html>
