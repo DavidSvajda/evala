@@ -196,6 +196,7 @@ jobs:
         if: inputs.validation == 'preparation'
         run: |
           node --test tests/preparation.test.mjs tests/study-kit-sync.test.mjs tests/release-version.test.mjs
+          node tests/import-ui-smoke.mjs
           node tests/board-motion-smoke.mjs
           node tests/preparation-smoke.mjs
       - name: Verify owner-only administration

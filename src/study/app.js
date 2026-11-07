@@ -477,6 +477,7 @@ function visibleLibrary() {
         (filter === 'pending' && !game.analysis?.complete)),
   );
   const sort = $('#library-sort').value;
+  if (sort === 'imported') return result.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const stamp = (g) =>
     [g.headers.UTCDate, g.headers.Date]
       .map((v) =>
@@ -675,7 +676,7 @@ function selectGame(game) {
   $('.workspace').classList.remove('library-open');
   if (activeView === 'review') focusBoard();
 }
-async function addPgn(text, { select = true } = {}) {
+async function addPgn(text, { select = true, openSingle = false } = {}) {
   const { games, errors } = parsePgnCollection(text);
   let added = 0;
   for (const game of [...games].reverse()) {
@@ -695,25 +696,28 @@ async function addPgn(text, { select = true } = {}) {
   $('#import-status').textContent =
     `${added} nových partií${errors.length ? ' · ' + errors.join(' ') : games.length > added ? ' · duplicity přeskočeny' : ''}`;
   const first = library.find((g) => g.id === games[0].id);
-  if (first && select) selectGame(first);
-  else renderLibrary();
+  if (first && select) {
+    if (openSingle && games.length === 1 && !errors.length) {
+      setView('review');
+      setAnalysisTab(first.moves.length ? 'summary' : 'lines');
+    }
+    selectGame(first);
+  } else renderLibrary();
   $('#import-panel').open = false;
   return games;
 }
 $('#import-fen').addEventListener('click', async () => {
   try {
-    await addPgn(parseFenGame($('#fen-input').value).pgn);
+    await addPgn(parseFenGame($('#fen-input').value).pgn, { openSingle: true });
     $('#fen-input').value = '';
-    setView('review');
     $('#toggle-settings').setAttribute('aria-expanded', 'false');
-    $('#analysis-lines-tab')?.click();
   } catch (e) {
     $('#import-status').textContent = translate(e.message);
   }
 });
 $('#import-pgn').addEventListener('click', async () => {
   try {
-    await addPgn($('#pgn-input').value);
+    await addPgn($('#pgn-input').value, { openSingle: true });
     $('#pgn-input').value = '';
   } catch (e) {
     $('#import-status').textContent = e.message;
@@ -724,13 +728,15 @@ $('#pgn-file').addEventListener('change', async (event) => {
   if (!file) return;
   try {
     if (file.size > 2_000_000) throw new Error('Soubor je větší než 2 MB.');
-    await addPgn(await file.text());
+    await addPgn(await file.text(), { openSingle: true });
   } catch (e) {
     $('#import-status').textContent = e.message;
   }
   event.target.value = '';
 });
-$('#demo-game').addEventListener('click', () => addPgn(DEMO_PGN).catch((e) => error(e.message)));
+$('#demo-game').addEventListener('click', () =>
+  addPgn(DEMO_PGN, { openSingle: true }).catch((e) => error(e.message)),
+);
 const suggestedUser = new URLSearchParams(location.search).get('username');
 $('#username').value =
   options.lastUsername || (/^[A-Za-z0-9_-]{2,40}$/.test(suggestedUser || '') ? suggestedUser : '');
