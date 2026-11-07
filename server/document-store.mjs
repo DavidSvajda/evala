@@ -3,6 +3,7 @@ import { mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/pro
 import { resolve } from 'node:path';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { createPostgresStore } from './postgres-store.mjs';
+import { accountUsage, summarizeAccounts } from './admin-metrics.mjs';
 
 const filename = (key) => createHash('sha256').update(key).digest('hex') + '.json';
 export function createDocumentStore({
@@ -130,7 +131,7 @@ export function createDocumentStore({
     return promise;
   }
   return {
-    async accountSummaries() {
+    async accountSummaries({ page = 1, now = Date.now() } = {}) {
       await initialize();
       const users = [];
       let scanned = 0,
@@ -160,15 +161,16 @@ export function createDocumentStore({
           value?.training &&
           value?.games
         ) {
-          users.push({
-            name: value.name,
-            email: value.email,
-            createdAt: value.createdAt,
-            lastLoginAt: value.lastLoginAt || null,
-          });
+          users.push(accountUsage(value));
         }
       }
-      return { users: users.sort((a, b) => b.createdAt - a.createdAt), truncated };
+      return {
+        ...summarizeAccounts(
+          users.sort((a, b) => b.createdAt - a.createdAt),
+          { page, now },
+        ),
+        truncated,
+      };
     },
     get,
     put,

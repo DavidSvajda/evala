@@ -100,10 +100,24 @@ test(
       assert.equal((await store.get(accountKey)).value.name, account.name);
       await store.transact(accountKey, async (a) => {
         await store.put(gameKey, { pgn: 'private test', analysis: { complete: true } });
-        a.games.test = { id: 'test', version: 'version1', white: 'A', black: 'B', result: '1-0' };
+        a.games.test = {
+          id: 'test',
+          version: 'version1',
+          white: 'A',
+          black: 'B',
+          result: '1-0',
+          updatedAt: account.createdAt,
+          analyzed: true,
+        };
         return a;
       });
       assert.equal((await store.get(accountKey)).value.games.test.white, 'A');
+      const admin = await store.accountSummaries();
+      const record = admin.users.find((user) => user.email === account.email);
+      assert.equal(record.lastUsedAt, account.createdAt);
+      assert.equal(record.reviews, 1);
+      assert.equal(Object.hasOwn(record, 'id'), false);
+      assert.ok(admin.totals.activeThisWeek >= 1);
       await Promise.all(
         Array.from({ length: 8 }, () =>
           store.transact(accountKey, (a) => {

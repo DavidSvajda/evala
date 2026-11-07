@@ -11,6 +11,7 @@ import {
   clientAddress,
 } from './security.mjs';
 import { finishAccountDeletion } from './account-deletion.mjs';
+import { ADMIN_GRANT_SECONDS, isAdminAccount } from './admin.mjs';
 const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const random = () => randomBytes(32).toString('hex');
@@ -26,6 +27,7 @@ export const publicUser = (a) => ({
 });
 export function createAccountIdentity({
   store,
+  adminAccountId = '',
   googleClientId = process.env.GOOGLE_CLIENT_ID || '',
   verifyGoogle = async (token) =>
     (
@@ -121,6 +123,7 @@ export function createAccountIdentity({
       if (/^[a-f0-9]{64}$/.test(old || '')) await store.remove('session:' + hash(old));
       const raw = random(),
         csrf = random();
+      const adminGrant = isAdminAccount(id, adminAccountId) ? random() : null;
       await store.put('session:' + hash(raw), {
         userId: id,
         epoch: account.authEpoch,
@@ -128,8 +131,11 @@ export function createAccountIdentity({
         expires: Date.now() + 30 * 86400000,
         createdAt: Date.now(),
         cookieVersion: 1,
+        ...(adminGrant ? { adminGrantHash: hash(adminGrant) } : {}),
       });
       setCookie(req, res, 'evala_account', raw, 30 * 86400);
+      if (adminGrant) setCookie(req, res, 'evala_admin', adminGrant, ADMIN_GRANT_SECONDS, 'Strict');
+      else if (cookie(req, 'evala_admin')) setCookie(req, res, 'evala_admin', '', 0, 'Strict');
       json(res, 200, { user: publicUser(account), csrf, training: account.training });
       return true;
     }
@@ -164,12 +170,14 @@ export function createAccountIdentity({
       });
       await store.remove('session:' + hash(cookie(req, 'evala_account')));
       setCookie(req, res, 'evala_account', '', 0);
+      if (cookie(req, 'evala_admin')) setCookie(req, res, 'evala_admin', '', 0, 'Strict');
       json(res, 200, { ok: true });
       return true;
     }
     if (url.pathname === '/api/account/logout' && req.method === 'POST') {
       await store.remove('session:' + hash(cookie(req, 'evala_account')));
       setCookie(req, res, 'evala_account', '', 0);
+      if (cookie(req, 'evala_admin')) setCookie(req, res, 'evala_admin', '', 0, 'Strict');
       json(res, 200, { ok: true });
       return true;
     }

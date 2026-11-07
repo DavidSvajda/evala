@@ -1,51 +1,135 @@
-const status = document.querySelector('#admin-status');
-const button = document.querySelector('#reload-admin');
-const date = (value) => (value ? new Date(value).toLocaleString('cs-CZ') : '—');
-function rows(selector, values) {
-  const fragment = document.createDocumentFragment();
-  for (const cells of values) {
-    const row = document.createElement('tr');
-    for (const value of cells) {
-      const cell = document.createElement('td');
-      cell.textContent = String(value ?? '—');
-      row.append(cell);
-    }
-    fragment.append(row);
-  }
-  document.querySelector(selector).replaceChildren(fragment);
+const $ = (selector) => document.querySelector(selector);
+const status = $('#admin-status');
+const reload = $('#reload-admin');
+const previous = $('#admin-previous');
+const next = $('#admin-next');
+const users = $('#admin-users');
+const data = $('#admin-data');
+const number = new Intl.NumberFormat('cs-CZ');
+const date = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' });
+const timestamp = (ms) => (Number.isFinite(ms) && ms > 0 ? date.format(ms) : '—');
+let currentPage = 1;
+let activeRequest;
+let expires;
+
+function cell(row, value) {
+  const td = row.insertCell();
+  td.textContent = String(value ?? '—');
+  return td;
 }
-async function load() {
-  button.disabled = true;
-  document.querySelector('#admin-data').hidden = true;
+
+function renderUsers(accounts) {
+  users.replaceChildren();
+  for (const user of accounts) {
+    const row = users.insertRow();
+    const identity = cell(row, user.name);
+    const email = document.createElement('span');
+    email.className = 'admin-email';
+    email.textContent = user.email;
+    identity.append(email);
+    for (const value of [user.createdAt, user.lastLoginAt, user.lastUsedAt])
+      cell(row, timestamp(value));
+    cell(row, number.format(user.reviews));
+    cell(row, number.format(user.attempts));
+  }
+  if (!accounts.length) cell(users.insertRow(), 'Na této stránce nejsou žádné účty.').colSpan = 6;
+}
+
+function renderTraffic(days) {
+  const chart = $('#admin-traffic-chart');
+  const table = $('#admin-days');
+  chart.replaceChildren();
+  table.replaceChildren();
+  const max = Math.max(1, ...days.map((d) => d.loads));
+  const sum = days.reduce((total, day) => total + day.loads, 0);
+  $('#admin-traffic-summary').textContent =
+    `${number.format(sum)} načtení včetně obnovení stránky a robotů. Nejde o unikátní návštěvníky.`;
+  for (const [i, day] of days.entries()) {
+    const row = table.insertRow();
+    cell(row, day.date);
+    cell(row, number.format(day.loads));
+    const bar = document.createElementNS(chart.namespaceURI, 'rect');
+    const height = day.loads ? Math.max(2, (98 * day.loads) / max) : 1;
+    for (const [name, value] of Object.entries({
+      x: i * 20 + 2,
+      y: 100 - height,
+      width: 15,
+      height,
+      rx: 2,
+    }))
+      bar.setAttribute(name, String(value));
+    const tooltip = document.createElementNS(chart.namespaceURI, 'title');
+    tooltip.textContent = `${day.date} · ${number.format(day.loads)}`;
+    bar.append(tooltip);
+    chart.append(bar);
+  }
+}
+
+function clearPrivateData() {
+  clearTimeout(expires);
+  data.hidden = true;
+  users.replaceChildren();
+  activeRequest?.abort();
+  activeRequest = undefined;
+}
+
+async function load(page = 1) {
+  clearPrivateData();
+  const request = new AbortController();
+  activeRequest = request;
+  const timeout = setTimeout(() => request.abort(), 15_000);
+  reload.disabled = true;
   status.textContent = 'Načítání…';
   try {
-    const response = await fetch('/api/admin/overview', {
+    const response = await fetch(`/api/admin/overview?page=${page}`, {
       credentials: 'same-origin',
       cache: 'no-store',
+      signal: request.signal,
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Přehled není dostupný.');
-    rows(
-      '#admin-users',
-      data.users.map((u) => [u.name, u.email, date(u.createdAt), date(u.lastLoginAt)]),
-    );
-    rows(
-      '#admin-days',
-      data.days.map((d) => [d.date, d.loads]),
-    );
-    document.querySelector('#user-count').textContent = `(${data.users.length})`;
-    document.querySelector('#admin-data').hidden = false;
-    status.textContent = data.truncated
-      ? 'Přehled je částečný. Byl dosažen limit čtení úložiště.'
-      : 'Aktualizováno ' + date(data.generatedAt);
+    const result = await response.json();
+    if (activeRequest !== request || document.hidden) return;
+    if (!response.ok) throw new Error(result.error || 'Přehled není dostupný.');
+    const { totals } = result;
+    $('#count-accounts').textContent = number.format(totals.accounts);
+    $('#count-new').textContent = number.format(totals.newThisWeek);
+    $('#count-active').textContent = number.format(totals.activeThisWeek);
+    $('#count-reviews').textContent = number.format(totals.reviews);
+    renderUsers(result.users);
+    if (result.days) renderTraffic(result.days);
+    currentPage = result.page;
+    previous.disabled = currentPage <= 1;
+    next.disabled = currentPage * result.pageSize >= totals.accounts;
+    const start = result.users.length ? (currentPage - 1) * result.pageSize + 1 : 0;
+    $('#admin-page-range').textContent = start
+      ? `${number.format(start)}–${number.format(start + result.users.length - 1)} z ${number.format(totals.accounts)}`
+      : '0 účtů na stránce';
+    data.hidden = false;
+    expires = setTimeout(() => {
+      clearPrivateData();
+      status.textContent = 'Ověření správce vypršelo. Přihlas se znovu přes Můj účet.';
+    }, result.validForMs);
+    status.textContent = result.truncated
+      ? 'Přehled obsahuje část účtů kvůli limitu úložiště.'
+      : `Načteno ${timestamp(result.generatedAt)}`;
   } catch (error) {
-    status.textContent = error.message;
+    if (activeRequest === request)
+      status.textContent =
+        error.name === 'AbortError' ? 'Načítání vypršelo. Zkus přehled obnovit.' : error.message;
   } finally {
-    button.disabled = false;
+    clearTimeout(timeout);
+    if (activeRequest === request) {
+      reload.disabled = false;
+      activeRequest = undefined;
+    }
   }
 }
-button.onclick = load;
+
+reload.onclick = () => void load();
+previous.onclick = () => void load(currentPage - 1);
+next.onclick = () => void load(currentPage + 1);
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) document.querySelector('#admin-data').hidden = true;
+  if (document.hidden) clearPrivateData();
+  else void load();
 });
+window.addEventListener('pagehide', clearPrivateData);
 window.addEventListener('pageshow', () => void load());
