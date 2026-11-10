@@ -33,12 +33,12 @@
   },
   "devDependencies": {
     "@fontsource-variable/manrope": "^5.2.8",
-    "esbuild": "^0.25.12",
-    "eslint": "10.13.0",
+    "esbuild": "^0.28.2",
+    "eslint": "10.14.0",
     "fake-indexeddb": "6.2.7",
     "fflate": "^0.8.2",
-    "globals": "17.13.0",
-    "playwright": "^1.56.1",
+    "globals": "17.14.0",
+    "playwright": "^1.65.0",
     "prettier": "3.9.10",
     "sharp": "^0.35.5"
   },
