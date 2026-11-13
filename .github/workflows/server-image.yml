@@ -146,6 +146,9 @@ jobs:
         run: |
           node scripts/package-bar.mjs
           EVALA_EXTENSION_DIR=dist-bar node tests/maia-local-smoke.mjs
+          EVALA_EXTENSION_DIR=dist-bar node tests/extension.mjs
+          node --test tests/import.test.mjs tests/imports.test.mjs tests/account-preferences.test.mjs
+          node tests/import-ui-smoke.mjs
       - name: Verify researched move classifications
         if: inputs.validation == 'classification'
         run: |

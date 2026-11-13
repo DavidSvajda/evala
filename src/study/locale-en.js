@@ -67,6 +67,19 @@ export const EN = {
   'Hledat nové partie při obnovení a návratu do aplikace':
     'Check for new games on reload and when returning to the app',
   'Nejdřív zadej šachovou přezdívku v importu.': 'Enter your chess username in Import first.',
+  'Propojené šachové profily': 'Linked chess profiles',
+  'Ulož oba veřejné profily. Naposledy vybraný profil určuje tvoji barvu ve statistikách a v osobním tréninku.':
+    'Save both public profiles. The last selected profile sets your side in statistics and personal training.',
+  'Přezdívka nebo odkaz na profil': 'Username or profile URL',
+  'Ověřit a uložit veřejný profil': 'Check and save public profile',
+  'Odpojit profil': 'Unlink profile',
+  'Profil odpojen.': 'Profile unlinked.',
+  'Zadej přezdívku nebo odkaz na veřejný profil vybraného webu.':
+    'Enter a username or a public profile URL for the selected site.',
+  'Profil nemá dostupné dokončené standardní partie.':
+    'This profile has no completed standard games available.',
+  'Duplicity přeskočeny.': 'Duplicates skipped.',
+  'Část partií se nevešla do limitu 200.': 'Some games did not fit the 200-game library limit.',
   'Hledám nové dokončené partie…': 'Checking for new completed games…',
   'Nové partie:': 'New games:',
   'Žádné nové dokončené partie. Knihovna je aktuální.':

@@ -1,6 +1,7 @@
 import { checkedResult } from '../core/engine-result.js';
 export { checkedResult } from '../core/engine-result.js';
 import { applyReviewProgress } from './review-stream.js';
+import { legacyGameId, gameSourceId } from './game.js';
 
 export function serverAddress(value) {
   let url;
@@ -145,7 +146,7 @@ export async function remoteReview(
     if (buffer.trim()) consume(buffer);
     if (
       !result?.analysis?.complete ||
-      result.id !== game.id ||
+      ![game.id, legacyGameId(game), gameSourceId(game.headers)].includes(result.id) ||
       result.moves.length !== game.moves.length
     )
       throw new Error('Server nevrátil dokončený rozbor této partie.');

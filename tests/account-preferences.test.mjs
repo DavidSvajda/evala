@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { preferences } from '../server/account-preferences.mjs';
+import { linkedUsername, profilePatch } from '../src/core/chess-profiles.js';
+
+test('linked profiles use separate fields and accept legacy preferences', () => {
+  const prior = { chessUsername: 'Legacy', chessPlatform: 'lichess' };
+  assert.equal(linkedUsername(prior, 'lichess'), 'Legacy');
+  assert.equal(linkedUsername(prior, 'chesscom'), '');
+  const both = preferences({
+    ...prior,
+    lichessUsername: 'Legacy',
+    ...profilePatch('chesscom', 'Friend'),
+  });
+  assert.equal(linkedUsername(both, 'lichess'), 'Legacy');
+  assert.equal(linkedUsername(both, 'chesscom'), 'Friend');
+  assert.equal(linkedUsername({ ...both, lichessUsername: '' }, 'lichess'), '');
+});
 import {
   mergeAccountPreferences,
   remainingPreferencePatch,

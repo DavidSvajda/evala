@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { parseServerPgn } from './pgn-parser.mjs';
+import { legacyGameId } from '../src/study/game.js';
 import { classifyMove, normalizeReview, SACRIFICE_VERSION } from '../src/study/review.js';
 import { cleanLearning } from '../src/training/practice.js';
 import { checkedResult } from '../src/core/engine-result.js';
@@ -68,7 +69,9 @@ export async function handleLibrary(req, res, url, { store, s, account, mutateAc
     if (req.method === 'PUT') {
       const input = await body(req);
       const game = await parseServerPgn(input.pgn);
-      if (game.id !== id) throw fail('Partie neodpovídá svému identifikátoru.');
+      if (game.id !== id && legacyGameId(game) !== id)
+        throw fail('Partie neodpovídá svému identifikátoru.');
+      game.id = id;
       game.createdAt = Math.max(0, Math.min(Date.now(), Number(input.createdAt) || Date.now()));
       game.notes = typeof input.notes === 'string' ? input.notes.slice(0, 4000) : '';
       game.learning = cleanLearning(input.learning || game.learning, game.moves);

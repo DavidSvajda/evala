@@ -63,13 +63,15 @@ async function refresh() {
   document.querySelector('.summary-score').textContent = scoreText(status?.score);
   document.querySelector('.summary-label').textContent = status?.score
     ? evaluationLabel(status.score)
-    : hasBoard
-      ? status.state === 'waiting'
-        ? 'Čekám na úplnou pozici'
-        : settings.enabled
-          ? 'Připravuji rozbor…'
-          : 'Výpočet pozastaven'
-      : 'Otevři Chess.com nebo Lichess';
+    : status?.state === 'unavailable'
+      ? 'Otevři analytickou šachovnici nebo rozbor dohrané partie'
+      : hasBoard
+        ? status.state === 'waiting'
+          ? 'Čekám na úplnou pozici'
+          : settings.enabled
+            ? 'Připravuji rozbor…'
+            : 'Výpočet pozastaven'
+        : 'Otevři analýzu na Chess.com nebo Lichess';
   document.querySelector('.summary-detail').textContent = status?.score
     ? `Hloubka ${status.score.depth} · skóre z pohledu bílého`
     : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · bar vedle šachovnice`;

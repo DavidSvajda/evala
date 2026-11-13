@@ -44,7 +44,7 @@ Serverový režim odesílá pozice na zadaný server a vyžaduje jeho případn�
 5. Obnov už otevřené stránky Chess.com / Lichess. Bar se objeví u viditelné šachovnice; výchozí umístění je vlevo.
 6. Připni Evala přes ikonu rozšíření. Kliknutím otevřeš nastavení a **Vyzkoušet na šachovnici**.
 
-**Pro živou partii:** po instalaci otevři nebo obnov kartu s právě hranou hrou na Chess.com (`/game/live/…` nebo `/play/…`). Bar se připojí přímo k desce a po každém tahu obou stran sám přepočítá hodnocení. Není třeba otevírat demo, přepínat do analýzy ani ručně vkládat FEN. Náhled v Codexu je jen testovací deska; rozšíření musí být načtené do prohlížeče, ve kterém hraješ.
+**Pro rozbor partie:** otevři analytickou šachovnici na Chess.com nebo Lichess. Bar po změně pozice přepočítá hodnocení i během animace figur. Pro rozbor vlastní dohrané partie můžeš také importovat veřejný archiv do Evaly. V nastavení Evaly lze uložit veřejné profily obou webů a obnovovat jejich knihovnu společně.
 
 Stejný postup funguje v Edge přes `edge://extensions`. Ověřovaná cílová platforma je desktopový Chrome/Chromium, minimálně verze 116. Firefox a mobilní prohlížeče nejsou součástí této verze.
 

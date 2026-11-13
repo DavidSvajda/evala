@@ -1,6 +1,7 @@
 import { findBoard, boardFlipped, PositionTracker } from './adapters/board.js';
 import { EvalBar } from './ui/bar.js';
 import { readSettings, writeSettings } from './core/settings.js';
+import { analysisPage } from './core/analysis-page.js';
 
 export async function mount({ demo = false } = {}) {
   const assetUrl = (path) =>
@@ -10,7 +11,9 @@ export async function mount({ demo = false } = {}) {
   let settings = await readSettings();
   let tracker = new PositionTracker(),
     nativeFen = null,
-    nativePath = '',
+    nativePlacement = null,
+    nativeAllowed = null,
+    boardRevision = 0,
     lastFen = null,
     currentBoard = null,
     state = 'waiting';
@@ -97,13 +100,17 @@ export async function mount({ demo = false } = {}) {
       lastPath = location.pathname;
       tracker = new PositionTracker();
       nativeFen = null;
+      nativePlacement = null;
+      nativeAllowed = null;
+      boardRevision++;
       lastFen = null;
       searchKey = '';
       requestId++;
       send({ type: 'pause' });
       view.renderScore(null);
     }
-    const board = findBoard();
+    const supportedPage = demo || analysisPage(location.href);
+    const board = supportedPage ? findBoard() : null;
     if (!board) {
       if (currentBoard) {
         send({ type: 'pause' });
@@ -111,11 +118,15 @@ export async function mount({ demo = false } = {}) {
         searchKey = '';
         lastFen = null;
         tracker = new PositionTracker();
+        nativeFen = null;
+        nativePlacement = null;
+        nativeAllowed = null;
+        boardRevision++;
         view.renderScore(null);
       }
       currentBoard = null;
       view.hide();
-      setState('waiting');
+      setState(supportedPage ? 'waiting' : 'unavailable');
       return;
     }
     if (currentBoard && currentBoard !== board) {
@@ -123,6 +134,12 @@ export async function mount({ demo = false } = {}) {
       lastFen = null;
       searchKey = '';
       nativeFen = null;
+      nativePlacement = null;
+      nativeAllowed = null;
+      boardRevision++;
+      requestId++;
+      send({ type: 'pause' });
+      view.renderScore(null);
     }
     currentBoard = board;
     view.place(board, boardFlipped(board));
@@ -132,10 +149,11 @@ export async function mount({ demo = false } = {}) {
     }
     if (!demo)
       window.postMessage(
-        { channel: 'evala-board', type: 'read', token: boardToken },
+        { channel: 'evala-board', type: 'read', token: boardToken, boardRevision },
         location.origin,
       );
-    const position = tracker.resolve(board, nativePath === location.pathname ? nativeFen : null);
+    const allowed = demo || nativeAllowed === true;
+    const position = allowed ? tracker.resolve(board, nativeFen, nativePlacement) : null;
     if (!position) {
       if (lastFen !== null) {
         send({ type: 'pause' });
@@ -145,8 +163,10 @@ export async function mount({ demo = false } = {}) {
         view.renderScore(null);
       }
       setState(
-        'waiting',
-        'Čekám na úplnou pozici. Otevři analýzu nebo načti stránku od začátku partie.',
+        nativeAllowed === false ? 'unavailable' : 'waiting',
+        nativeAllowed === false
+          ? 'Evala počítá na analytické šachovnici a v rozboru dohrané partie.'
+          : 'Čekám na úplný FEN z analytické šachovnice.',
       );
       return;
     }
@@ -185,10 +205,14 @@ export async function mount({ demo = false } = {}) {
       event.origin === location.origin &&
       data?.channel === 'evala-board' &&
       data.type === 'position' &&
-      data.token === boardToken
+      data.token === boardToken &&
+      data.path === location.pathname &&
+      data.boardRevision === boardRevision
     ) {
       nativeFen = data.fen;
-      nativePath = data.path;
+      nativePlacement =
+        typeof data.placement === 'string' && data.placement.length <= 71 ? data.placement : null;
+      nativeAllowed = data.allowed === true;
       return;
     }
     if (

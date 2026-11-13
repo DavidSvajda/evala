@@ -1,6 +1,5 @@
 import { escapeHtml as esc } from '../ui/dom.js';
-import { importUsername } from './import.js';
-import { parsePgnCollection } from './game.js';
+import { importUsername, importUsernameFor } from './import.js';
 import { remoteReview, connectPublicServer } from './remote.js';
 import { reviewGame, currentReview, specialReviewBudget } from './review.js';
 import { REVIEW_PROFILES } from './review-profiles.js';
@@ -74,19 +73,19 @@ export class PlayerReport {
     $('#load-report').disabled = true;
     $('#report-status').textContent = 'Načítám dokončené partie…';
     try {
-      const username = $('#report-username').value.trim(),
-        platform = $('#report-platform').value,
+      const platform = $('#report-platform').value,
+        username = importUsernameFor($('#report-username').value, platform),
         limit = Number($('#report-count').value);
       const pgn = await importUsername(username, platform, {
         limit,
         signal: controller.signal,
         onProgress: (text) => ($('#report-status').textContent = text),
       });
-      const { games } = parsePgnCollection(pgn);
-      await this.addPgn(pgn);
-      this.games = games
-        .map((g) => this.library().find((saved) => saved.id === g.id))
-        .filter(Boolean);
+      this.games = [
+        ...new Map(
+          (await this.addPgn(pgn, { signal: controller.signal })).map((game) => [game.id, game]),
+        ).values(),
+      ];
       this.checked = new Set(this.games.map((g) => g.id));
       this.onPlayer(username, platform);
       this.render();

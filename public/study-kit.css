@@ -259,3 +259,7 @@ body[data-arrow-style='rounded'] .solid-board-arrow {
     scroll-margin-top: 160px;
   }
 }
+.linked-profile-row {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--line);
+}

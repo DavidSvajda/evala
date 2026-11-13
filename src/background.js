@@ -1,3 +1,5 @@
+import { analysisPage } from './core/analysis-page.js';
+
 let creating;
 const offscreenUrl = chrome.runtime.getURL('offscreen.html');
 async function ensureOffscreen() {
@@ -23,10 +25,7 @@ async function ensureOffscreen() {
 }
 const supported = (url) => {
   try {
-    const u = new URL(url);
-    return (
-      u.protocol === 'https:' && ['www.chess.com', 'chess.com', 'lichess.org'].includes(u.hostname)
-    );
+    return Boolean(analysisPage(url));
   } catch {
     return false;
   }
