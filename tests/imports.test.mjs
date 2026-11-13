@@ -1,8 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePgn, parsePgnCollection, parseFenGame } from '../src/study/game.js';
+import { parsePgn, parsePgnCollection, parseFenGame, legacyGameId } from '../src/study/game.js';
 import { readFileSync } from 'node:fs';
 const IMMORTAL = readFileSync(new URL('./fixtures/immortal.pgn', import.meta.url), 'utf8');
+test('keeps distinct provider games with identical moves and accepts initial PGN comments', () => {
+  const first = '[Site "https://lichess.org/game/Abcd1234"]\n\n{Initial note} 1. e4 e5 1-0';
+  const second = '[Site "https://lichess.org/Zyxw5678/black"]\n\n1. e4 e5 0-1';
+  const { games, errors } = parsePgnCollection(`${first}\n\n${second}`);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(
+    games.map((game) => game.id),
+    ['lichess-Abcd1234', 'lichess-Zyxw5678'],
+  );
+  assert.equal(legacyGameId(games[0]), legacyGameId(games[1]));
+  assert.equal(parsePgn(games[0].pgn).id, games[0].id);
+});
 test('imports the supplied Anderssen title and compact movetext without discarding moves', () => {
   const game = parsePgn(IMMORTAL);
   assert.equal(game.headers.White, 'Adolf Anderssen');

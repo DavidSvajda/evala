@@ -76,8 +76,9 @@ export function preferences(input = {}) {
     )
       p.lesson.focusKey = input.lesson.focusKey;
   }
-  if (typeof input.chessUsername === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(input.chessUsername))
-    p.chessUsername = input.chessUsername;
+  for (const key of ['chessUsername', 'chesscomUsername', 'lichessUsername'])
+    if (typeof input[key] === 'string' && /^(?:[A-Za-z0-9_-]{2,40})?$/.test(input[key]))
+      p[key] = input[key];
   if (['chesscom', 'lichess'].includes(input.chessPlatform)) p.chessPlatform = input.chessPlatform;
   return p;
 }

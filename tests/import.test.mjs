@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { importUsername } from '../src/study/import.js';
+import { importUsername, importUsernameFor } from '../src/study/import.js';
 
 test('username importer honors 10–100 games and asks Lichess for clock data', async () => {
   const original = globalThis.fetch;
@@ -10,8 +10,16 @@ test('username importer honors 10–100 games and asks Lichess for clock data', 
       urls.push(url);
       return new Response('[Event "Test"]\n\n1. e4 e5 *');
     };
-    await importUsername('Friend', 'lichess', { limit: 100 });
+    await importUsername('https://lichess.org/@/Friend', 'lichess', { limit: 100 });
     assert.match(urls[0], /max=100&moves=true&clocks=true/);
+    assert.match(urls[0], /\/Friend\?/);
+    const params = new URL(urls[0]).searchParams;
+    assert.equal(params.get('ongoing'), 'false');
+    assert.equal(params.get('finished'), 'true');
+    assert.match(params.get('perfType'), /correspondence/);
+    assert.throws(() => importUsernameFor('https://lichess.org.evil.test/@/Friend', 'lichess'));
+    globalThis.fetch = async () => new Response('  \n');
+    await assert.rejects(importUsername('@Friend', 'lichess'), /dokončené standardní partie/);
     globalThis.fetch = async (url) =>
       url.endsWith('/archives')
         ? Response.json({ archives: ['https://api.chess.com/pub/player/friend/games/2026/10'] })

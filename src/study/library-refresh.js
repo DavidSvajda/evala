@@ -1,5 +1,6 @@
 import { importUsername } from './import.js';
 import { translate as t } from './i18n.js';
+import { linkedUsername } from '../core/chess-profiles.js';
 export function createLibraryRefresh(context) {
   const button = document.querySelector('#refresh-games'),
     toggle = document.querySelector('#auto-refresh-games'),
@@ -13,18 +14,25 @@ export function createLibraryRefresh(context) {
   };
   function source() {
     const o = context.options();
-    return {
-      username: o.lastUsername || document.querySelector('#username').value,
-      platform: o.lastPlatform || document.querySelector('#platform').value || 'chesscom',
-    };
+    const profiles = context.profiles?.() || {};
+    const linked = ['lichess', 'chesscom']
+      .map((platform) => ({ platform, username: linkedUsername(profiles, platform) }))
+      .filter(({ username }) => username);
+    if (linked.length) return linked;
+    return [
+      {
+        username: o.lastUsername || document.querySelector('#username').value,
+        platform: o.lastPlatform || document.querySelector('#platform').value || 'chesscom',
+      },
+    ].filter(({ username }) => /^[A-Za-z0-9_-]{2,40}$/.test(username || ''));
   }
   async function refresh(manual = false) {
     if (controller || context.busy()) {
       if (manual) status.textContent = t('Nejprve pozastav rozbor.');
       return;
     }
-    const { username, platform } = source();
-    if (!/^[A-Za-z0-9_-]{2,40}$/.test(username || '')) {
+    const sources = source();
+    if (!sources.length) {
       if (manual) status.textContent = t('Nejdřív zadej šachovou přezdívku v importu.');
       return;
     }
@@ -38,34 +46,35 @@ export function createLibraryRefresh(context) {
     const activeOwner = context.owner();
     lastCheck = Date.now();
     controller = new AbortController();
-    let timedOut = false;
     const activeController = controller;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      activeController.abort();
-    }, 20000);
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
     status.textContent = t('Hledám nové dokončené partie…');
     const before = context.library().length;
+    const errors = [];
     try {
-      const pgn = await importUsername(username, platform, {
-        signal: controller.signal,
-        limit: 20,
-      });
-      if (activeOwner !== context.owner()) return;
-      await context.add(pgn);
-      const count = context.library().length - before;
-      status.textContent = count
-        ? t('Nové partie: ') + count
-        : t('Žádné nové dokončené partie. Knihovna je aktuální.');
-    } catch (error) {
-      if (activeOwner === context.owner()) {
-        if (timedOut) status.textContent = t('Načítání trvá příliš dlouho. Zkus to znovu.');
-        else if (error.name !== 'AbortError') status.textContent = t(error.message);
+      for (const { username, platform } of sources) {
+        try {
+          const pgn = await importUsername(username, platform, {
+            signal: activeController.signal,
+            limit: 20,
+          });
+          if (activeOwner !== context.owner() || activeController.signal.aborted) return;
+          await context.add(pgn, activeController.signal);
+        } catch (error) {
+          if (activeOwner !== context.owner() || activeController.signal.aborted) return;
+          const name = platform === 'lichess' ? 'Lichess' : 'Chess.com';
+          errors.push(
+            `${name} · ${t(error.name === 'TimeoutError' ? 'Načítání trvá příliš dlouho. Zkus to znovu.' : error.message)}`,
+          );
+        }
       }
+      if (activeOwner !== context.owner() || activeController.signal.aborted) return;
+      const count = context.library().length - before;
+      status.textContent =
+        [count ? t('Nové partie: ') + count : '', ...errors].filter(Boolean).join(' · ') ||
+        t('Žádné nové dokončené partie. Knihovna je aktuální.');
     } finally {
-      clearTimeout(timeout);
       controller = null;
       button.disabled = false;
       button.removeAttribute('aria-busy');

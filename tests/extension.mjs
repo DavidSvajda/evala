@@ -94,10 +94,13 @@ try {
   await context.route('https://www.chess.com/**', (route) =>
     route.fulfill({
       contentType: 'text/html',
-      body: `<!doctype html><html><head><title>Chess.com adapter fixture</title><style>body{background:#302e2b;margin:120px 240px}wc-chess-board{display:block;position:relative;width:560px;height:560px;background:#bbb}.piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><wc-chess-board data-fen="${fen}">${pieces}</wc-chess-board><script>document.querySelector('wc-chess-board').game={getFEN:()=>document.querySelector('wc-chess-board').dataset.fen};</script></body></html>`,
+      body: `<!doctype html><html><head><title>Chess.com adapter fixture</title><style>body{background:#302e2b;margin:120px 240px}wc-chess-board{display:block;position:relative;width:560px;height:560px;background:#bbb}.piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><wc-chess-board data-fen="${fen}">${pieces}</wc-chess-board><script>document.querySelector('wc-chess-board').game={getFEN:()=>document.querySelector('wc-chess-board').dataset.fen,getResult:()=>location.pathname.startsWith('/analysis/')?'1-0':'*'};</script></body></html>`,
     }),
   );
   await page.goto('https://www.chess.com/game/live/123456789');
+  await page.locator('evala-bar').waitFor({ state: 'attached' });
+  assert.equal(await page.locator('evala-bar .rail').isVisible(), false);
+  await page.goto('https://www.chess.com/analysis/game/live/123456789/review');
   await page.waitForFunction(
     () =>
       document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===
@@ -107,9 +110,9 @@ try {
   );
   assert.match(await page.locator('evala-bar .value').textContent(), /^\+/);
   console.log(
-    'PASS: Chess.com live-game route → MAIN bridge → content → background → offscreen → Stockfish worker',
+    'PASS: Chess.com play page stays inactive; finished review reaches the bundled Stockfish worker',
   );
-  // Simulate two actual board mutations on the live game route, without reloading.
+  // Advance the logical board while rendered pieces are still in flight.
   for (const [san, from, to, top] of [
     ['e4', 'square-52', 'square-54', '50%'],
     ['e5', 'square-57', 'square-55', '37.5%'],
@@ -121,7 +124,8 @@ try {
         const b = document.querySelector('wc-chess-board');
         b.game.getFEN = () => expected;
         const p = b.querySelector('.' + from);
-        p.classList.replace(from, to);
+        p.classList.add('animating');
+        p.dataset.destination = to;
         p.style.top = top;
       },
       { expected, from, to, top },
@@ -140,16 +144,14 @@ try {
       if (status.fen === expected && status.state === 'done') break;
       await new Promise((done) => setTimeout(done, 100));
     } while (Date.now() < deadline);
-    assert.equal(status.fen, expected, `live ${san} must update FEN automatically`);
+    assert.equal(status.fen, expected, `review ${san} must update FEN during animation`);
     assert.equal(status.state, 'done');
     assert.ok(
       status.score.value > 500,
       'White perspective must remain consistent after both sides move',
     );
   }
-  console.log(
-    'PASS: live game automatically re-evaluates e2e4 and e7e5 with correct turn/sign, no manual FEN and no page reload',
-  );
+  console.log('PASS: Chess.com follows both sides from logical FEN while rendered squares lag');
   await page.screenshot({ path: 'test-results/chesscom-extension.png' });
 
   const names = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
@@ -157,11 +159,11 @@ try {
   for (const row of chess.board())
     for (const p of row)
       if (p)
-        pieces += `<piece class="${p.color === 'w' ? 'white' : 'black'} ${names[p.type]}" style="left:${'abcdefgh'.indexOf(p.square[0]) * 12.5}%;top:${(8 - Number(p.square[1])) * 12.5}%"></piece>`;
+        pieces += `<piece data-key="${p.square}" class="${p.color === 'w' ? 'white' : 'black'} ${names[p.type]} anim" style="left:0;top:0"></piece>`;
   await context.route('https://lichess.org/**', (route) =>
     route.fulfill({
       contentType: 'text/html',
-      body: `<!doctype html><html><head><title>Lichess adapter fixture</title><style>body{background:#262421;margin:120px 240px}cg-board{display:block;position:relative;width:560px;height:560px;background:#bbb}piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><div class="cg-wrap orientation-white"><cg-board data-fen="${chess.fen()}">${pieces}</cg-board></div></body></html>`,
+      body: `<!doctype html><html><head><title>Lichess adapter fixture</title><style>body{background:#262421;margin:120px 240px}cg-board{display:block;position:relative;width:560px;height:560px;background:#bbb}piece{position:absolute;width:12.5%;height:12.5%}</style></head><body><div class="cg-wrap orientation-black"><cg-board data-fen="${chess.fen()}">${pieces}</cg-board></div><script>for(const p of document.querySelectorAll('piece'))p.cgKey=p.dataset.key;</script></body></html>`,
     }),
   );
   await page.goto('https://lichess.org/analysis');
@@ -173,7 +175,9 @@ try {
     { timeout: 30000 },
   );
   assert.match(await page.locator('evala-bar .value').textContent(), /^\+/);
-  console.log('PASS: Lichess board adapter + actual extension pipeline');
+  console.log(
+    'PASS: Lichess reads logical Chessground squares on a flipped board during animation',
+  );
   assert.deepEqual(errors, []);
 } finally {
   await context.close();

@@ -1,9 +1,30 @@
-const checkedUser = (value) => {
-  const name = value.trim();
+export function importUsernameFor(value, platform) {
+  let name = String(value ?? '').trim();
+  if (platform === 'lichess') name = name.replace(/^@(?=\w)/, '');
+  if (/^https:\/\//i.test(name)) {
+    const url = new URL(name);
+    const match =
+      platform === 'lichess'
+        ? url.hostname === 'lichess.org' && url.pathname.match(/^\/@\/([a-z0-9_-]+)\/?$/i)
+        : ['chess.com', 'www.chess.com'].includes(url.hostname) &&
+          url.pathname.match(/^\/member\/([a-z0-9_-]+)\/?$/i);
+    if (match && !url.username && !url.password && !url.port) name = match[1];
+  }
   if (!/^[A-Za-z0-9_-]{2,40}$/.test(name))
-    throw new Error('Zadej uživatelské jméno bez odkazu a mezer.');
+    throw new Error('Zadej přezdívku nebo odkaz na veřejný profil vybraného webu.');
   return name;
-};
+}
+
+export async function publicLichessProfile(input) {
+  const name = importUsernameFor(input, 'lichess');
+  const response = await checkedFetch(`https://lichess.org/api/user/${encodeURIComponent(name)}`, {
+    signal: AbortSignal.timeout(15000),
+  });
+  const profile = await response.json();
+  if (typeof profile.username !== 'string' || !/^[a-z0-9_-]{2,40}$/i.test(profile.username))
+    throw new Error('Lichess vrátil neplatný profil.');
+  return { username: profile.username };
+}
 async function checkedFetch(url, options) {
   const response = await fetch(url, options);
   if (!response.ok)
@@ -17,14 +38,17 @@ async function checkedFetch(url, options) {
   return response;
 }
 export async function importUsername(username, platform, { signal, onProgress, limit = 20 } = {}) {
-  const user = checkedUser(username);
+  const user = importUsernameFor(username, platform);
+  const deadline = AbortSignal.timeout(20000);
+  signal = signal ? AbortSignal.any([signal, deadline]) : deadline;
   limit = Math.max(1, Math.min(100, Math.floor(Number(limit)) || 20));
   if (platform === 'lichess') {
     const response = await checkedFetch(
-      `https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${limit}&moves=true&clocks=true&evals=false&ongoing=false&perfType=bullet,blitz,rapid,classical`,
+      `https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${limit}&moves=true&clocks=true&evals=false&ongoing=false&finished=true&opening=true&perfType=ultraBullet,bullet,blitz,rapid,classical,correspondence`,
       { signal, headers: { Accept: 'application/x-chess-pgn' } },
     );
     const text = await response.text();
+    if (!text.trim()) throw new Error('Profil nemá dostupné dokončené standardní partie.');
     if (text.length > 2_000_000) throw new Error('Import je příliš velký. Použij PGN soubor.');
     return text;
   }
@@ -34,7 +58,7 @@ export async function importUsername(username, platform, { signal, onProgress, l
     throw new Error('Uživatel nemá dostupné archivované partie.');
   const games = [];
   // Serial requests follow the provider's published rate-limit guidance.
-  const recent = archives.archives.slice(-12).reverse();
+  const recent = [...archives.archives].sort().slice(-12).reverse();
   for (const [i, url] of recent.entries()) {
     if (!/^https:\/\/api\.chess\.com\/pub\/player\/[a-z0-9_-]+\/games\/\d{4}\/\d{2}$/i.test(url))
       throw new Error('Neplatná adresa archivu.');

@@ -29,6 +29,8 @@ import { theme, setTheme } from './theme.js';
 import { createLesson, nextLessonId, publicChesscomProfile } from '../training/lesson.js';
 import { trainingJourney, localDay } from '../training/journey.js';
 import { renderJourney } from './journey.js';
+import { linkedUsername, profilePatch } from '../core/chess-profiles.js';
+import { importUsernameFor, publicLichessProfile } from './import.js';
 
 const $ = (s) => document.querySelector(s);
 const PREFERENCES = {
@@ -168,14 +170,14 @@ export async function initPlatform(context) {
       'show-legal': 'legalMoves',
       'move-sound': 'sound',
       'auto-next': 'autoNext',
-      'linked-platform': 'chessPlatform',
-      'linked-username': 'chessUsername',
       'experience-level': 'skill',
     })) {
       const el = $('#' + id);
       if (el.type === 'checkbox') el.checked = preferences[key];
       else el.value = preferences[key];
     }
+    $('#linked-platform').value = preferences.chessPlatform;
+    $('#linked-username').value = linkedUsername(preferences, preferences.chessPlatform);
     $('#puzzle-difficulty').value = preferences.difficulty;
     $('#review-budget').value = preferences.reviewBudget;
     $('#review-pause-status').textContent =
@@ -186,6 +188,13 @@ export async function initPlatform(context) {
         : '—';
   }
   function updatePreferences(patch) {
+    if (patch.chessPlatform && patch.chessPlatform !== preferences.chessPlatform) {
+      const platform = preferences.chessPlatform;
+      const username = linkedUsername(preferences, platform);
+      const field = platform === 'lichess' ? 'lichessUsername' : 'chesscomUsername';
+      if (username && preferences[field] === undefined && patch[field] === undefined)
+        patch = { [field]: username, ...patch };
+    }
     Object.assign(preferences, patch);
     applyPreferences();
     try {
@@ -325,20 +334,23 @@ export async function initPlatform(context) {
     renderHome();
   }
   function renderChessProfile() {
-    const name = preferences?.chessUsername;
-    $('#chesscom-profile').replaceChildren();
-    if (!name || preferences.chessPlatform !== 'chesscom') return;
-    const link = document.createElement('a');
-    link.href = 'https://www.chess.com/member/' + encodeURIComponent(name);
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = name;
-    const note = document.createElement('small');
-    note.textContent =
-      language() === 'en'
-        ? ' Public data connection; ownership is not verified.'
-        : ' Propojení veřejných dat; vlastnictví účtu není ověřené.';
-    $('#chesscom-profile').append(link, note);
+    for (const [platform, base] of [
+      ['chesscom', 'https://www.chess.com/member/'],
+      ['lichess', 'https://lichess.org/@/'],
+    ]) {
+      const container = $(`#${platform}-profile`);
+      const name = linkedUsername(preferences, platform);
+      container.replaceChildren();
+      $(`[data-import-profile="${platform}"]`).disabled = !name;
+      $(`[data-unlink-profile="${platform}"]`).disabled = !name;
+      if (!name) continue;
+      const link = document.createElement('a');
+      link.href = base + encodeURIComponent(name);
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = name;
+      container.append(link);
+    }
   }
   async function lessonPuzzle() {
     const day = localDay();
@@ -803,8 +815,7 @@ export async function initPlatform(context) {
         } else saveTraining({ ...training, rating, initialRating: rating });
       }
       const patch = { onboardingComplete: true, trainingGoal: $('#onboarding-goal').value };
-      if (profile)
-        Object.assign(patch, { chessUsername: profile.username, chessPlatform: 'chesscom' });
+      if (profile) Object.assign(patch, profilePatch('chesscom', profile.username));
       updatePreferences(patch);
       if (profile) context.setUsername(profile.username, 'chesscom');
       renderHome();
@@ -814,26 +825,64 @@ export async function initPlatform(context) {
       button.disabled = false;
     }
   };
-  $('#connect-chesscom').onclick = async (event) => {
-    event.target.disabled = true;
+  const activateProfile = (platform, username, save = true) => {
+    updatePreferences(
+      save
+        ? profilePatch(platform, username)
+        : { chessPlatform: platform, chessUsername: username },
+    );
+    context.setUsername(username, platform);
+    renderHome();
+  };
+  const connectProfile = async (platform, input, button) => {
+    const currentOwner = prefKey(),
+      currentGeneration = account.user?.generation;
+    button.disabled = true;
     try {
-      const profile = await publicChesscomProfile($('#linked-username').value);
-      updatePreferences({ chessUsername: profile.username, chessPlatform: 'chesscom' });
-      context.setUsername(profile.username, 'chesscom');
-      renderChessProfile();
+      const profile = await (platform === 'lichess'
+        ? publicLichessProfile(input)
+        : publicChesscomProfile(input));
+      if (prefKey() !== currentOwner || account.user?.generation !== currentGeneration) return;
+      activateProfile(platform, profile.username);
       $('#preference-status').textContent = translate('Veřejný profil propojen.');
     } catch (e) {
-      $('#preference-status').textContent = e.message;
+      if (prefKey() === currentOwner && account.user?.generation === currentGeneration)
+        $('#preference-status').textContent = translate(e.message);
     } finally {
-      event.target.disabled = false;
+      button.disabled = false;
     }
   };
-  $('#import-linked-profile').onclick = () => {
-    if (!preferences.chessUsername) return;
+  const importProfile = (platform) => {
+    const username = linkedUsername(preferences, platform);
+    if (!username) return;
+    activateProfile(platform, username, false);
     go('games');
-    $('#username').value = preferences.chessUsername;
-    $('#platform').value = preferences.chessPlatform;
+    $('#username').value = username;
+    $('#platform').value = platform;
     $('#username-form').requestSubmit();
+  };
+  $('#connect-chesscom').onclick = (event) =>
+    connectProfile($('#linked-platform').value, $('#linked-username').value, event.currentTarget);
+  for (const platform of ['chesscom', 'lichess']) {
+    $(`[data-import-profile="${platform}"]`).onclick = () => importProfile(platform);
+    $(`[data-unlink-profile="${platform}"]`).onclick = () => {
+      const other = platform === 'lichess' ? 'chesscom' : 'lichess';
+      const patch = profilePatch(platform, '');
+      if (preferences.chessPlatform === platform) {
+        patch.chessPlatform = other;
+        patch.chessUsername = linkedUsername(preferences, other);
+      } else {
+        delete patch.chessPlatform;
+        delete patch.chessUsername;
+      }
+      updatePreferences(patch);
+      context.setUsername(preferences.chessUsername, preferences.chessPlatform);
+      renderHome();
+      $('#preference-status').textContent = translate('Profil odpojen.');
+    };
+  }
+  $('#linked-platform').onchange = (event) => {
+    $('#linked-username').value = linkedUsername(preferences, event.target.value);
   };
   document.querySelectorAll('[data-mode]').forEach(
     (b) =>
@@ -872,16 +921,17 @@ export async function initPlatform(context) {
         [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
       });
   $('#save-chess-profile').onclick = () => {
-    const username = $('#linked-username').value.trim();
-    if (!/^[A-Za-z0-9_-]{0,40}$/.test(username)) {
-      $('#preference-status').textContent =
-        'Přezdívka může obsahovat jen písmena, čísla, pomlčku a podtržítko.';
-      return;
+    const platform = $('#linked-platform').value;
+    try {
+      const input = $('#linked-username').value.trim();
+      const name = input
+        ? importUsernameFor(input, platform)
+        : linkedUsername(preferences, platform);
+      activateProfile(platform, name, Boolean(input));
+      $('#preference-status').textContent = translate('Profil uložen.');
+    } catch (error) {
+      $('#preference-status').textContent = translate(error.message);
     }
-    updatePreferences({ chessUsername: username, chessPlatform: $('#linked-platform').value });
-    context.setUsername(username, preferences.chessPlatform);
-    $('#preference-status').textContent = 'Profil uložen.';
-    renderHome();
   };
   $('#starting-rating').onchange = async (event) => {
     const rating = Number(event.target.value);

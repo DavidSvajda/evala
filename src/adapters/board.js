@@ -30,20 +30,25 @@ export function boardFlipped(board) {
   );
 }
 
-export function readPlacement(board) {
+export function readPlacement(board, logicalOnly = false) {
   const pieces = [];
   const flipped = boardFlipped(board);
   const rect = board.getBoundingClientRect();
   const elements = board.matches('cg-board')
     ? board.querySelectorAll('piece:not(.ghost):not(.fading)')
     : board.querySelectorAll('.piece:not(.ghost):not(.fading)');
-  if (board.querySelector('.dragging, .animating')) return null;
+  if (!logicalOnly && board.querySelector('.dragging, .animating, .anim')) return null;
   for (const el of elements) {
     let code, square;
     if (board.matches('cg-board')) {
       const type = Object.keys(names).find((name) => el.classList.contains(name));
       if (!type) continue;
       code = el.classList.contains('white') ? names[type].toUpperCase() : names[type];
+      if (logicalOnly) {
+        if (typeof el.cgKey !== 'string') return null;
+        pieces.push({ piece: code, square: el.cgKey });
+        continue;
+      }
       const p = el.getBoundingClientRect();
       let file = Math.floor((p.left + p.width / 2 - rect.left) / (rect.width / 8));
       let rank = 7 - Math.floor((p.top + p.height / 2 - rect.top) / (rect.height / 8));
@@ -124,10 +129,14 @@ export class PositionTracker {
     this.last = null;
   }
 
-  resolve(board, nativeFen) {
-    const placement = readPlacement(board);
+  resolve(board, nativeFen, logicalPlacement) {
+    if (nativeFen && (nativeFen === this.last || validPosition(nativeFen))) {
+      this.last = nativeFen;
+      return { fen: nativeFen, source: 'site' };
+    }
+    const placement = logicalPlacement || readPlacement(board);
     if (!placement) return null;
-    const direct = [nativeFen, board.getAttribute('data-fen'), board.getAttribute('fen')];
+    const direct = [board.getAttribute('data-fen'), board.getAttribute('fen')];
     for (const fen of direct) {
       if (validPosition(fen) && fen.split(' ')[0] === placement) {
         this.last = fen;

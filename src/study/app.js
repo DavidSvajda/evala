@@ -20,7 +20,14 @@ import { LocalEnginePool } from './local-engine-pool.js';
 import { localPerformancePlan } from './local-performance.js';
 import { reviewCheckpoint } from './review-checkpoint.js';
 import { RemoteEngine, serverAddress, remoteReview, connectPublicServer } from './remote.js';
-import { parsePgnCollection, parseFenGame, DEMO_PGN, lineToSan, annotatedPgn } from './game.js';
+import {
+  parsePgnCollection,
+  parseFenGame,
+  DEMO_PGN,
+  lineToSan,
+  annotatedPgn,
+  gameSourceId,
+} from './game.js';
 import { reviewGame, summarize } from './review.js';
 import {
   loadLibrary,
@@ -41,7 +48,8 @@ import {
 import { renderAccountIdentity } from './account-panel.js';
 import { playMoveSound } from './audio.js';
 import { initPlatform } from './platform.js';
-import { importUsername } from './import.js';
+import { importUsername, importUsernameFor } from './import.js';
+import { linkedUsername } from '../core/chess-profiles.js';
 import { StudyBoard } from './board.js';
 import { analyzeLibrary, renderAnalytics } from './analytics.js';
 import { PlayerReport } from './report.js';
@@ -630,30 +638,58 @@ function selectGame(game) {
   $('.workspace').classList.remove('library-open');
   if (activeView === 'review') focusBoard();
 }
-async function addPgn(text, { select = true } = {}) {
+async function addPgn(text, { select = true, signal } = {}) {
   const { games, errors } = parsePgnCollection(text);
-  let added = 0;
-  for (const game of [...games].reverse()) {
-    const existing = library.find(
-      (g) =>
-        g.id === game.id &&
-        g.initialFen === game.initialFen &&
-        g.moves.map((m) => m.uci).join(' ') === game.moves.map((m) => m.uci).join(' '),
-    );
-    if (existing) continue;
-    if (library.length >= 200)
-      throw new Error('Knihovna má limit 200 partií. Exportuj starší partie a uvolni místo.');
-    library.unshift(game);
-    await store(game);
-    added++;
+  const owner = account.user?.id,
+    generation = account.user?.generation;
+  const existing = new Map();
+  for (const game of library) {
+    const key = gameSourceId(game.headers) || game.id;
+    if (!existing.has(key)) existing.set(key, game);
   }
-  $('#import-status').textContent =
-    `${added} nových partií${errors.length ? ' · ' + errors.join(' ') : games.length > added ? ' · duplicity přeskočeny' : ''}`;
-  const first = library.find((g) => g.id === games[0].id);
-  if (first && select) selectGame(first);
-  else renderLibrary();
-  $('#import-panel').open = false;
-  return games;
+  const saved = [];
+  let added = 0,
+    duplicates = 0,
+    skipped = 0;
+  const assertOwner = () => {
+    signal?.throwIfAborted();
+    if (owner !== account.user?.id || generation !== account.user?.generation)
+      throw new DOMException('Import byl zrušen.', 'AbortError');
+  };
+  try {
+    for (const game of games) {
+      assertOwner();
+      const prior = existing.get(game.id);
+      if (prior) {
+        duplicates++;
+        saved.push(prior);
+      } else if (library.length >= 200) skipped++;
+      else {
+        await saveGame(game);
+        if (owner !== account.user?.id || generation !== account.user?.generation) assertOwner();
+        library.unshift(game);
+        existing.set(game.id, game);
+        saved.push(game);
+        added++;
+      }
+    }
+    assertOwner();
+    if (!saved.length && skipped)
+      throw new Error('Knihovna má limit 200 partií. Exportuj starší partie a uvolni místo.');
+    $('#import-status').textContent = [
+      translate(`${added} nových partií`),
+      duplicates ? translate('Duplicity přeskočeny.') : '',
+      skipped ? translate('Část partií se nevešla do limitu 200.') : '',
+      ...errors,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    if (saved[0] && select) selectGame(saved[0]);
+    $('#import-panel').open = Boolean(skipped || errors.length);
+    return saved;
+  } finally {
+    if (owner === account.user?.id && generation === account.user?.generation) renderLibrary();
+  }
 }
 $('#import-fen').addEventListener('click', async () => {
   try {
@@ -700,18 +736,25 @@ $('#username-form').addEventListener('submit', async (event) => {
   $('#import-username').textContent = 'Zrušit import';
   $('#import-status').textContent = 'Načítám veřejné dokončené partie…';
   try {
-    const username = $('#username').value,
-      platform = $('#platform').value;
+    const platform = $('#platform').value,
+      username = importUsernameFor($('#username').value, platform);
     const pgn = await importUsername(username, platform, {
       signal: importController.signal,
       onProgress: (text) => ($('#import-status').textContent = text),
     });
-    await addPgn(pgn);
+    await addPgn(pgn, { signal: importController.signal });
     options.lastUsername = username;
     options.lastPlatform = platform;
+    $('#username').value = username;
     savePreferences(options);
   } catch (e) {
-    $('#import-status').textContent = e.name === 'AbortError' ? 'Import byl zrušen.' : e.message;
+    $('#import-status').textContent = translate(
+      e.name === 'AbortError'
+        ? 'Import byl zrušen.'
+        : e.name === 'TimeoutError'
+          ? 'Načítání trvá příliš dlouho. Zkus to znovu.'
+          : e.message,
+    );
   } finally {
     importController = null;
     $('#import-username').textContent = 'Načíst posledních 20';
@@ -1632,7 +1675,7 @@ learningUI = initLearning({
     );
   },
 });
-await initPlatform({
+const studyPlatform = await initPlatform({
   library: () => library,
   username: () => options.lastUsername || '',
   openGame: (game, ply) => {
@@ -1696,6 +1739,14 @@ await initPlatform({
     updateAnalytics();
   },
 });
+for (const [platformId, inputId] of [
+  ['platform', 'username'],
+  ['report-platform', 'report-username'],
+]) {
+  $('#' + platformId).addEventListener('change', (event) => {
+    $('#' + inputId).value = linkedUsername(studyPlatform.preferences(), event.target.value);
+  });
+}
 let lastAccountRefresh = Date.now();
 const resumeAccount = async (force = false) => {
   if (
@@ -1751,7 +1802,7 @@ window.addEventListener('pagehide', () => {
 // Shared links restore only after library and routing have initialized.
 sharing = createSharing({
   enabled: hostedServer,
-  owner: () => account.user?.id || 'guest',
+  owner: () => `${account.user?.id || 'guest'}:${account.user?.generation || ''}`,
   game: () => selected,
   ply: () => ply,
   branch: () => branch,
@@ -1786,6 +1837,7 @@ createLibraryRefresh({
   library: () => library,
   owner: () => account.user?.id || 'guest',
   busy: () => !!job || !!playerReport?.running || !!importController,
-  add: (pgn) => addPgn(pgn, { select: false }),
+  profiles: studyPlatform.preferences,
+  add: (pgn, signal) => addPgn(pgn, { select: false, signal }),
   render: renderLibrary,
 });

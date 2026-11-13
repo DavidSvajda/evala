@@ -64,7 +64,7 @@ try {
       body: `<!doctype html><html><head><style>body{margin:120px 240px}wc-chess-board{display:block;position:relative;width:560px;height:560px}</style></head><body><wc-chess-board data-fen="${fen}">${pieces}</wc-chess-board><script>document.querySelector('wc-chess-board').game={getFEN:()=>document.querySelector('wc-chess-board').dataset.fen};</script></body></html>`,
     }),
   );
-  await page.goto('https://www.chess.com/game/live/123456789');
+  await page.goto('https://www.chess.com/analysis');
   await page.waitForFunction(
     () =>
       document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===

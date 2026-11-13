@@ -17,6 +17,25 @@ function fingerprint(text) {
   return (h >>> 0).toString(16);
 }
 
+export function legacyGameId(game) {
+  return fingerprint(game.initialFen + '|' + game.moves.map((move) => move.uci).join(' '));
+}
+
+export function gameSourceId(headers) {
+  for (const value of [headers.Link, headers.Site]) {
+    if (typeof value !== 'string') continue;
+    const lichess = value.match(
+      /^https:\/\/lichess\.org\/(?:game\/)?([A-Za-z0-9]{8})(?:\/(?:white|black))?\/?(?:[?#].*)?$/,
+    );
+    if (lichess) return 'lichess-' + lichess[1];
+    const chesscom = value.match(
+      /^https:\/\/(?:www\.)?chess\.com\/(?:game\/(live|daily)|(live|daily)\/game)\/(\d{1,20})\/?(?:[?#].*)?$/i,
+    );
+    if (chesscom) return `chesscom-${(chesscom[1] || chesscom[2]).toLowerCase()}-${chesscom[3]}`;
+  }
+  return null;
+}
+
 export function parsePgn(pgn) {
   if (typeof pgn !== 'string' || pgn.length > 2_000_000)
     throw new Error('PGN je prázdné nebo větší než 2 MB. Rozděl soubor na menší části.');
@@ -58,7 +77,6 @@ export function parsePgn(pgn) {
       clockAfter: clock ? Number(clock[1]) * 3600 + Number(clock[2]) * 60 + Number(clock[3]) : null,
     };
   });
-  const canonical = initialFen + '|' + moves.map((m) => m.uci).join(' ');
   const notes = {};
   for (const [i, fen] of [initialFen, ...moves.map((m) => m.fenAfter)].entries()) {
     const comment = comments.get(fen) || '',
@@ -73,7 +91,7 @@ export function parsePgn(pgn) {
       };
   }
   return {
-    id: fingerprint(canonical),
+    id: gameSourceId(headers) || legacyGameId({ initialFen, moves }),
     pgn: chess.pgn(),
     headers,
     initialFen,
@@ -136,11 +154,13 @@ export function parsePgnCollection(text) {
     lines.push(line);
     if (!header) {
       const visible = line.replace(/;.*$/, '');
-      if (!comment && /^\s*(?:\d+\.|1-0|0-1|1\/2-1\/2|\*)/.test(visible)) started = true;
+      let movetext = '';
       for (const c of visible) {
         if (c === '{') comment = true;
         else if (c === '}') comment = false;
+        else if (!comment) movetext += c;
       }
+      if (/^\s*(?:\d+\.|1-0|0-1|1\/2-1\/2|\*)/.test(movetext)) started = true;
     }
   }
   if (lines.join('').trim()) parts.push(lines.join('\n'));

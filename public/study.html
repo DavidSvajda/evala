@@ -274,7 +274,7 @@
                     id="username"
                     placeholder="Tvoje přezdívka"
                     autocomplete="off"
-                    maxlength="40"
+                    maxlength="200"
                     required /></div
                 ><button id="import-username" class="secondary-button" type="submit"
                   >Načíst posledních 20</button
@@ -700,7 +700,7 @@
                 >Uživatelské jméno<input
                   id="report-username"
                   required
-                  maxlength="40"
+                  maxlength="200"
                   autocomplete="off"
                   placeholder="Tvoje přezdívka"
               /></label>
@@ -977,26 +977,43 @@
               ><p class="hint"
                 >Po prvním pokusu se obtížnost upravuje podle výsledků. Toto nastavení pak zůstane
                 uzamčené.</p
-              ><h2>Šachový profil</h2
+              ><h2>Propojené šachové profily</h2
               ><p class="section-description"
-                >Přezdívka určuje tvoji barvu ve statistikách a pozice pro osobní trénink. Neslouží
-                jako přihlášení.</p
+                >Ulož oba veřejné profily. Naposledy vybraný profil určuje tvoji barvu ve
+                statistikách a v osobním tréninku.</p
               ><label for="linked-platform">Herní server</label
               ><select id="linked-platform"
                 ><option value="chesscom">Chess.com</option
                 ><option value="lichess">Lichess</option></select
-              ><label for="linked-username">Přezdívka</label
+              ><label for="linked-username">Přezdívka nebo odkaz na profil</label
               ><input
                 id="linked-username"
-                maxlength="40"
+                maxlength="200"
                 placeholder="Tvoje přezdívka"
                 autocomplete="off" /><button id="save-chess-profile" class="primary-button"
                 >Uložit profil</button
               ><button id="connect-chesscom" type="button" class="quiet-button"
-                >Propojit veřejný profil Chess.com</button
-              ><div id="chesscom-profile" class="profile-link" data-i18n-ignore></div
-              ><button id="import-linked-profile" class="text-button" type="button"
-                >Načíst partie propojeného profilu</button
+                >Ověřit a uložit veřejný profil</button
+              ><div class="linked-profile-row">
+                <strong>Chess.com</strong
+                ><div id="chesscom-profile" class="profile-link" data-i18n-ignore></div>
+                <div class="setup-actions"
+                  ><button data-import-profile="chesscom" class="text-button" type="button"
+                    >Načíst partie</button
+                  ><button data-unlink-profile="chesscom" class="text-button" type="button"
+                    >Odpojit profil</button
+                  ></div
+                > </div
+              ><div class="linked-profile-row">
+                <strong>Lichess</strong
+                ><div id="lichess-profile" class="profile-link" data-i18n-ignore></div>
+                <div class="setup-actions"
+                  ><button data-import-profile="lichess" class="text-button" type="button"
+                    >Načíst partie</button
+                  ><button data-unlink-profile="lichess" class="text-button" type="button"
+                    >Odpojit profil</button
+                  ></div
+                > </div
               ><button id="restart-onboarding" class="text-button" type="button"
                 >Úvodní nastavení</button
               ><p id="preference-status" class="inline-status" role="status"></p>
