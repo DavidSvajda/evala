@@ -39,8 +39,13 @@ export function trainedThemeRecurrence(games, username) {
     const color = ownColor(game, username),
       rawDate = game.headers.UTCDate || game.headers.Date || '';
     if (!color || !game.analysis?.complete || !/^\d{4}\.\d{2}\.\d{2}$/.test(rawDate)) continue;
-    const played = Date.parse(rawDate.replaceAll('.', '-') + 'T00:00:00Z'),
+    const utcTime = game.headers.UTCDate && game.headers.UTCTime,
+      time = /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(utcTime || '') ? utcTime : '00:00:00',
+      isoDate = rawDate.replaceAll('.', '-'),
+      played = Date.parse(isoDate + 'T' + time + 'Z'),
       speed = timeClass(game.headers.TimeControl);
+    if (!Number.isFinite(played) || new Date(played).toISOString().slice(0, 10) !== isoDate)
+      continue;
     for (const theme of themes.values()) {
       if (!(played > theme.at) || theme.speed !== speed) continue;
       let decisions = 0;

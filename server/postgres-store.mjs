@@ -2,6 +2,7 @@ import pg from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { scheduleDatabaseBackup } from './database-backup.mjs';
 import { httpError } from './http.mjs';
+import { ADMIN_PAGE_SIZE, DAY_MS } from './admin-metrics.mjs';
 
 export function postgresPool(connectionString, ca = process.env.DATABASE_CA) {
   const url = new URL(connectionString);
@@ -250,11 +251,39 @@ export function createPostgresStore({
     transact,
     durable: true,
     kind: 'postgres',
-    async accountSummaries() {
-      const { rows } = await query(`SELECT name,email,profile->'createdAt' AS "createdAt",
-        profile->'lastLoginAt' AS "lastLoginAt" FROM evala.users
-        WHERE NOT(profile ? 'deleting') ORDER BY (profile->>'createdAt')::bigint DESC LIMIT 10001`);
-      return { users: rows.slice(0, 10000), truncated: rows.length > 10000 };
+    async accountSummaries({ page = 1, now = Date.now() } = {}) {
+      const { rows } = await query(
+        `WITH game_usage AS (
+          SELECT user_id, count(*) AS games, count(*) FILTER (WHERE metadata->>'analyzed' = 'true') AS reviews,
+            max(CASE WHEN metadata->>'updatedAt' ~ '^[0-9]{1,15}$' THEN (metadata->>'updatedAt')::bigint END) AS last_saved
+          FROM evala.games GROUP BY user_id
+        ), puzzle_usage AS (
+          SELECT user_id, max(CASE WHEN payload->>'lastAt' ~ '^[0-9]{1,15}$' THEN (payload->>'lastAt')::bigint END) AS last_trained
+          FROM evala.training_history GROUP BY user_id
+        ), accounts AS (
+          SELECT u.id, u.name, u.email,
+            CASE WHEN profile->>'createdAt' ~ '^[0-9]{1,15}$' THEN (profile->>'createdAt')::bigint END AS "createdAt",
+            CASE WHEN profile->>'lastLoginAt' ~ '^[0-9]{1,15}$' THEN (profile->>'lastLoginAt')::bigint END AS "lastLoginAt",
+            greatest(g.last_saved, p.last_trained) AS "lastUsedAt",
+            coalesce(g.games, 0) AS games, coalesce(g.reviews, 0) AS reviews,
+            CASE WHEN t.state->>'attempted' ~ '^[0-9]{1,12}$' THEN (t.state->>'attempted')::bigint ELSE 0 END AS attempts
+          FROM evala.users u
+          LEFT JOIN game_usage g ON g.user_id = u.id
+          LEFT JOIN puzzle_usage p ON p.user_id = u.id
+          LEFT JOIN evala.training t ON t.user_id = u.id
+          WHERE NOT (u.profile ? 'deleting')
+        ), page AS (
+          SELECT * FROM accounts ORDER BY "createdAt" DESC NULLS LAST, id LIMIT $2 OFFSET $3
+        )
+        SELECT (SELECT jsonb_build_object(
+          'accounts', count(*), 'newThisWeek', count(*) FILTER (WHERE "createdAt" >= $1),
+          'activeThisWeek', count(*) FILTER (WHERE "lastUsedAt" >= $1),
+          'reviews', coalesce(sum(reviews), 0), 'attempts', coalesce(sum(attempts), 0)
+        ) FROM accounts) AS totals,
+        (SELECT coalesce(jsonb_agg(to_jsonb(page) - 'id' ORDER BY "createdAt" DESC NULLS LAST, id), '[]'::jsonb) FROM page) AS users`,
+        [now - 7 * DAY_MS, ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE],
+      );
+      return { ...rows[0], truncated: false };
     },
     async ready() {
       const result = await query('SELECT version FROM evala.schema_migrations WHERE version=1');

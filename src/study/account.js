@@ -1,5 +1,10 @@
 import { language } from './i18n.js';
-import { mergeAccountPreferences, remainingPreferencePatch } from '../core/account-preferences.js';
+import {
+  mergeAccountPreferences,
+  remainingPreferencePatch,
+  combinePreferencePatches,
+} from '../core/account-preferences.js';
+import { jsonBytes, ACCOUNT_PROFILE_BYTES } from '../training/study-kit-sync.js';
 export const account = { user: null, csrf: '', config: null, training: null, status: 'loading' };
 let googleLoading;
 let identityRevision = 0,
@@ -28,14 +33,21 @@ function writePending(key, patch) {
     /* The current tab still retains the pending update. */
   }
 }
+function overlayPending(prior, patch) {
+  try {
+    return mergeAccountPreferences(prior, patch);
+  } catch (error) {
+    if (error.status !== 413 || !patch.studyKit) throw error;
+    // A full cloud kit must not prevent sign-in or discard the offline outbox.
+    const { studyKit, studyKitBase, ...rest } = patch;
+    return { ...mergeAccountPreferences(prior, rest), studyKit };
+  }
+}
 function applyState(state) {
   ++identityRevision;
   const user = state.user;
   if (user)
-    user.preferences = mergeAccountPreferences(
-      user.preferences,
-      pendingPreferences(pendingKey(user)),
-    );
+    user.preferences = overlayPending(user.preferences, pendingPreferences(pendingKey(user)));
   Object.assign(account, {
     user,
     csrf: state.csrf || '',
@@ -48,10 +60,12 @@ export async function accountRequest(
   { method = 'GET', body, signal, keepalive = false } = {},
 ) {
   const identity = account.user;
+  const payload = body === undefined ? undefined : JSON.stringify(body);
   const response = await fetch('/api/account/' + path, {
     method,
     credentials: 'same-origin',
-    keepalive,
+    keepalive:
+      keepalive && (payload === undefined || new TextEncoder().encode(payload).length < 60000),
     signal: signal || AbortSignal.timeout(20000),
     headers: {
       ...(identity
@@ -63,7 +77,7 @@ export async function accountRequest(
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(method !== 'GET' ? { 'X-CSRF-Token': account.csrf } : {}),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: payload,
   });
   const data = await response.json().catch(() => ({}));
   if (
@@ -188,8 +202,13 @@ export async function logoutAccount(allDevices = false) {
 }
 export function queueAccountPreferences(patch) {
   if (!account.user || !Object.keys(patch).length) return;
+  if (patch.studyKit) patch = { ...patch, studyKitBase: account.user.preferences?.studyKit || {} };
   const key = pendingKey();
-  writePending(key, mergeAccountPreferences(pendingPreferences(key), patch));
+  const pending = combinePreferencePatches(pendingPreferences(key), patch);
+  // Validate before changing either local representation.
+  if (jsonBytes({ preferences: pending }) > ACCOUNT_PROFILE_BYTES)
+    throw new Error('Nastavení je příliš velké.');
+  writePending(key, pending);
   account.user.preferences = mergeAccountPreferences(account.user.preferences, patch);
   clearTimeout(preferenceTimer);
   preferenceTimer = setTimeout(
@@ -216,18 +235,25 @@ export function flushAccountPreferences({ keepalive = false } = {}) {
       if (!current()) return;
       const sent = pendingPreferences(key);
       if (!Object.keys(sent).length) return;
-      const { user } = await accountRequest('profile', {
+      const { user, studyKitCopies } = await accountRequest('profile', {
         method: 'PATCH',
         body: { preferences: sent },
         keepalive,
       });
       if (!current()) return;
-      const remaining = remainingPreferencePatch(pendingPreferences(key), sent);
+      const remaining = remainingPreferencePatch(pendingPreferences(key), sent, user.preferences);
       writePending(key, remaining);
-      user.preferences = mergeAccountPreferences(user.preferences, remaining);
+      user.preferences = overlayPending(user.preferences, remaining);
       account.user = user;
       document.dispatchEvent(
-        new CustomEvent('evala:sync', { detail: { message: 'Synchronizováno', error: false } }),
+        new CustomEvent('evala:sync', {
+          detail: {
+            message: studyKitCopies
+              ? 'Souběžné úpravy cvičebny byly zachovány jako kopie.'
+              : 'Synchronizováno',
+            error: false,
+          },
+        }),
       );
     });
   preferenceTail = task;

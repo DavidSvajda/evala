@@ -1,4 +1,16 @@
 export const EN = {
+  'Verze v účtu se znovu změnila. Porovnej aktuální verze.':
+    'The account version changed again. Compare the latest versions.',
+  'Zavři ostatní záložky Evaly a obnov stránku pro dokončení aktualizace úložiště.':
+    'Close other Evala tabs and reload to finish updating local storage.',
+  'Konflikt verzí': 'Sync conflict',
+  'Uloženo v tomto zařízení': 'Saved on this device',
+  'Partie má dvě verze. Otevři Moje partie a vyřeš konflikt.':
+    'This game has two versions. Open My games to resolve the conflict.',
+  'Souběžné úpravy cvičebny byly zachovány jako kopie.':
+    'Concurrent study edits were preserved as copies.',
+  'Studijní prostor je plný. Exportuj a odeber starší obsah.':
+    'Study storage is full. Export and remove older content.',
   'Pokročilé nastavení': 'Advanced settings',
   'Rozsah rozboru': 'Review scope',
   'Tři důležité momenty': 'Three key moments',
@@ -102,6 +114,9 @@ export const EN = {
   'Řazení partií': 'Sort games',
   Nejnovější: 'Newest first',
   Nejstarší: 'Oldest first',
+  'Naposledy přidané': 'Recently added',
+  'Datum partie · od nejnovější': 'Game date · newest first',
+  'Datum partie · od nejstarší': 'Game date · oldest first',
   Nejdelší: 'Longest first',
   Nejkratší: 'Shortest first',
   'Označit zobrazené': 'Select shown',

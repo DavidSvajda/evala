@@ -11,10 +11,13 @@ import {
   encodeTask,
   decodeTask,
   ENDGAME_LESSONS,
+  STUDY_LIMITS,
 } from '../training/study-kit.js';
 import { weaknessEvidence } from '../training/practice.js';
 import { trainedThemeRecurrence } from '../training/study-progress.js';
 import { localDay } from '../training/journey.js';
+import { STUDY_KIT_BYTES } from '../training/study-kit-sync.js';
+import { repertoirePgnLines } from '../training/pgn-repertoire.js';
 
 const t = (cs, en) => (language() === 'en' ? en : cs);
 const identity = () => `${account.user?.id || 'guest'}:${account.user?.generation || ''}`;
@@ -47,7 +50,7 @@ export function createStudyKit(context) {
   function save(next) {
     const data = cleanStudyKit(next),
       json = JSON.stringify(data);
-    if (new TextEncoder().encode(json).length > 44000)
+    if (new TextEncoder().encode(json).length > STUDY_KIT_BYTES)
       throw Error(
         t(
           'Studijní prostor je plný. Nejdřív exportuj a odeber starší variantu nebo úkol.',
@@ -60,6 +63,35 @@ export function createStudyKit(context) {
     cachedSource = account.user?.preferences?.studyKit || json;
     cachedData = data;
     return data;
+  }
+  function importPgn(pgn, { side = 'w', title = 'PGN', plies = 40 } = {}) {
+    const old = read(),
+      additions = [];
+    for (const text of repertoirePgnLines(pgn, plies)) {
+      const line = repertoireLine(text, side);
+      if (
+        [...old.lines, ...additions].some(
+          (item) => item.side === line.side && item.pgn === line.pgn,
+        )
+      )
+        continue;
+      additions.push({
+        id: crypto.randomUUID(),
+        title: String(title).slice(0, 68) + ' · ' + (additions.length + 1),
+        pgn: line.pgn,
+        side: line.side,
+        note: '',
+      });
+    }
+    if (old.lines.length + additions.length > STUDY_LIMITS.lines)
+      throw Error(
+        t(
+          'Repertoár má limit 128 variant. Nic nebylo importováno.',
+          'The repertoire limit is 128 lines. Nothing was imported.',
+        ),
+      );
+    save({ ...old, lines: [...old.lines, ...additions] });
+    return additions.length;
   }
   function message(value) {
     const el = root?.querySelector('[data-kit-status]');
@@ -127,8 +159,8 @@ export function createStudyKit(context) {
             side: parsed.side,
             note: f.get('note'),
           };
-        if (!old.lines.some((l) => l.id === id) && old.lines.length >= 24)
-          throw Error(t('Limit je 24 variant.', 'The limit is 24 lines.'));
+        if (!old.lines.some((l) => l.id === id) && old.lines.length >= STUDY_LIMITS.lines)
+          throw Error(t('Limit je 128 variant.', 'The limit is 128 lines.'));
         save({ ...old, lines: [...old.lines.filter((l) => l.id !== id), row] });
         mount(root);
         message(t('Varianta uložena.', 'Line saved.'));
@@ -162,8 +194,8 @@ export function createStudyKit(context) {
             ),
           );
         const old = read();
-        if (old.tasks.length >= 40)
-          throw Error(t('Limit je 40 úkolů.', 'The limit is 40 exercises.'));
+        if (old.tasks.length >= STUDY_LIMITS.tasks)
+          throw Error(t('Limit je 128 úkolů.', 'The limit is 128 exercises.'));
         save({ ...old, tasks: [...old.tasks, task] });
         mount(root);
       });
@@ -538,8 +570,8 @@ export function createStudyKit(context) {
       note.querySelector('button').onclick = () =>
         safely(() => {
           const data = read();
-          if (!data.tasks.some((r) => r.id === task.id) && data.tasks.length >= 40)
-            throw Error(t('Limit je 40 úkolů.', 'The limit is 40 exercises.'));
+          if (!data.tasks.some((r) => r.id === task.id) && data.tasks.length >= STUDY_LIMITS.tasks)
+            throw Error(t('Limit je 128 úkolů.', 'The limit is 128 exercises.'));
           save({ ...data, tasks: [...data.tasks.filter((r) => r.id !== task.id), task] });
           const url = new URL(location.href);
           url.hash = '/practice';
@@ -647,5 +679,5 @@ export function createStudyKit(context) {
     if (e.detail !== 'practice') cancel();
   });
   window.addEventListener('pagehide', cancel);
-  return { mount, cancel };
+  return { mount, cancel, importPgn };
 }

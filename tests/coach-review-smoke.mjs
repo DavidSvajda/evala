@@ -62,7 +62,7 @@ try {
   await page.locator('#toggle-theme').waitFor();
   await page.evaluate(async (game) => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('evala-study', 1);
+      const request = indexedDB.open('evala-study');
       request.onupgradeneeded = () => request.result.createObjectStore('games', { keyPath: 'id' });
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);

@@ -29,6 +29,7 @@ export function createAnalysisServer({
   publicBudgetSeconds = Number(process.env.PUBLIC_ENGINE_SECONDS || 1800),
   root = resolve('dist'),
   accounts = {},
+  adminAccountId = process.env.ADMIN_ACCOUNT_ID || '',
   human = {},
   dataMaintenance = process.env.DATA_MAINTENANCE === 'true',
 } = {}) {
@@ -53,9 +54,10 @@ export function createAnalysisServer({
     puzzlePath: resolve(root, 'data/puzzles.json'),
     ...accounts,
     store,
+    adminAccountId,
   });
   const analyze = createAnalysisApi({ slots, authorized, reports, publicReports });
-  const admin = createAdmin({ store, session: identity.session });
+  const admin = createAdmin({ store, session: identity.session, ownerId: adminAccountId });
   const opponent = localEngineOnly
     ? { dispose() {} }
     : createHumanOpponent({ reports, isOwner: authorized, ...human });
@@ -136,6 +138,7 @@ export function createAnalysisServer({
   server.maxRequestsPerSocket = 100;
   server.maxConnections = 256;
   server.on('close', () => {
+    admin.stop();
     slots.forEach((s) => s.engine.dispose());
     opponent.dispose();
     store.close?.().catch(() => {});

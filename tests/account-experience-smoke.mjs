@@ -37,6 +37,15 @@ const base = `http://127.0.0.1:${server.address().port}`,
   mobile = await phone.newPage(),
   errors = [];
 for (const page of [pc, mobile]) page.on('pageerror', (e) => errors.push(e.message));
+await mobile.route('**/api/account/me', async (route) => {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await route.continue();
+});
+async function open(page, section) {
+  await page.goto(base + '/study.html#/' + section);
+  // Hidden settings already have default checkbox values before account hydration.
+  await page.locator(`main[data-page="${section}"]`).waitFor({ state: 'visible' });
+}
 async function login(context) {
   const config = await (await context.request.get(base + '/api/account/config')).json(),
     response = await context.request.post(base + '/api/account/google', {
@@ -84,6 +93,7 @@ try {
   });
   assert.ok(upload.ok());
   await pc.addInitScript(() => {
+    if (!localStorage.getItem('evala-language')) localStorage.setItem('evala-language', 'cs');
     window.moveSoundCount = 0;
     const Native = window.AudioContext;
     window.AudioContext = class extends Native {
@@ -123,14 +133,16 @@ try {
   await libraryReady;
   assert.equal(await pc.locator('#header-signin').textContent(), 'Můj účet');
   releaseLibrary();
+  await pc.locator('main[data-page="settings"]').waitFor({ state: 'visible' });
   await pc.locator('#home-board img').first().waitFor({ state: 'attached' });
   assert.equal(await pc.locator('#move-sound').isChecked(), true);
   await pc.locator('[data-board-theme="walnut"]').click();
   await pc.locator('#show-coordinates').uncheck();
   await pc.locator('#language-choice').selectOption('en');
-  await pc.goto(base + '/study.html#/analysis');
+  await open(pc, 'analysis');
   await pc.locator('#toggle-settings').click();
   await pc.locator('#profile').selectOption('deep');
+  await pc.locator('#study-settings .advanced-settings > summary').click();
   await pc.locator('#study-lines').selectOption('2');
   await pc.locator('#close-settings').click();
   await pc.locator('#next-move').click();
@@ -146,7 +158,7 @@ try {
       p.soundVersion === 1,
   );
   await login(phone);
-  await mobile.goto(base + '/study.html#/analysis');
+  await open(mobile, 'analysis');
   await mobile.locator('#home-board img').first().waitFor({ state: 'attached' });
   assert.match(
     await mobile.locator('#study-board [data-square="e5"] img').getAttribute('src'),
@@ -166,7 +178,7 @@ try {
     await pc.screenshot({ path: '.local-data/account-experience/desktop.png' });
     await mobile.screenshot({ path: '.local-data/account-experience/mobile.png' });
   }
-  await mobile.goto(base + '/study.html#/settings');
+  await open(mobile, 'settings');
   assert.equal(await mobile.locator('#move-sound').isChecked(), true);
   assert.equal(await mobile.locator('#show-coordinates').isChecked(), false);
   assert.equal(await mobile.evaluate(() => document.body.dataset.boardTheme), 'walnut');
@@ -180,10 +192,11 @@ try {
   await mobile.locator('#move-sound').uncheck();
   await mobile.locator('#show-coordinates').check();
   await failedSave;
-  await pc.goto(base + '/study.html#/settings');
+  await open(pc, 'settings');
   await pc.locator('[data-board-theme="blue"]').click();
   await saved(desktop, (p) => p.boardTheme === 'blue');
   await mobile.reload();
+  await mobile.locator('main[data-page="settings"]').waitFor({ state: 'visible' });
   await mobile.locator('#home-board img').first().waitFor({ state: 'attached' });
   assert.equal(await mobile.locator('#move-sound').isChecked(), false);
   fail = false;
@@ -192,7 +205,7 @@ try {
   await pc.evaluate(() => dispatchEvent(new Event('online')));
   await pc.waitForFunction(() => document.querySelector('#move-sound').checked === false);
   const sounds = await pc.evaluate(() => window.moveSoundCount);
-  await pc.goto(base + '/study.html#/analysis');
+  await open(pc, 'analysis');
   await pc.locator('#previous-move').click();
   assert.equal(await pc.evaluate(() => window.moveSoundCount), sounds);
   assert.deepEqual(errors, []);

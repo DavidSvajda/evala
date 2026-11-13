@@ -187,7 +187,7 @@ export function initLearning(context) {
       };
       const written = { ...data.notes[ply] };
       game.learning = cleanLearning(data, game.moves);
-      await context.save(game);
+      const result = await context.save(game);
       if (context.selected() !== game || context.ply() !== ply) return;
       const draft = {
         cause: $('#mistake-cause').value,
@@ -215,12 +215,25 @@ export function initLearning(context) {
         if (field.setSelectionRange && editing.start !== null)
           field.setSelectionRange(editing.start, editing.end);
       }
-      $('#note-status').textContent = changed
-        ? t(
-            'Uloženo. Nové úpravy ještě nejsou uložené.',
-            'Saved. New edits have not been saved yet.',
-          )
-        : t('Poznámka uložena.', 'Note saved.');
+      $('#note-status').textContent =
+        result?.status === 'conflict'
+          ? t(
+              'Uloženo v tomto zařízení. V Moje partie vyřeš konflikt verzí.',
+              'Saved on this device. Resolve the version conflict in My games.',
+            )
+          : result?.status === 'pending'
+            ? t(
+                'Uloženo v tomto zařízení. Čeká na synchronizaci.',
+                'Saved on this device. Waiting to sync.',
+              )
+            : result?.status === 'error' || result?.status === 'stale'
+              ? t('Poznámka nebyla uložena. Zkus to znovu.', 'The note was not saved. Try again.')
+              : changed
+                ? t(
+                    'Uloženo. Nové úpravy ještě nejsou uložené.',
+                    'Saved. New edits have not been saved yet.',
+                  )
+                : t('Poznámka uložena.', 'Note saved.');
     };
     $('#next-my-critical').onclick = () => {
       const indices = Object.entries(learning(game).notes)
@@ -813,6 +826,7 @@ export function initLearning(context) {
   refresh();
   return {
     refresh,
+    importRepertoire: studyKit.importPgn,
     invalidate: () => {
       noteKey = '';
       refresh();

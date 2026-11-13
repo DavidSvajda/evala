@@ -33,14 +33,15 @@ export function createStaticFiles({
   backend = true,
   localEngineOnly = false,
 }) {
-  // Hosted public mode uses our backend and the two chess import providers.
+  // Hosted modes use our backend and the explicitly allowed chess providers.
   // Custom remote engines remain available in the local/private deployment.
-  const policy = publicReports
-    ? localPolicy.replace(
-        "connect-src 'self' https: http://127.0.0.1:* http://localhost:*",
-        "connect-src 'self' https://api.chess.com https://lichess.org https://accounts.google.com",
-      )
-    : localPolicy;
+  const policy =
+    publicReports || localEngineOnly
+      ? localPolicy.replace(
+          "connect-src 'self' https: http://127.0.0.1:* http://localhost:*",
+          "connect-src 'self' https://api.chess.com https://lichess.org https://explorer.lichess.org https://tablebase.lichess.ovh https://accounts.google.com",
+        )
+      : localPolicy;
   const absoluteRoot = resolve(root);
   let rootPath;
   return async (req, res, url) => {

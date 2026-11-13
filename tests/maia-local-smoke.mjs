@@ -38,7 +38,7 @@ try {
           id: 1,
           initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
           moves: ['e2e4'],
-          elo: 1600,
+          elo: 2800,
         });
       });
     } finally {
@@ -52,6 +52,13 @@ try {
   );
   assert.equal(remote.length, 0);
   await page.locator('#engine').selectOption('maia');
+  assert.equal(await page.locator('#humanElo option').first().getAttribute('value'), '800');
+  assert.equal(await page.locator('#humanElo option').last().getAttribute('value'), '2800');
+  await page.locator('#humanElo').selectOption('2800');
+  assert.deepEqual(
+    await page.locator('#time option').evaluateAll((options) => options.map((o) => o.value)),
+    ['300', '750', '1500', '3000', '5000', '7500', '10000', '15000', '30000'],
+  );
   await page.locator('#humanStyle').selectOption('attacking');
   await page.goto(`chrome-extension://${id}/demo.html`);
   await page.waitForFunction(
@@ -59,7 +66,7 @@ try {
       document
         .querySelector('evala-bar')
         ?.shadowRoot.querySelector('.stats')
-        .textContent.includes('Maia 1400:'),
+        .textContent.includes('Maia 2800:'),
     {},
     { timeout: 45000 },
   );
@@ -67,6 +74,7 @@ try {
   assert.equal(await page.locator('evala-bar .human-arrow').isVisible(), true);
   const controls = await context.newPage();
   await controls.goto(`chrome-extension://${id}/popup.html`);
+  assert.equal(await controls.locator('#humanElo').inputValue(), '2800');
   // Background tabs must keep calculating for this pause/resume check.
   await controls.locator('details.advanced-settings').evaluate((el) => (el.open = true));
   await controls.locator('[name="pauseHidden"]').uncheck();
@@ -75,7 +83,7 @@ try {
     const shadow = document.querySelector('evala-bar').shadowRoot;
     return (
       shadow.querySelector('.human-arrow').hasAttribute('hidden') &&
-      !shadow.querySelector('.stats').textContent.includes('Maia 1400:') &&
+      !shadow.querySelector('.stats').textContent.includes('Maia 2800:') &&
       !shadow.querySelector('.rail').title.includes('Lidský návrh:')
     );
   });
@@ -106,7 +114,7 @@ try {
       document
         .querySelector('evala-bar')
         .shadowRoot.querySelector('.stats')
-        .textContent.includes('Maia 1400:'),
+        .textContent.includes('Maia 2800:'),
     {},
     { timeout: 45000 },
   );

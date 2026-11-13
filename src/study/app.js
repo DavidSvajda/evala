@@ -1,4 +1,5 @@
 import { gameStatusMarkup } from './views/game-status.js';
+import { showGameConflict } from './sync-conflict-ui.js';
 import { createLibraryRefresh } from './library-refresh.js';
 import { renderNotation } from './views/notation.js';
 import { summaryMarkup } from './views/summary.js';
@@ -37,6 +38,8 @@ import {
   getPreferences,
   savePreferences,
   setStorageIdentity,
+  gameConflictBackup,
+  resolveGameConflict,
 } from './storage.js';
 import {
   account,
@@ -60,6 +63,7 @@ import { moveIcon } from '../ui/move-icons.js';
 import { initializeLanguage, language, translate } from './i18n.js';
 import { initializeFullscreen } from './fullscreen.js';
 import { createSharing } from './sharing.js';
+import { createPreparation } from './preparation-ui.js';
 import {
   readSettings as readBarSettings,
   writeSettings as writeBarSettings,
@@ -67,6 +71,7 @@ import {
 
 const $ = (selector) => document.querySelector(selector);
 let sharing = null;
+let preparationUI = null;
 initializeLanguage();
 const stroke = (path) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -459,9 +464,12 @@ $('#toggle-library').addEventListener('click', () => {
 
 async function store(game, options) {
   try {
-    await saveGame(game, options);
+    const result = await saveGame(game, options);
+    if (result?.status === 'conflict') renderLibrary();
+    return result;
   } catch (e) {
     error(e.message);
+    return { status: 'error', error: e };
   }
 }
 const librarySelection = new Set();
@@ -477,6 +485,7 @@ function visibleLibrary() {
         (filter === 'pending' && !game.analysis?.complete)),
   );
   const sort = $('#library-sort').value;
+  if (sort === 'imported') return result.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const stamp = (g) =>
     [g.headers.UTCDate, g.headers.Date]
       .map((v) =>
@@ -526,6 +535,43 @@ function renderLibrary() {
       renderLibrarySelection();
     };
     row.append(check, button);
+    if (game._syncConflict || game._hasSyncBackup) {
+      const resolveButton = document.createElement('button');
+      resolveButton.type = 'button';
+      resolveButton.className = 'quiet-button game-conflict-button';
+      resolveButton.textContent = game._syncConflict
+        ? language() === 'en'
+          ? 'Resolve conflict'
+          : 'Vyřešit konflikt'
+        : language() === 'en'
+          ? 'Version backup'
+          : 'Záloha verzí';
+      resolveButton.onclick = async () => {
+        if (job || playerReport?.running) {
+          error(
+            language() === 'en'
+              ? 'Stop the analysis before choosing a version.'
+              : 'Před výběrem verze zastav rozbor.',
+          );
+          return;
+        }
+        resolveButton.disabled = true;
+        try {
+          const backup = game._syncConflict
+            ? { id: game.id, local: game, remote: game._syncConflict.remote }
+            : await gameConflictBackup(game.id);
+          if (!backup) return;
+          const choice = await showGameConflict(game, backup);
+          if (choice) await resolveGameConflict(game, choice);
+          await reloadLibrary();
+        } catch (e) {
+          error(e.message);
+        } finally {
+          resolveButton.disabled = false;
+        }
+      };
+      row.append(resolveButton);
+    }
     fragment.append(row);
   }
   if (!visible.length) {
@@ -638,7 +684,7 @@ function selectGame(game) {
   $('.workspace').classList.remove('library-open');
   if (activeView === 'review') focusBoard();
 }
-async function addPgn(text, { select = true, signal } = {}) {
+async function addPgn(text, { select = true, openSingle = false, signal } = {}) {
   const { games, errors } = parsePgnCollection(text);
   const owner = account.user?.id,
     generation = account.user?.generation;
@@ -684,7 +730,13 @@ async function addPgn(text, { select = true, signal } = {}) {
     ]
       .filter(Boolean)
       .join(' · ');
-    if (saved[0] && select) selectGame(saved[0]);
+    if (saved[0] && select) {
+      if (openSingle && games.length === 1 && !errors.length) {
+        setView('review');
+        setAnalysisTab(saved[0].moves.length ? 'summary' : 'lines');
+      }
+      selectGame(saved[0]);
+    }
     $('#import-panel').open = Boolean(skipped || errors.length);
     return saved;
   } finally {
@@ -693,18 +745,16 @@ async function addPgn(text, { select = true, signal } = {}) {
 }
 $('#import-fen').addEventListener('click', async () => {
   try {
-    await addPgn(parseFenGame($('#fen-input').value).pgn);
+    await addPgn(parseFenGame($('#fen-input').value).pgn, { openSingle: true });
     $('#fen-input').value = '';
-    setView('review');
     $('#toggle-settings').setAttribute('aria-expanded', 'false');
-    $('#analysis-lines-tab')?.click();
   } catch (e) {
     $('#import-status').textContent = translate(e.message);
   }
 });
 $('#import-pgn').addEventListener('click', async () => {
   try {
-    await addPgn($('#pgn-input').value);
+    await addPgn($('#pgn-input').value, { openSingle: true });
     $('#pgn-input').value = '';
   } catch (e) {
     $('#import-status').textContent = e.message;
@@ -715,13 +765,15 @@ $('#pgn-file').addEventListener('change', async (event) => {
   if (!file) return;
   try {
     if (file.size > 2_000_000) throw new Error('Soubor je větší než 2 MB.');
-    await addPgn(await file.text());
+    await addPgn(await file.text(), { openSingle: true });
   } catch (e) {
     $('#import-status').textContent = e.message;
   }
   event.target.value = '';
 });
-$('#demo-game').addEventListener('click', () => addPgn(DEMO_PGN).catch((e) => error(e.message)));
+$('#demo-game').addEventListener('click', () =>
+  addPgn(DEMO_PGN, { openSingle: true }).catch((e) => error(e.message)),
+);
 const suggestedUser = new URLSearchParams(location.search).get('username');
 $('#username').value =
   options.lastUsername || (/^[A-Za-z0-9_-]{2,40}$/.test(suggestedUser || '') ? suggestedUser : '');
@@ -770,11 +822,15 @@ function renderReview() {
     `${running ? 'Pozastavit rozbor' : selected?.analysis?.complete ? 'Znovu rozebrat' : selected?.analysis ? 'Pokračovat v rozboru' : 'Rozebrat partii'}<span>${running ? icons.pause : icons.arrow}</span>`;
   $('#review-state').textContent = running
     ? 'Probíhá'
-    : selected?.analysis?.complete
-      ? 'Uloženo'
-      : selected?.analysis
-        ? 'Částečný rozbor'
-        : 'Připraveno';
+    : selected?._syncConflict
+      ? 'Konflikt verzí'
+      : selected?._syncPending
+        ? 'Uloženo v tomto zařízení'
+        : selected?.analysis?.complete
+          ? 'Uloženo'
+          : selected?.analysis
+            ? 'Částečný rozbor'
+            : 'Připraveno';
   if (!running) $('#review-progress').hidden = true;
   if (selected) {
     const positions = selected.fens.length,
@@ -965,6 +1021,7 @@ function renderPosition() {
   renderCoach(fen, result, last, mark);
   renderCoachJourney();
   renderLines(result, fen);
+  preparationUI?.update();
 }
 function coachThreat(fen) {
   const key = language() + ':' + fen;
@@ -1656,7 +1713,7 @@ learningUI = initLearning({
   },
   render: renderAll,
   navigate,
-  save: (game) => saveGame(game, { syncPartial: true }),
+  save: (game) => store(game, { syncPartial: true }),
   playLine: (index, line) => {
     navigate(index);
     startBranch(line);
@@ -1674,6 +1731,26 @@ learningUI = initLearning({
       { signal },
     );
   },
+});
+preparationUI = createPreparation({
+  fen: activeFen,
+  selected: () => selected,
+  library: () => library,
+  busy: () => !!job || !!playerReport?.running,
+  tab: setAnalysisTab,
+  playMove: (uci) => startBranch([uci]),
+  openLine: (line) => {
+    navigate(0);
+    startBranch(line);
+    if (branch) branch.index = branch.moves.length;
+    renderAll();
+  },
+  importGame: async (pgn) => {
+    await addPgn(pgn);
+    setView('review');
+  },
+  save: (game) => store(game, { syncPartial: true }),
+  importRepertoire: learningUI.importRepertoire,
 });
 const studyPlatform = await initPlatform({
   library: () => library,
