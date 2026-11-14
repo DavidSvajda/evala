@@ -74,6 +74,41 @@ try {
   );
   await controls.reload();
   assert.equal(await controls.locator('#engine').inputValue(), 'full');
+  await controls.locator('#time').selectOption('3000');
+  const talRequest = context.waitForEvent('request', {
+    predicate: (request) => request.url().includes('/rodent-tal.wasm'),
+    timeout: 45000,
+  });
+  await controls.locator('#engine').selectOption('tal');
+  await talRequest;
+  await page.waitForFunction(
+    () =>
+      document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===
+        'done' &&
+      document
+        .querySelector('evala-bar')
+        ?.shadowRoot.querySelector('.engine-name')
+        .textContent.includes('Rodent V'),
+    {},
+    { timeout: 45000 },
+  );
+  assert.match(await page.locator('evala-bar .value').textContent(), /[+−]?\d|M/);
+  await controls.reload();
+  assert.equal(await controls.locator('#engine').inputValue(), 'tal');
+  await controls.locator('#time').selectOption('30000');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===
+      'searching',
+  );
+  await controls.locator('#time').selectOption('3000');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('evala-bar')?.shadowRoot.querySelector('.rail').dataset.state ===
+      'done',
+    {},
+    { timeout: 15000 },
+  );
   await controls.locator('#engine').selectOption('lite');
   await page.waitForFunction(() =>
     document
@@ -82,7 +117,9 @@ try {
       .textContent.includes('Lite'),
   );
   await controls.close();
-  console.log('PASS: actual Full NNUE worker/model, persisted selection and switch back to Lite');
+  console.log(
+    'PASS: actual Full NNUE and Rodent Tal workers, persisted selection and switch back to Lite',
+  );
 
   const fen = 'rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   const chess = new Chess(fen);

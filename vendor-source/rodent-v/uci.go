@@ -1,0 +1,875 @@
+// ================================================================
+// S12 UCI PROTOCOL
+// ================================================================
+//
+//   This file implements the Universal Chess Interface (UCI) protocol,
+//   which lets any UCI-compatible GUI (Arena, Cutechess, SCID,
+//   lichess-bot, etc.) drive the engine.
+//
+//   UCI BASICS
+//   ----------
+//   Communication is line-based over stdin/stdout.
+//   The GUI sends commands; the engine responds asynchronously.
+//   The most important commands:
+//
+//     uci           -> engine identifies itself and lists options
+//     isready       -> engine responds "readyok" when idle
+//     ucinewgame    -> reset state for a fresh game
+//     position ...  -> set up the board from startpos or FEN
+//     go ...        -> start searching (may include time controls)
+//     stop          -> abort the current search
+//     quit          -> exit the process
+//
+//   CONCURRENCY MODEL
+//   -----------------
+//   Searching runs in a separate goroutine so that the UCI loop
+//   remains responsive to "stop" and "quit" commands during a search.
+//   abortFlag (an atomic int32) is the signal: the search goroutine
+//   checks it periodically and unwinds when set.  searchDone is a
+//   channel that is closed when the goroutine exits; the UCI loop
+//   waits on it before starting a new search.
+//
+//   TIME MANAGEMENT
+//   ---------------
+//   parseGoParams converts UCI time parameters into a single
+//   timeLimit in milliseconds.  The formula is:
+//
+//       alloc = (myTime + myInc * (movestogo - 1)) / movestogo
+//
+//   A 10 ms safety margin is subtracted to account for I/O latency.
+//   When "movetime" is specified directly, that value is used instead.
+//
+
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"golang.org/x/sys/cpu"
+)
+
+// ---- UCI main loop ----
+
+func uciLoop() {
+	var p Pos
+	parseFEN(&p, startFEN)
+	allocTT(16)
+
+	// Allocate one SearchState per thread slot.
+	// The main thread always uses states[0]; helpers use states[1..N-1].
+	// Allocate enough for the maximum allowed thread count up front so
+	// we never allocate during a search.
+	const maxAllowedThreads = 256
+	states := make([]*SearchState, maxAllowedThreads)
+	states[0] = new(SearchState)
+	states[0].tt = &mainTT
+	states[0].isMainThread = true
+
+	var searchDone chan struct{}
+
+	// stopSearch signals the running search to abort and waits for it
+	// to finish outputting "bestmove" before returning.
+	stopSearch := func() {
+		atomic.StoreInt32(&abortFlag, 1)
+		if searchDone != nil {
+			<-searchDone
+			searchDone = nil
+		}
+	}
+
+	for {
+		command, ok := nextCommand()
+		if !ok {
+			break
+		}
+		line := strings.TrimRight(command, "\r\n ")
+		tokens := strings.Fields(line)
+		if len(tokens) == 0 {
+			continue
+		}
+
+		switch tokens[0] {
+		case "uci":
+			arch := "Scalar"
+			if cpu.X86.HasAVX2 {
+				arch = "AVX2"
+			}
+			fmt.Printf("id name Rodent V %s %s\n", versionString, arch)
+			fmt.Println("id author Naman Thanki, Pawel Koziol, based on Sungorus by Pablo Vazquez")
+
+			// these options should be always exposed
+			fmt.Println("option name Hash type spin default 16 min 1 max 1048576")
+			fmt.Println("option name Clear Hash type button")
+			fmt.Println("option name UCI_Chess960 type check default false")
+			fmt.Println("option name UCI_LimitStrength type check default false")
+			fmt.Printf("option name UCI_Elo type spin default %d min 800 max 3000\n", engineElo)
+			fmt.Println("option name Threads type spin default 1 min 1 max 256")
+			fmt.Printf("option name Move Overhead type spin default %d min 0 max 5000\n", moveOverhead)
+
+			if !noOptions {
+				fmt.Println("option name OwnBook type check default false")
+				fmt.Println("option name MultiPV type spin default 1 min 1 max 500")
+				printSingleOption(HcePerc)
+				printSingleOption(NnuePerc)
+				if readPersonalityFiles {
+					fmt.Println("option name PersonalityFile type string default", personalityFile)
+				} else {
+					fmt.Println("option name Save Personality type button")
+					fmt.Println("option name NnuePath type string default", nnuePath)
+					fmt.Println("option name MainBook type string default", mainBookPath)
+					fmt.Println("option name GuideBook type string default", guideBookPath)
+				}
+
+				printUciOptionsPerColor()
+
+				printSingleOption(LikesClosed)
+				printSingleOption(KingTropism)
+				printSingleOption(Forwardness)
+				printSingleOption(HorizontalMirroring)
+			}
+
+			if nnue.Loaded {
+				fmt.Printf("info string Loaded NNUE network: %s\n", nnuePath)
+			}
+
+			fmt.Println("uciok")
+
+		case "isready":
+			stopSearch()
+			fmt.Println("readyok")
+
+		case "setoption":
+			stopSearch()
+			prevThreads := numThreads
+			parseSetOption(tokens[1:])
+			if numThreads < prevThreads {
+				trimIdleThreadStates(states, numThreads)
+				reclaimOSMemory()
+			}
+
+		case "ucinewgame":
+			stopSearch()
+			clearTT()
+			reclaimOSMemory()
+			for i := 0; i < numThreads; i++ {
+				if states[i] != nil {
+					states[i].kbnModeActive = false
+					states[i].clearHistory()
+				}
+			}
+			parseFEN(&p, startFEN)
+
+		case "position":
+			stopSearch()
+			parsePosition(&p, tokens[1:])
+
+		case "step":
+			stopSearch()
+
+			if len(tokens) < 2 {
+				fmt.Println("info string usage: move e2e4 [e7e5 ...]")
+				break
+			}
+
+			applyMoves(&p, tokens[1:])
+
+		case "go":
+			stopSearch()
+
+			move := 0
+			if ownBook {
+				move = guideBook.getMove(&p)
+				if move == 0 {
+					move = mainBook.getMove(&p)
+				}
+			}
+			if move != 0 {
+				fmt.Printf("bestmove %s\n", moveToStr(move))
+			} else {
+
+				st, mt, md, mn := parseGoParams(tokens[1:], &p)
+				softTimeLimit = st
+				hardTimeLimit = mt
+				pondering = false
+				for _, t := range tokens[1:] {
+					if t == "ponder" {
+						pondering = true
+						break
+					}
+				}
+				posForSearch := p // copy: the search owns its own position
+				searchDone = make(chan struct{})
+				go func(pos Pos, done chan struct{}, maxDepth int, maxNodes int64) {
+					defer close(done)
+					think(&pos, states, maxDepth, maxNodes)
+				}(posForSearch, searchDone, md, mn)
+			}
+		case "stop":
+			stopSearch()
+
+		case "ponderhit":
+			// The move we were pondering was played. Switch from
+			// unlimited ponder mode to normal time control.
+			pondering = false
+
+		case "quit":
+			stopSearch()
+			os.Exit(0)
+
+		case "bench":
+			stopSearch()
+			depth := 14 // default bench depth
+			if len(tokens) > 1 {
+				if d, err := strconv.Atoi(tokens[1]); err == nil {
+					depth = d
+				}
+			}
+			runBench(depth, states[0], false)
+
+		case "perft":
+			stopSearch()
+			depth := 1
+			if len(tokens) > 1 {
+				if d, err := strconv.Atoi(tokens[1]); err == nil {
+					depth = d
+				}
+			}
+			start := time.Now()
+			n := perft(&p, depth)
+			elapsed := time.Since(start).Milliseconds()
+			if elapsed < 1 {
+				elapsed = 1
+			}
+			fmt.Printf("Nodes: %d  Time: %dms  NPS: %d\n", n, elapsed, n*1000/uint64(elapsed))
+
+		case "print":
+			PrintBoard(&p)
+
+		case "eval":
+			eval_trace(&p)
+
+		case "help":
+			fmt.Println("Available commands:")
+			fmt.Println("  uci        - Enter UCI mode (standard GUI communication)")
+			fmt.Println("  isready    - Check if the engine is ready")
+			fmt.Println("  bench      - Run a performance benchmark over standard FENs")
+			fmt.Println("  eval       - Show static evaluation for the current position")
+			fmt.Println("  print      - Display the current board")
+			fmt.Println("  perft <d>  - Run perft to depth <d>")
+			fmt.Println("  quit       - Exit the engine")
+
+		case "nnue":
+			{
+				var acc Accumulator
+				refresh(&p, &acc)
+				fmt.Print(acc.getEval(&p, p.side))
+			}
+
+		case "measure_scale":
+			if len(tokens) >= 2 {
+				measureScale(tokens[1])
+			} else {
+				fmt.Println("info string Usage: measure_scale <epd_file>")
+			}
+
+		case "threats":
+			PrintThreatDebug(&p)
+		}
+	}
+
+	// Stdin closed. Wait for any in-progress search to output bestmove.
+	if searchDone != nil {
+		<-searchDone
+	}
+}
+
+// ---- Option parsing ----
+
+// parseSetOption handles the "setoption name <n> value <v>" command.
+//
+//	Hash: resize the transposition table (in megabytes).
+//	Clear Hash: zero the transposition table.
+var useChess960 bool
+
+func parseSetOption(tokens []string) {
+	name := ""
+	value := ""
+	i := 0
+
+	if i < len(tokens) && strings.EqualFold(tokens[i], "name") {
+		i++
+	}
+	for i < len(tokens) && !strings.EqualFold(tokens[i], "value") {
+		if name != "" {
+			name += " "
+		}
+		name += tokens[i]
+		i++
+	}
+	if i < len(tokens) && strings.EqualFold(tokens[i], "value") {
+		i++
+		value = strings.Join(tokens[i:], " ")
+	}
+
+	switch {
+	case strings.EqualFold(name, "Hash"):
+		if mb, err := strconv.Atoi(value); err == nil {
+			allocTT(mb)
+			allocatedMB := (int64(mainTT.size) * 8) / (1024 * 1024)
+			fmt.Printf("info string Hash set to %d MB (%d entries)\n", allocatedMB, mainTT.size)
+		}
+		return
+
+	case strings.EqualFold(name, "Clear Hash"):
+		clearTT()
+		reclaimOSMemory()
+		return
+
+	case strings.EqualFold(name, "Save Personality"):
+		if noOptions {
+			return
+		}
+		if err := saveOptions("personality.txt"); err != nil {
+			fmt.Printf("info string failed to save personality: %v\n", err)
+		} else {
+			fmt.Println("info string personality saved")
+		}
+		return
+
+	case strings.EqualFold(name, "Threads"):
+		if n, err := strconv.Atoi(value); err == nil {
+			numThreads = limitValue(n, 1, 256)
+			updateMemoryLimit()
+		}
+		return
+
+	case strings.EqualFold(name, "Move Overhead") || strings.EqualFold(name, "MoveOverhead"):
+		if n, err := strconv.Atoi(value); err == nil {
+			moveOverhead = int64(limitValue(n, 0, 5000))
+		}
+		return
+
+	case strings.EqualFold(name, "UCI_LimitStrength"):
+		if b, err := strconv.ParseBool(value); err == nil {
+			limitStrength = b
+			configureEngineStrength()
+		}
+		return
+
+	case strings.EqualFold(name, "UCI_Chess960"):
+		if b, err := strconv.ParseBool(value); err == nil {
+			useChess960 = b
+		}
+		return
+
+	case strings.EqualFold(name, "UCI_Elo"):
+		if n, err := strconv.Atoi(value); err == nil {
+			engineElo = limitValue(n, 800, 3500)
+			configureEngineStrength()
+		}
+		return
+
+	case strings.EqualFold(name, "personalityFile"):
+		if noOptions {
+			return
+		}
+		if value == "" {
+			fmt.Println("info string personality not found")
+			return
+		}
+
+		if readOptions(value) == nil {
+			personalityFile = value // only correct values are saved
+			fmt.Printf("info string loaded personality: %s\n", value)
+		} else {
+			fmt.Printf("info string failed to load personality: %s\n", value)
+		}
+		return
+
+	case strings.EqualFold(name, "nnuePath"):
+		if noOptions {
+			return
+		}
+		if value == "" {
+			fmt.Println("info string NNUE file path is empty")
+			return
+		}
+
+		if nnueLoad(value) {
+			if noOptions {
+				return
+			}
+			nnuePath = value // only correct values are saved
+			fmt.Printf("info string NNUE loaded: %s\n", value)
+			reclaimOSMemory()
+		} else {
+			fmt.Printf("info string failed to load NNUE: %s\n", value)
+		}
+		return
+
+	case strings.EqualFold(name, "mainBook") || strings.EqualFold(name, "mainBookPath"):
+		if noOptions {
+			return
+		}
+		if value == "" {
+			fmt.Println("info string main book file path is empty")
+			return
+		}
+
+		if initMainBook(value) {
+			mainBookPath = value
+			updateMemoryLimit()
+			reclaimOSMemory()
+		} else {
+			fmt.Printf("info string failed to load main book %q\n", value)
+		}
+		return
+
+	case strings.EqualFold(name, "guideBook") || strings.EqualFold(name, "guideBookPath"):
+		if noOptions {
+			return
+		}
+		if value == "" {
+			fmt.Println("info string guide book file path is empty")
+			return
+		}
+
+		if initGuideBook(value) {
+			guideBookPath = value
+			updateMemoryLimit()
+			reclaimOSMemory()
+		} else {
+			fmt.Printf("info string failed to load guide book %q\n", value)
+		}
+
+		return
+
+	case strings.EqualFold(name, "OwnBook"):
+		if noOptions {
+			return
+		}
+		ownBook = strings.EqualFold(value, "true")
+		return
+	}
+
+	// Parse all the single (symmetric) options
+	if setSingleOption(name, value) {
+		return
+	}
+
+	// Parse all the per color (asymmetric) options
+	if setPerColorOption(name, value) {
+		return
+	}
+}
+
+// ---- Position setup ----
+
+// parsePosition handles "position startpos [moves ...]" and
+// "position fen <fen> [moves ...]".
+// After applying the move list, histLen is trimmed whenever an
+// irreversible move resets the clock, so repetition detection does
+// not look past that point.
+func parsePosition(p *Pos, tokens []string) {
+	if len(tokens) == 0 {
+		return
+	}
+
+	i := 0
+
+	switch tokens[i] {
+	case "startpos":
+		parseFEN(p, startFEN)
+		i++
+
+	case "m8":
+		parseFEN(p, m8FEN)
+		i++
+
+	case "fen":
+		i++
+
+		var parts []string
+		for i < len(tokens) && tokens[i] != "moves" {
+			parts = append(parts, tokens[i])
+			i++
+		}
+
+		parseFEN(p, strings.Join(parts, " "))
+	}
+
+	if i < len(tokens) && tokens[i] == "moves" {
+		applyMoves(p, tokens[i+1:])
+	}
+}
+
+// Apply a series of moves on the board.
+func applyMoves(p *Pos, moveStrs []string) {
+	var acc Accumulator
+	refresh(p, &acc)
+
+	for _, moveStr := range moveStrs {
+		move := parseMove(p, moveStr)
+		if move == 0 {
+			fmt.Printf("info string invalid move %s\n", moveStr)
+			break
+		}
+
+		var u Update
+		var r Revert
+
+		makeMove(p, &u, &r, move)
+		acc.applyPendingChanges(&acc, p, &u, nil)
+
+		if p.clock == 0 {
+			p.histLen = 0
+		}
+	}
+}
+
+// ---- Time management ----
+
+// parseGoParams reads the "go" command parameters and returns:
+//
+//	softLimit (ms): allocated soft time for stopping between iterations; -1 = no limit.
+//	hardLimit (ms): absolute deadline for stopping mid-search; -1 = no limit.
+//	maxDepth: maximum search depth.
+func parseGoParams(tokens []string, p *Pos) (int64, int64, int, int64) {
+	wtime := int64(-1)
+	btime := int64(-1)
+	winc := int64(0)
+	binc := int64(0)
+	movestogo := int64(0)
+	movetime := int64(-1)
+	maxDepth := maxPly - 1
+	nodes := int64(-1)
+
+	for i := 0; i < len(tokens); i++ {
+		switch tokens[i] {
+		case "wtime":
+			if i+1 < len(tokens) {
+				i++
+				wtime, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "btime":
+			if i+1 < len(tokens) {
+				i++
+				btime, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "winc":
+			if i+1 < len(tokens) {
+				i++
+				winc, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "binc":
+			if i+1 < len(tokens) {
+				i++
+				binc, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "movestogo":
+			if i+1 < len(tokens) {
+				i++
+				movestogo, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "movetime":
+			if i+1 < len(tokens) {
+				i++
+				movetime, _ = strconv.ParseInt(tokens[i], 10, 64)
+			}
+		case "depth":
+			if i+1 < len(tokens) {
+				i++
+				if d, err := strconv.Atoi(tokens[i]); err == nil {
+					maxDepth = d
+				}
+			}
+		case "nodes":
+			if i+1 < len(tokens) {
+				i++
+				if n, err := strconv.ParseInt(tokens[i], 10, 64); err == nil {
+					nodes = n
+				}
+			}
+		case "infinite":
+			return -1, -1, maxPly - 1, -1
+		}
+	}
+
+	if movetime >= 0 {
+		t := movetime - moveOverhead
+		if t < 0 {
+			t = 0
+		}
+		return t, t, maxDepth, nodes
+	}
+
+	var myTime, myInc int64
+	if p.side == White {
+		myTime = wtime
+		myInc = winc
+	} else {
+		myTime = btime
+		myInc = binc
+	}
+	if myTime < 0 {
+		return -1, -1, maxDepth, nodes // no clock provided -> search indefinitely or by nodes
+	}
+
+	mtg := movestogo
+	if mtg <= 0 {
+		mtg = 25
+	}
+
+	usableTime := myTime
+	// Reserve a small buffer when only one move remains on the clock.
+	if mtg == 1 {
+		dec := usableTime / 10
+		if dec > 1000 {
+			dec = 1000
+		}
+		usableTime -= dec
+	}
+
+	totalBudget := usableTime + myInc*(mtg-1) - moveOverhead
+	if totalBudget < 0 {
+		totalBudget = 0
+	}
+
+	alloc := totalBudget / mtg
+
+	maxSafe := (usableTime * 65) / 100
+	if maxSafe > usableTime-moveOverhead {
+		maxSafe = usableTime - moveOverhead
+	}
+	if maxSafe < 0 {
+		maxSafe = 0
+	}
+
+	if alloc > maxSafe {
+		alloc = maxSafe
+	}
+
+	// Soft limit: stop comfortably between iterations (75% of base time).
+	soft := alloc * 75 / 100
+	// Hard limit: allow up to 3x base time in complex struggles.
+	hard := alloc * 3
+	if hard > maxSafe {
+		hard = maxSafe
+	}
+
+	return soft, hard, maxDepth, nodes
+}
+
+// ---- Move string conversion ----
+
+// moveToStr converts an integer move to UCI algebraic notation,
+// e.g. "e2e4" or "e7e8q" for a queen promotion.
+func moveToStr(move int) string {
+	from := moveFrom(move)
+	to := moveTo(move)
+	s := []byte{
+		byte('a' + fileOf(from)),
+		byte('1' + rankOf(from)),
+		byte('a' + fileOf(to)),
+		byte('1' + rankOf(to)),
+	}
+
+	if moveType(move) == CASTLE && !useChess960 {
+		if to > from {
+			s[2] = 'g' // kingside
+		} else {
+			s[2] = 'c' // queenside
+		}
+	}
+
+	if isProm(move) {
+		const promChars = "nbrq"
+		s = append(s, promChars[(move>>12)&3])
+	}
+	return string(s)
+}
+
+// parseMove converts a UCI move string (e.g. "e2e4", "e7e8q") to the
+// internal integer representation.  Returns 0 if the string is invalid.
+// The move type is inferred from the position and move geometry.
+func parseMove(p *Pos, s string) int {
+	if len(s) < 4 {
+		return 0
+	}
+	from := makeSquare(int(s[0]-'a'), int(s[1]-'1'))
+	to := makeSquare(int(s[2]-'a'), int(s[3]-'1'))
+	mt := NORMAL
+
+	switch {
+	case p.typeAt(from) == K && abs(to-from) == 2 && !useChess960:
+		mt = CASTLE
+		if to > from { // kingside
+			to = p.castlingRookSq[p.side][0]
+		} else { // queenside
+			to = p.castlingRookSq[p.side][1]
+		}
+	case p.typeAt(from) == K && p.typeAt(to) == R && colorOf(p.board[to]) == p.side:
+		mt = CASTLE
+	case p.typeAt(from) == P && to == p.epSquare:
+		mt = EP_CAP
+	case p.typeAt(from) == P && abs(to-from) == 16:
+		mt = EP_SET
+	case p.typeAt(from) == P && len(s) > 4:
+		switch s[4] {
+		case 'n':
+			mt = N_PROM
+		case 'b':
+			mt = B_PROM
+		case 'r':
+			mt = R_PROM
+		case 'q':
+			mt = Q_PROM
+		}
+	}
+	return (mt << 12) | (to << 6) | from
+}
+
+var uciBufPool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
+
+func writeMove(buf *bytes.Buffer, move int, useChess960 bool) {
+	from := moveFrom(move)
+	to := moveTo(move)
+
+	toFile := fileOf(to)
+	toRank := rankOf(to)
+
+	if moveType(move) == CASTLE && !useChess960 {
+		if to > from {
+			toFile = 6 // 'g'
+		} else {
+			toFile = 2 // 'c'
+		}
+	}
+
+	buf.WriteByte(byte('a' + fileOf(from)))
+	buf.WriteByte(byte('1' + rankOf(from)))
+	buf.WriteByte(byte('a' + toFile))
+	buf.WriteByte(byte('1' + toRank))
+	if isProm(move) {
+		const promChars = "nbrq"
+		buf.WriteByte(promChars[(move>>12)&3])
+	}
+}
+
+func writePV(buf *bytes.Buffer, pv []int) {
+	for i, move := range pv {
+		if move == 0 {
+			break
+		}
+		if i > 0 {
+			buf.WriteByte(' ')
+		}
+		writeMove(buf, move, useChess960)
+	}
+}
+
+// pvString converts a PV array to a space-separated string of UCI
+// move strings, stopping at the first zero entry.
+func pvString(pv []int) string {
+	var sb strings.Builder
+	for _, move := range pv {
+		if move == 0 {
+			break
+		}
+		if sb.Len() > 0 {
+			sb.WriteByte(' ')
+		}
+		sb.WriteString(moveToStr(move))
+	}
+	return sb.String()
+}
+
+// buildPV prepends move to src and writes the result into dst,
+// keeping the principal variation buffer current after each alpha improvement.
+func buildPV(dst, src []int, move int) {
+	dst[0] = move
+	i := 1
+	for i < len(dst) {
+		if src[i-1] == 0 {
+			break
+		}
+		dst[i] = src[i-1]
+		i++
+	}
+	if i < len(dst) {
+		dst[i] = 0
+	}
+}
+
+// ---- Perft ----
+
+// perft counts the total number of leaf nodes at exactly "depth" plies
+// from the current position.  Used to verify move generation against
+// published tables (e.g. the Chessprogramming Wiki).
+//
+// Expected node counts from the starting position:
+//
+//	depth 1 ->        20
+//	depth 2 ->       400
+//	depth 3 ->     8 902
+//	depth 4 ->   197 281
+//	depth 5 -> 4 865 609
+func perft(p *Pos, depth int) uint64 {
+	var posStack [maxPly]Pos
+	posStack[0] = *p
+
+	return perftStack(&posStack, 0, depth)
+}
+
+func perftStack(
+	posStack *[maxPly]Pos,
+	ply int,
+	depth int,
+) uint64 {
+	if depth == 0 {
+		return 1
+	}
+
+	p := &posStack[ply]
+
+	var list [maxMoves]int
+
+	capCount := genCaptures(p, list[:])
+	quietCount := genQuiet(p, list[capCount:])
+	total := capCount + quietCount
+
+	var nodes uint64
+
+	for i := 0; i < total; i++ {
+		move := list[i]
+
+		child := &posStack[ply+1]
+		*child = *p
+
+		var u Update
+		var r Revert
+		makeMove(child, &u, &r, move)
+		//nnueApplyPending(child, &u)
+
+		if !child.selfInCheck() {
+			nodes += perftStack(
+				posStack,
+				ply+1,
+				depth-1,
+			)
+		}
+	}
+
+	return nodes
+}

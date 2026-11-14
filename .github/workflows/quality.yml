@@ -22,6 +22,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node scripts/prepare-assets.mjs
       - run: npm run build
+      - run: EVALA_BROWSER_EXECUTABLE="$(command -v google-chrome)" node tests/rodent-tal-browser.mjs
       - run: npm run lint
       - run: npm run format:check
       - run: node --test tests/study-kit.test.mjs tests/study-kit-sync.test.mjs tests/sync-storage.test.mjs tests/engine-startup.test.mjs tests/local-parallel.test.mjs tests/release-version.test.mjs tests/account-preferences.test.mjs tests/security.test.mjs tests/security-hardening.test.mjs tests/security-gates.test.mjs tests/accounts.test.mjs tests/admin.test.mjs

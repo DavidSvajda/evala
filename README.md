@@ -14,6 +14,8 @@ Svislý evaluation bar pro **Chess.com a Lichess**, s lokálním Stockfish 19 Li
 
 Nově také **kompletní rozbor partií** s plným Stockfish 19 NNUE a volitelným vlastním serverem. V popupu klikni **Rozebrat moje partie**; přes prohlížeč ho můžeš otevřít i jako samostatnou webovou aplikaci. Tato verze přibaluje plný engine (~100 MB), proto je větší než původní balík samotného baru.
 
+Lokální bar má také volbu **Rodent V · Mikhail Tal** s původní Talovou neuronovou sítí. Výpočet i návrh tahu běží v prohlížeči; nastavení času 3 s a maximální hloubky funguje stejně jako u Stockfish, ale dosažená hloubka závisí na rychlosti enginu a pozici. Přibalený zdroj a technické omezení zastavování popisuje [docs/extension-engines.md](docs/extension-engines.md).
+
 ## Evala 2 — osobní šachová aplikace
 
 Web má samostatný přehled, knihovnu, rozbor, trénink, statistiky, nastavení a účet. Krémový vzhled nabízí čtyři barvy šachovnice, sbalitelný panel a přepínání CS/EN. Trénink obsahuje 4 459 legálně ověřených CC0 úloh Lichess s původním ratingem, adaptivním výběrem a opakováním chyb. Vlastní tréninkový rating je oddělený od ratingu jednotlivé úlohy.

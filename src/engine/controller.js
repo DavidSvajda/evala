@@ -59,6 +59,13 @@ export class EngineController {
 
   stopActive() {
     if (!this.active || this.stopping) return;
+    if (this.variant === 'tal') {
+      // Go WebAssembly cannot process worker messages during CPU-bound search.
+      const pending = this.pending;
+      this.dispose();
+      if (pending) this.analyze(pending);
+      return;
+    }
     this.stopping = true;
     this.worker.postMessage('stop');
     this.stopTimer = setTimeout(() => {

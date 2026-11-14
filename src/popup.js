@@ -74,7 +74,9 @@ async function refresh() {
         : 'Otevři analýzu na Chess.com nebo Lichess';
   document.querySelector('.summary-detail').textContent = status?.score
     ? `Hloubka ${status.score.depth} · skóre z pohledu bílého`
-    : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · bar vedle šachovnice`;
+    : settings.engine === 'tal'
+      ? 'Rodent V · Tal NNUE · bar vedle šachovnice'
+      : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · bar vedle šachovnice`;
   document.querySelector('.mini-white').style.height = `${whitePercent(status?.score)}%`;
 }
 globalThis.chrome?.storage?.onChanged.addListener(async (changes) => {

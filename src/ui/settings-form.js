@@ -7,7 +7,7 @@ export function settingsMarkup(settings) {
     <label class="check-row"><span>Zobrazit evaluation bar</span><input type="checkbox" name="showBar" ${settings.showBar ? 'checked' : ''}></label>
     <label class="check-row"><span>Zobrazit tahy a šipky</span><input type="checkbox" name="showArrows" ${settings.showArrows ? 'checked' : ''}></label>
     <p class="hint">Vypnutí výpočtu zastaví engine i nové návrhy. Skrytí baru nebo tahů výpočet nepřerušuje. Nastavení zůstane uložené.</p></fieldset>
-    <div class="form-row"><label for="engine">Lokální engine</label><select id="engine" name="engine"><option value="lite">Stockfish 19 Lite</option><option value="full">Stockfish 19 Full NNUE</option><option value="maia">Maia-3 · lidské tahy</option></select></div>
+    <div class="form-row"><label for="engine">Lokální engine</label><select id="engine" name="engine"><option value="lite">Stockfish 19 Lite</option><option value="full">Stockfish 19 Full NNUE</option><option value="maia">Maia-3 · lidské tahy</option><option value="tal">Rodent V · Mikhail Tal</option></select></div>
     <div data-human-settings hidden><div class="form-row"><label for="humanElo">Úroveň modelu</label><select id="humanElo" name="humanElo">${[800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800].map((v) => `<option value="${v}">${v}</option>`).join('')}</select></div><div class="form-row"><label for="humanStyle">Styl</label><select id="humanStyle" name="humanStyle"><option value="natural">Přirozený</option><option value="attacking">Útočný hybrid</option></select></div><p class="hint">Maia běží na tvém CPU. Úroveň není ověřené Elo. Útočný hybrid hledá i nabídky materiálu s kontrolou Stockfish; oběť nezaručuje. Číselný bar počítá Stockfish Lite, lidský tah je nahoře ve stavu.</p></div>
     <p class="hint" data-engine-help></p><button type="button" class="text-button use-local" hidden>Přepnout na lokální výpočet</button>
     <fieldset class="presets"><legend>Výkon enginu</legend><div class="segmented"><button type="button" data-preset="quiet">Úsporný</button><button type="button" data-preset="balanced">Vyvážený</button><button type="button" data-preset="deep">Důkladný</button></div></fieldset>
@@ -58,9 +58,11 @@ export function bindSettings(root, initial, onChange) {
       ? 'Výpočet běží na vlastním serveru. Pro použití lokálního enginu přepni níže.'
       : settings.engine === 'maia'
         ? 'Model Maia-3 5M je součástí rozšíření. Bez serveru a účtu.'
-        : settings.engine === 'full'
-          ? 'Plná neuronová síť pro důkladnější analýzu. Načítá se déle a potřebuje více paměti.'
-          : 'Menší neuronová síť a rychlé načtení. Doporučeno pro běžné použití a notebooky.';
+        : settings.engine === 'tal'
+          ? 'Rodent V 1.2.03 s původní neuronovou sítí tal_nnue. Hodnocení i návrh tahu počítá lokálně; při 3 sekundách se hloubka může lišit podle pozice a počítače.'
+          : settings.engine === 'full'
+            ? 'Plná neuronová síť pro důkladnější analýzu. Načítá se déle a potřebuje více paměti.'
+            : 'Menší neuronová síť a rychlé načtení. Doporučeno pro běžné použití a notebooky.';
     root.querySelectorAll('[name]').forEach((input) => {
       if (input.type === 'checkbox') input.checked = settings[input.name];
       else {

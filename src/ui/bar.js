@@ -68,7 +68,9 @@ export class EvalBar {
     this.shadow.querySelector('.engine-name').textContent =
       settings.backend === 'server'
         ? 'Stockfish 19 Full · vlastní server'
-        : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokální výpočet`;
+        : settings.engine === 'tal'
+          ? 'Rodent V · Tal NNUE · lokální výpočet'
+          : `Stockfish 19 ${settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokální výpočet`;
     this.renderArrow(this.arrowMove);
     this.renderStats();
   }
@@ -168,7 +170,9 @@ export class EvalBar {
       this.shadow.querySelector('.stats').textContent =
         this.settings.backend === 'server'
           ? 'Stockfish 19 Full · server'
-          : `Stockfish 19 ${this.settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokálně`;
+          : this.settings.engine === 'tal'
+            ? 'Rodent V · Tal NNUE · lokálně'
+            : `Stockfish 19 ${this.settings.engine === 'full' ? 'Full NNUE' : 'Lite'} · lokálně`;
     if (!this.settings.showArrows) this.rail.title = 'Evala · tahové návrhy skryté';
   }
 

@@ -38,6 +38,7 @@ export function sanitizeSettings(input = {}) {
   if (input.side === 'right') settings.side = 'right';
   if (input.engine === 'full') settings.engine = 'full';
   if (input.engine === 'maia') settings.engine = 'maia';
+  if (input.engine === 'tal') settings.engine = 'tal';
   if (input.humanStyle === 'attacking') settings.humanStyle = 'attacking';
   if (input.backend === 'server' && typeof input.serverUrl === 'string') {
     try {

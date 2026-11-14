@@ -1,9 +1,10 @@
 import { assertAssetTree } from './release-safety.mjs';
 import { build } from 'esbuild';
-import { cp, mkdir, readFile, writeFile, access, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, writeFile, access, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, relative } from 'node:path';
+import { zipSync } from 'fflate';
 import sharp from 'sharp';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -93,6 +94,26 @@ await cp(
 );
 for (const file of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm'])
   await cp(resolve(root, 'node_modules/onnxruntime-web/dist', file), resolve(out, 'engine', file));
+for (const file of ['rodent-tal.wasm', 'wasm_exec.js'])
+  await cp(
+    resolve(root, 'vendor-source/rodent-v', file),
+    resolve(out, 'engine', file === 'wasm_exec.js' ? 'rodent-wasm-exec.js' : file),
+  );
+const rodentSource = {};
+const rodentRoot = resolve(root, 'vendor-source/rodent-v');
+await assertAssetTree(rodentRoot);
+async function addRodentSource(dir) {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = resolve(dir, entry.name);
+    if (entry.isDirectory()) await addRodentSource(path);
+    else if (entry.isFile() && entry.name !== 'rodent-tal.wasm')
+      rodentSource[relative(rodentRoot, path).replaceAll('\\', '/')] = new Uint8Array(
+        await readFile(path),
+      );
+  }
+}
+await addRodentSource(rodentRoot);
+await writeFile(resolve(out, 'engine/rodent-source.zip'), zipSync(rodentSource, { level: 6 }));
 await cp(resolve(root, 'vendor-source/maia3-5m.onnx'), resolve(out, 'engine/maia3-5m.onnx'));
 await cp(resolve(root, 'vendor-source/ONNX-LICENSE.txt'), resolve(out, 'engine/ONNX-LICENSE.txt'));
 await cp(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));

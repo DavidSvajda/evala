@@ -78,6 +78,7 @@ test('settings from storage or messages cannot create unbounded UCI commands', (
   assert.equal(sanitizeSettings({ humanElo: 99999 }).humanElo, 2800);
   assert.equal(sanitizeSettings({ humanElo: -1 }).humanElo, 800);
   assert.equal(sanitizeSettings({ engine: 'full' }).engine, 'full');
+  assert.equal(sanitizeSettings({ engine: 'tal' }).engine, 'tal');
   assert.equal(sanitizeSettings({ engine: '../bad-worker.js' }).engine, 'lite');
   assert.equal(sanitizeSettings({ hash: 999999 }).hash, 256);
   assert.equal(sanitizeSettings({ depth: '30\ngo infinite' }).depth, 18);
@@ -115,6 +116,38 @@ test('changing local model terminates the previous worker before starting the ne
   controller.onLine('readyok');
   assert.ok(workers[1].sent.some((s) => s.startsWith('go ')));
   controller.dispose();
+});
+
+test('Rodent Tal search is interrupted by terminating its busy WebAssembly worker', () => {
+  const workers = [];
+  const engine = new EngineController(
+    () => {
+      const worker = {
+        sent: [],
+        postMessage(command) {
+          this.sent.push(command);
+        },
+        terminate() {
+          this.terminated = true;
+        },
+      };
+      workers.push(worker);
+      return worker;
+    },
+    () => {},
+  );
+  engine.analyze({ id: 1, fen: START_FEN, settings: { engine: 'tal' } });
+  engine.onLine('uciok');
+  engine.onLine('readyok');
+  engine.analyze({ id: 2, fen: START_FEN, settings: { engine: 'tal' } });
+  assert.equal(workers[0].terminated, true);
+  assert.equal(workers[0].sent.includes('stop'), false);
+  assert.equal(workers.length, 2);
+  engine.onLine('uciok');
+  engine.onLine('readyok');
+  assert.ok(workers[1].sent.some((command) => command.startsWith('go ')));
+  engine.pause();
+  assert.equal(workers[1].terminated, true);
 });
 
 test('UCI waits for stop acknowledgement and drops all stale evaluation output', () => {

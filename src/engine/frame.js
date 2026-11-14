@@ -14,9 +14,11 @@ const engine = new HumanController(
   (variant) =>
     new Worker(
       new URL(
-        variant === 'full'
-          ? './engine/stockfish-19-single.js'
-          : './engine/stockfish-19-lite-single.js',
+        variant === 'tal'
+          ? './engine/rodent-tal-worker.js'
+          : variant === 'full'
+            ? './engine/stockfish-19-single.js'
+            : './engine/stockfish-19-lite-single.js',
         location.href,
       ),
     ),

@@ -52,6 +52,10 @@ for (const path of [
   'maia3-5m.onnx',
   'ort-wasm-simd-threaded.mjs',
   'ort-wasm-simd-threaded.wasm',
+  'rodent-tal-worker.js',
+  'rodent-tal.wasm',
+  'rodent-wasm-exec.js',
+  'rodent-source.zip',
   'ONNX-LICENSE.txt',
   'COPYING.txt',
   'UPSTREAM-README.md',
@@ -102,7 +106,7 @@ await writeFile(
 4. Obnov již otevřené stránky Chess.com nebo Lichess.
 5. Nastavení a zkušební desku otevřeš přes ikonu rozšíření.
 
-Výpočet běží lokálně přes Stockfish 19 Lite / Full NNUE nebo Maia-3 5M.
+Výpočet běží lokálně přes Stockfish 19 Lite / Full NNUE, Maia-3 5M nebo Rodent V Tal NNUE.
 Pro lidský engine vyber Maia-3, úroveň a styl. Lidský tah je ve stavu, číselný bar počítá Stockfish Lite. Není potřeba Node.js ani server.
 V nastavení vyber engine a profil Úsporný / Vyvážený / Důkladný.
 Lite se načítá rychleji; Full používá větší síť a potřebuje více paměti.
